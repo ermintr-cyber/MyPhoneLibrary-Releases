@@ -628,7 +628,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/backup-folder' and post:
                 if os.name!='nt' or not ipaddress.ip_address(self.client_address[0]).is_loopback:raise ValueError('Browse is available on the Windows host. From another device, enter a host folder path.')
                 script="Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description='Choose MyPhoneLibrary backup folder'; if($d.ShowDialog() -eq 'OK') { $d.SelectedPath }"
-                result=subprocess.run(['powershell.exe','-NoProfile','-STA','-Command',script],capture_output=True,text=True,timeout=120)
+                result=subprocess.run(['powershell.exe','-NoProfile','-STA','-Command',script],capture_output=True,text=True,timeout=120,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
                 return self.send(200,{'path':result.stdout.strip()})
             if path=='/api/settings' and post:return self.send(200,store.settings(d))
             if path=='/api/move' and post:return self.send(200,store.move(d))

@@ -26,6 +26,6 @@ with zipfile.ZipFile(tmp,'w',zipfile.ZIP_DEFLATED) as z:
             z.write(p,'MyPhoneLibrary-'+version+'/'+rel.as_posix())
 with zipfile.ZipFile(tmp) as z:
     if z.testzip():raise ValueError('ZIP verification failed')
-with tmp.open('rb') as f:os.fsync(f.fileno())
+with tmp.open('r+b') as f:os.fsync(f.fileno())
 os.replace(tmp,target)
 print(target)
