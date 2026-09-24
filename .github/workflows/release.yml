@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: ['main']
-    paths: ['server.py', 'web/**', 'updater.py', 'packaging/**', 'tests/**', '.github/workflows/release.yml']
+    paths: ['server.py', 'web/**', 'updater.py', 'packaging/**', '!packaging/android_suite_smoke.py', 'tests/**', '.github/workflows/release.yml']
 permissions:
   contents: write
 jobs:
@@ -72,5 +72,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          gh release view "v$env:APP_VERSION" --json tagName 2>$null
+          if ($LASTEXITCODE -eq 0) { Write-Host "Version already published; keeping existing release assets."; exit 0 }
           gh release create "v$env:APP_VERSION" dist/*.zip dist/*.exe --title "MyPhoneLibrary $env:APP_VERSION" --generate-notes --target "$env:GITHUB_SHA"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
