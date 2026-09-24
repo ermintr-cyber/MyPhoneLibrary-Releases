@@ -1,6 +1,9 @@
 Unicode true
+!ifndef SOURCE_ROOT
+!define SOURCE_ROOT "${__FILEDIR__}/.."
+!endif
 Name "My Phone Library network setup"
-OutFile "../ConfigureNetwork.exe"
+OutFile "${SOURCE_ROOT}\ConfigureNetwork.exe"
 RequestExecutionLevel admin
 SilentInstall silent
 AutoCloseWindow true

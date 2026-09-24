@@ -1,11 +1,14 @@
 Unicode true
+!ifndef SOURCE_ROOT
+!define SOURCE_ROOT "${__FILEDIR__}/.."
+!endif
 !include "MUI2.nsh"
 !include "x64.nsh"
 !ifndef VERSION
 !define VERSION "1.3.0"
 !endif
 Name "My Phone Library"
-OutFile "../dist/MyPhoneLibrary_Setup_${VERSION}.exe"
+OutFile "${SOURCE_ROOT}\dist\MyPhoneLibrary_Setup_${VERSION}.exe"
 InstallDir "$LOCALAPPDATA\Programs\MyPhoneLibrary"
 InstallDirRegKey HKCU "Software\MyPhoneLibrary" "InstallDir"
 RequestExecutionLevel user
@@ -36,19 +39,19 @@ Function .onInit
 FunctionEnd
 Section "Application"
  SetOutPath "$INSTDIR"
- File "../server.py"
- File "../updater.py"
- File "../app-manifest.json"
- File "../MyPhoneLibrary.exe"
- File "../ConfigureNetwork.exe"
- File "../Pokreni-MyPhoneLibrary.cmd"
- File "../Start-MyPhoneLibrary.cmd"
- File "../PROCITAJ-ME.md"
- File "../THIRD-PARTY.md"
+ File "${SOURCE_ROOT}\server.py"
+ File "${SOURCE_ROOT}\updater.py"
+ File "${SOURCE_ROOT}\app-manifest.json"
+ File "${SOURCE_ROOT}\MyPhoneLibrary.exe"
+ File "${SOURCE_ROOT}\ConfigureNetwork.exe"
+ File "${SOURCE_ROOT}\Pokreni-MyPhoneLibrary.cmd"
+ File "${SOURCE_ROOT}\Start-MyPhoneLibrary.cmd"
+ File "${SOURCE_ROOT}\PROCITAJ-ME.md"
+ File "${SOURCE_ROOT}\THIRD-PARTY.md"
  SetOutPath "$INSTDIR\web"
- File /r "../web/*"
+ File /r "${SOURCE_ROOT}\web\*"
  SetOutPath "$INSTDIR\runtime"
- File /r "../runtime/*"
+ File /r "${SOURCE_ROOT}\runtime\*"
  SetOutPath "$INSTDIR"
  WriteUninstaller "$INSTDIR\Uninstall.exe"
  WriteRegStr HKCU "Software\MyPhoneLibrary" "InstallDir" "$INSTDIR"

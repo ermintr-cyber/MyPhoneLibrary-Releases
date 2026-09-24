@@ -1,6 +1,9 @@
 Unicode true
+!ifndef SOURCE_ROOT
+!define SOURCE_ROOT "${__FILEDIR__}/.."
+!endif
 Name "My Phone Library"
-OutFile "../MyPhoneLibrary.exe"
+OutFile "${SOURCE_ROOT}\MyPhoneLibrary.exe"
 RequestExecutionLevel user
 SilentInstall silent
 AutoCloseWindow true
