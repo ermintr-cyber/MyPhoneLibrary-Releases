@@ -22,8 +22,10 @@ def tap(texts):
  except Exception as e:print('UI read:',str(e),flush=True)
  return False
 adb('shell','am','start','-n','com.mylibraries.installer/.MainActivity')
+started_install=False
 for i in range(50):
- tap({'install selected applications','install','update','done'})
+ if not started_install:started_install=tap({'install selected applications'})
+ else:tap({'install','update','done'})
  packages=adb('shell','pm','list','packages')
  if 'package:com.myphonelibrary.app' in packages and 'package:com.mymedialibrary.app' in packages:break
  time.sleep(2)
@@ -31,6 +33,8 @@ else:
  print(adb('shell','logcat','-d','-s','AndroidRuntime','PackageInstaller','PackageManager'),flush=True)
  print('Installed:',packages,flush=True)
  raise RuntimeError('The combined Android installer did not install both applications.')
+adb('shell','am','force-stop','com.mylibraries.installer')
+adb('shell','input','keyevent','3')
 adb('shell','am','start','-n','com.myphonelibrary.app/.MainActivity');time.sleep(3)
 assert adb('shell','pidof','com.myphonelibrary.app').strip(),'Phone Android app failed to start'
 print('Android bundle installed both original packages; Phone app launched.')
