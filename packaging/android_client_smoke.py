@@ -60,6 +60,9 @@ class TestControl(BaseHTTPRequestHandler):
 with tempfile.TemporaryDirectory() as folder:
     store = server.Store(folder)
     host = server.AppServer(('0.0.0.0', 9000), store)
+    # WebView/emulator may leave idle preconnect sockets until the emulator exits.
+    # They must not make this disposable fixture wait forever in server_close().
+    host.daemon_threads = True
     control = HTTPServer(('127.0.0.1', 0), TestControl)
     for instance in (host, control):
         threading.Thread(target=instance.serve_forever, daemon=True).start()
