@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const nodes=new Map(),handlers={};
+function node(id){if(!nodes.has(id))nodes.set(id,{value:'',innerHTML:'',dataset:{},style:{},hidden:false,classList:{add(){},remove(){},toggle(){}},setAttribute(){},querySelector(){return null},querySelectorAll(){return []},addEventListener(k,f){handlers[id+':'+k]=f;},showModal(){this.open=true},close(){this.open=false}});return nodes.get(id);}
+const ctx=vm.createContext({console,URLSearchParams,location:{hash:''},confirm:()=>true,setTimeout:()=>0,clearTimeout(){},window:{addEventListener(){}},document:{getElementById:node,documentElement:{dataset:{}},querySelectorAll(){return []},addEventListener(k,f){handlers[k]=f;}}});
+const source=fs.readFileSync(__dirname+'/../web/app.js','utf8');vm.runInContext(source.slice(0,source.lastIndexOf('boot().then(')),ctx);
+const run=s=>vm.runInContext(s,ctx);
+run(`db={version:UI_VERSION,settings:{layout:'list',columns:['model'],options:{},views:[],custom_fields:[]},trash:[],catalog:[{id:'bat',category:'battery',name:'BL-6F',compatible_batteries:[],supported_models:[{brand:'Nokia',model:'N95 8GB'}]},{id:'charger',category:'charger',name:'2mm',compatible:['wanted']}],records:[{id:'owned',kind:'phone',brand:'Nokia',model:'N73',instances:[{id:'u',inv:'1',condition:'U kolekciji'}]},{id:'wanted',rev:1,kind:'phone',brand:'Nokia',model:'N95 8GB',wishlist:true,battery:'BL-6F',charger:'2mm',instances:[],custom:{},specs:{}},{id:'part',kind:'part',model:'Spare battery',catalog_item:'bat',quantity:3,reserved:1,location:'Drawer',instances:[]}]};render();`);
+assert.equal(run('filtered().some(isWanted)'),false);
+assert.match(node('summary').innerHTML,/<strong>1<\/strong><span>models/);
+run('showWanted=true;render()');assert.equal(run('filtered().some(isWanted)'),true);
+run("showWanted=false;currentView='wish';render()");assert.equal(run('filtered().length'),1);assert.match(node('collection-table').innerHTML,/Acquired — add to collection/);
+run("acquireWanted('wanted')");assert.equal(run('draft.instances.length'),1);assert.equal(run('draft.wishlist'),false);assert.equal(run("record('wanted').instances.length"),0);
+run('closeEditor()');assert.equal(run("record('wanted').wishlist"),true);
+run("addWanted();draft.brand='Nokia';draft.model='N95 8GB';draft.os='Symbian';readDraft()");assert.equal(run('draft.instances.length'),0);assert.doesNotMatch(node('editor-content').innerHTML,/data-u="imei"/);
+run('matchModel()');assert.equal(run('draft.id'),'wanted');assert.equal(run('draft.battery'),'BL-6F');
+run("db.records.push({id:'legacy',kind:'phone',brand:'Nokia',model:'8800',wishlist:true,instances:[{id:'old-wanted',inv:'2',condition:'Wanted',note:'Keep me'}]});acquireWanted('legacy')");assert.equal(run('draft.instances.length'),1);assert.equal(run('draft.instances[0].id'),'old-wanted');assert.equal(run('draft.instances[0].note'),'Keep me');assert.equal(run('draft.instances[0].condition'),'U kolekciji');assert.equal(run("record('legacy').instances[0].condition"),'Wanted');
+assert.equal(run('needsCompletion({box:null,charger_present:false})'),true);
+assert.equal(run('needsCompletion({box:null,battery_present:null})'),false);
+assert.equal(run("needsCompletion({box:true,battery_present:false,purpose:'Donor'})"),false);
+assert.equal(run("accessoryStock(record('wanted'),'battery_present')[0].quantity-accessoryStock(record('wanted'),'battery_present')[0].reserved"),2);
+assert.equal(run("chargerSuggestions(record('wanted'))[0].name"),'2mm');
+run("refreshModelOptions('Nokia')");assert.match(node('model-suggestions').innerHTML,/N95 8GB/);
+console.log('Wishlist visibility/counts, model-only entry, cancel/acquire, legacy conversion, missing items and linked stock passed.');

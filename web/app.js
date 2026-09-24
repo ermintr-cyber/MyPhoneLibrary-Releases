@@ -1,5 +1,5 @@
 'use strict';
-const UI_VERSION='1.17.0';
+const UI_VERSION='1.18.0';
 const IS_ANDROID_APP=typeof navigator!=='undefined'&&/MyPhoneLibraryAndroid/i.test(navigator.userAgent);
 const BUNDLED_ANDROID_UI=IS_ANDROID_APP&&window.MyPhoneLibraryAndroid?.hasBundledUi?.()===true;
 function androidVersion(){
@@ -8,6 +8,7 @@ function androidVersion(){
 
 let serverInstance=null,versionMismatch=false,connectionCheckBusy=false,catalogReturn=null;
 let editorUnitIndex=0,openCatalogCategory=null,comboSerial=0;
+let showWanted=false;
 let settingsTab='appearance',currentView='all',dragColumn=null,ignoreSortUntil=0;
 const $=id=>document.getElementById(id), clone=x=>JSON.parse(JSON.stringify(x));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -19,6 +20,9 @@ let db=null,csrf='',draft=null,mode='edit',addUnit=null,dirty=false,expanded=new
 const columns=[['select','Select'],['completeness','Completeness'],['image','Image'],['inv','Inv. no.'],['brand','Brand'],['model','Model name'],['alias','Model number / Variant'],['type','Type code'],['product_code','Product code'],['colors','Colors'],['editions','Editions'],['battery','Battery'],['charger','Charger'],['state','Condition'],['rating','Cosmetic'],['owned','Owned'],['box','Box'],['os','Operating system'],['released','Released'],['introduced','Introduced'],['qty','Qty'],['parts','Parts'],['location','Location'],['value','Value'],['gsm','GSM'],['wiki','Wiki'],['note','Note'],['actions','Actions']];
 const opts={state:['Netestiran','Ispravan','Djelimično ispravan','Neispravan'],condition:['U kolekciji','Wanted'],purpose:['Kolekcija','Za popravak','Donor','Za prodaju','Za razmjenu'],edition:['Standard','Music Edition','Limited Edition'],currency:['KM'],originality:['Nepoznato','Original','Zamjenski','Miješano'],lock:['Nepoznato','Otključan','SIM-lock','Drugi lock']};
 const live=r=>(r.instances||[]).filter(u=>ACTIVE.includes(u.condition));
+const isWanted=r=>r.kind==='phone'&&(r.wishlist||(r.instances||[]).some(u=>u.condition==='Wanted'));
+const wantedOnly=r=>isWanted(r)&&!live(r).length;
+function acquireButton(r){return isWanted(r)?`<button type="button" data-action="acquire-wanted" data-id="${r.id}">Acquired — add to collection</button>`:'';}
 const unique=a=>[...new Set(a.filter(Boolean))];
 const name=r=>[r.brand,r.model].filter(Boolean).join(' ');
 function toast(msg){const dialog=[...document.querySelectorAll('dialog[open]')].at(-1);let node=$('toast');if(dialog){node=dialog.querySelector('.dialog-notice');if(!node){node=document.createElement('p');node.className='dialog-notice hint';node.setAttribute('role','status');dialog.prepend(node);}}node.textContent=msg;node.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>node.hidden=true,9000);}
@@ -155,20 +159,20 @@ function lists(){
  const values={...db.settings.options,edition:opts.edition};
  for(const key of Object.keys(values))values[key]=unique(values[key]);
  $('datalists').innerHTML=Object.entries(values).map(([key,a])=>`<datalist id="options-${esc(key)}">${a.map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist>`).join('');
- $('model-suggestions').innerHTML=db.records.filter(r=>r.kind==='phone').map(r=>`<option value="${esc(r.model)}">${esc(r.brand)}</option>`).join('');
+ refreshModelOptions();
 
 }
 let selectedUnits=new Set(),quickEdit=null,bulkTargets=[];
 const unitOnlyColumns=['location','box','state','rating','note'];
 const forParts=u=>u.for_parts===true||u.purpose==='Donor';
-const needsCompletion=u=>u.box===true&&!forParts(u)&&(completeness(u).missing.length>0||completeness(u).unknown.length>0);
+const needsCompletion=u=>!forParts(u)&&completeness(u).missing.length>0;
 function stateHTML(state){const cls=state==='Ispravan'?'working':state==='Neispravan'?'broken':'untested';return `<span class="state-${cls}">${esc(enumLabel(state)||'Untested')}</span>`;}
-function shownUnits(r){return (r.instances||[]).filter(u=>currentView==='donors'?forParts(u):true);}
+function shownUnits(r){return (r.instances||[]).filter(u=>currentView==='wish'?u.condition==='Wanted':currentView==='donors'?forParts(u):showWanted||u.condition!=='Wanted');}
 const unitFields={color:'Color',edition:'Edition',location:'Location',state:'Working condition',condition:'Ownership status',box:'Box',battery_present:'Battery',charger_present:'Charger',manual:'Manual',headphones:'Headphones',os:'Operating system'};
 const accessoryFields=['battery_present','charger_present','box','manual','headphones'];
 function completeness(u){return {missing:accessoryFields.filter(k=>u[k]===false),unknown:accessoryFields.filter(k=>u[k]==null)};}
 function completenessHTML(u){const c=completeness(u);return `<span class="${c.missing.length?'error':c.unknown.length?'muted':'good'}">${c.missing.length?'Missing: '+c.missing.map(k=>unitFields[k]).join(', '):c.unknown.length?'Not checked':'Complete'}</span>${c.unknown.length?`<small>Unchecked: ${esc(c.unknown.map(k=>unitFields[k]).join(', '))}</small>`:''}`;}
-function selectionBox(r,u=null){const units=u?[u]:r.instances||[];return units.length?`<input type="checkbox" aria-label="Select ${u?'unit '+esc(u.inv):'all units of '+esc(name(r))}" data-select-record="${r.id}" ${u?`data-select-unit="${u.id}"`:''} ${units.every(x=>selectedUnits.has(x.id))?'checked':''}>`:'';}
+function selectionBox(r,u=null){const units=u?[u]:shownUnits(r);return units.length?`<input type="checkbox" aria-label="Select ${u?'unit '+esc(u.inv):'all units of '+esc(name(r))}" data-select-record="${r.id}" ${u?`data-select-unit="${u.id}"`:''} ${units.every(x=>selectedUnits.has(x.id))?'checked':''}>`:'';}
 function quickButton(r,u,i,key,label){return `<button class="link quick-edit" data-action="quick-start" data-id="${r.id}" data-index="${i}" data-field="${key}" title="Edit ${esc(unitFields[key])}">${label||'—'}</button>`;}
 function unitControl(key,value,id){const tri=accessoryFields.includes(key),choices=tri?[["null","Not checked"],["true","Yes"],["false","No"]]:key==='state'?opts.state.map(v=>[v,enumLabel(v)]):key==='condition'?opts.condition.map(v=>[v,enumLabel(v)]):null;
  if(choices)return `<select id="${id}">${choices.map(([v,l])=>`<option value="${v}" ${String(value??'null')===v?'selected':''}>${l}</option>`).join('')}</select>`;
@@ -222,7 +226,7 @@ function searchMatches(r,q){const norm=v=>normal(v).replace(/[^\p{L}\p{N}]/gu,''
 function filtered(){
  let q=normal($('search').value),view=currentView;
  if(view.startsWith('saved-')){const v=db.settings.views[Number(view.slice(6))];if(v){view=v.filter;q=normal($('search').value||v.query);}}
- let rows=db.records.filter(r=>{if(view==='donors'&&!live(r).some(forParts))return false;if(view==='incomplete'&&!live(r).some(needsCompletion))return false;if(view==='phone'||view==='part'){if(r.kind!==view)return false;}if(view==='wish'&&!r.wishlist&&!(r.instances||[]).some(u=>u.condition==='Wanted'))return false;if(view==='duplicates'&&live(r).length<2)return false;if(view==='untested'&&!live(r).some(u=>u.state==='Netestiran'))return false;if(view==='repair'&&!live(r).some(u=>u.purpose==='Za popravak'||u.state==='Neispravan'||u.state==='Djelimično ispravan'))return false;return searchMatches(r,q);});
+ let rows=db.records.filter(r=>{if(view==='donors'&&!live(r).some(forParts))return false;if(view==='incomplete'&&!live(r).some(needsCompletion))return false;if(view==='phone'||view==='part'){if(r.kind!==view)return false;}if(view==='wish'&&!isWanted(r))return false;if(['all','phone'].includes(view)&&!showWanted&&wantedOnly(r))return false;if(view==='duplicates'&&live(r).length<2)return false;if(view==='untested'&&!live(r).some(u=>u.state==='Netestiran'))return false;if(view==='repair'&&!live(r).some(u=>u.purpose==='Za popravak'||u.state==='Neispravan'||u.state==='Djelimično ispravan'))return false;return searchMatches(r,q);});
  return rows.sort((a,b)=>{const av=value(a,sort.key),bv=value(b,sort.key);return sort.dir*(typeof av==='number'&&typeof bv==='number'?av-bv:String(av).localeCompare(String(bv),'bs',{numeric:true}));});
 }
 function image(r){const src=r.image||(r.photos||[])[0];return src?`<img class="thumb" src="${esc(src)}" alt="${esc(name(r))}" loading="lazy" data-action="photo" data-url="${esc(src)}">`:'<span class="thumb-placeholder" aria-label="No photo">▯</span>';}
@@ -235,12 +239,12 @@ function cell(r,key){if(key==='select')return selectionBox(r);if(key==='complete
  if(key==='inv')return r.kind==='phone'?'—':esc(v)||'—';
  if(key==='gsm'||key==='wiki'){const links=r.kind==='phone'?unique(live(r).map(u=>u[key]||r[key]).filter(Boolean)):[];if(links.length)return links.map((x,i)=>`<a href="${esc(x)}" target="_blank" rel="noopener noreferrer">${key==='gsm'?'GSM':'Wiki'}${links.length>1?' '+(i+1):''} ↗</a>`).join(' · ');}if(key==='gsm'||key==='wiki')return v?`<a href="${esc(v)}" target="_blank" rel="noopener noreferrer">${key==='gsm'?'GSM ↗':'Wiki ↗'}</a>`:'—';
  if(key==='note')return v?`<button class="quiet" data-action="note" data-id="${r.id}" aria-label="View note">☷</button>`:'—';
- if(key==='actions')return `<button data-action="edit" data-id="${r.id}">Edit</button>`;
+ if(key==='actions')return `<button data-action="edit" data-id="${r.id}">Edit</button>${acquireButton(r)}`;
  return esc(v)||'—';}
 function unitImage(r,u){const own=(u.photos||[])[0],src=own||r.image||(r.photos||[])[0];return src?`<img class="thumb" src="${esc(src)}" alt="${esc(u.inv)}" title="${own?'Unit photo':'Model catalog image'}" data-action="photo" data-url="${esc(src)}">${own?`<small>${u.photos.length} ${u.photos.length===1?'photo':'photos'}</small>`:'<small>Catalog</small>'}`:'<span class="thumb-placeholder" aria-label="No photo">▯</span>';}
 function copyUnit(id,index){if(phoneDraft&&!confirm('Replace the saved phone draft with this copy?'))return;phoneDraft=null;mode='add';draft=clone(record(id));addUnit=clone(draft.instances[index]);for(const key of ['id','inv','imei','imei2','serial'])delete addUnit[key];addUnit.inv=nextInventoryNumber();addUnit.photos=[];draft.instances.push(addUnit);dirty=true;editorRender(draft.instances.length-1);$('editor').showModal();$('editor').scrollTop=0;toast('Copy ready. Enter the IMEI and review the new unit details.');}
 function unitTiles(r){return `<div class="unit-list">${(r.instances||[]).map((u,i)=>`<article class="unit-line"><div class="unit-photo">${unitImage(r,u)}</div><div class="unit-overview"><strong>${esc(u.inv)}</strong><span>${catalogLink('color',u.color)} · ${esc(enumLabel(u.edition))||'Standard'}</span></div><div><small>Condition</small>${stateHTML(u.state)}<small>${esc(enumLabel(u.condition))}</small></div><div><small>IMEI</small>${u.imei?esc(u.imei.slice(0,3)+'••••'+u.imei.slice(-4)):'—'}</div><div><small>Box / battery</small>${triLabel(u.box)} / ${triLabel(u.battery_present)}</div><div><small>Location</small>${catalogLink('location',u.location)}</div><div class="unit-actions"><button data-action="edit-unit" data-id="${r.id}" data-index="${i}">Edit</button><button data-action="copy-unit" data-id="${r.id}" data-index="${i}">Copy</button></div></article>`).join('')||'<p>No units yet.</p>'}</div>`;}
-function modelActions(r){return `<div class="row-actions"><button class="primary" data-action="add-existing" data-id="${r.id}">+ Add another</button><button data-action="repairs" data-id="${r.id}">Repairs</button><button data-action="labels" data-id="${r.id}">QR labels</button><button data-action="history" data-id="${r.id}">History</button><button data-action="edit" data-id="${r.id}">Model details and images</button></div>`;}
+function modelActions(r,showAcquire=true){return `<div class="row-actions">${showAcquire?acquireButton(r):''}<button class="primary" data-action="add-existing" data-id="${r.id}">+ Add another</button><button data-action="repairs" data-id="${r.id}">Repairs</button><button data-action="labels" data-id="${r.id}">QR labels</button><button data-action="history" data-id="${r.id}">History</button><button data-action="edit" data-id="${r.id}">Model details and images</button></div>`;}
 function unitCell(r,u,i,key){
  if(key==='select')return selectionBox(r,u);if(key==='completeness')return completenessHTML(u);
  const quickKey={colors:'color',editions:'edition',state:'state',location:'location',box:'box',os:'os'}[key];
@@ -269,10 +273,21 @@ function expandedRow(r,visible){
  const keys=unique([...visible.filter(k=>k!=='actions'),...unitOnlyColumns,'actions']);
  return `<tr class="row-expanded"><td colspan="${visible.length}"><div class="unit-scroll" role="region" aria-label="Individual phones for ${esc(name(r))}" tabindex="0"><table class="unit-details-table"><thead><tr>${keys.map(k=>`<th>${esc(columns.find(c=>c[0]===k)?.[1]||k)}</th>`).join('')}</tr></thead><tbody>${shownUnits(r).map(u=>{const i=r.instances.indexOf(u);return `<tr class="unit-table-row">${keys.map(k=>`<td data-column="${k}">${unitCell(r,u,i,k)}</td>`).join('')}</tr>`;}).join('')}</tbody></table></div>${modelActions(r)}</td></tr>`;
 }
-function mobileModel(r){return `<article class="mobile-model"><div class="mobile-model-heading">${cell(r,'image')}<button class="mobile-model-name" data-action="${r.kind==='phone'?'expand':'edit'}" data-id="${r.id}"><strong>${esc(name(r))}</strong><small>${esc([r.alias,r.type].filter(Boolean).join(' · '))}</small></button><span class="number-pill">${value(r,'qty')}</span></div><p class="mobile-model-meta">${esc([value(r,'colors'),value(r,'editions')].filter(Boolean).join(' · '))}</p>${expanded.has(r.id)&&r.kind==='phone'?`<div class="mobile-units">${shownUnits(r).map(u=>{const i=r.instances.indexOf(u),keys=unique(['inv','colors','editions','state','location','box','rating','alias','type','os','battery','charger','gsm','wiki','note',...db.settings.columns]).filter(k=>!['select','image','model','brand','actions','qty','parts','owned','completeness'].includes(k));return `<section class="mobile-unit"><div class="mobile-unit-heading">${unitImage(r,u)}<strong>Unit ${esc(u.inv)||'—'}</strong>${forParts(u)?'<span>For parts</span>':''}</div><div class="mobile-unit-fields">${keys.map(k=>`<div class="unit-field"><small>${esc(columns.find(c=>c[0]===k)?.[1]||k)}</small>${unitCell(r,u,i,k)}</div>`).join('')}</div>${unitCell(r,u,i,'actions')}</section>`;}).join('')}${modelActions(r)}</div>`:''}</article>`;}
-function completionReport(rows){const entries=rows.flatMap(r=>live(r).filter(needsCompletion).map(u=>({r,u})));return `<h2>To complete</h2><p class="subtle">Only boxed collection phones. Missing accessories and unchecked items are listed separately.</p><div class="completion-list">${entries.map(({r,u})=>{const c=completeness(u);return `<article><div>${unitImage(r,u)}</div><div><strong>${esc(name(r))} · ${esc(u.inv)}</strong><small>${esc([u.color,enumLabel(u.edition)].filter(Boolean).join(' · '))}</small><p>Missing: ${esc(c.missing.map(k=>unitFields[k]).join(', ')||'None confirmed')}</p><p class="subtle">To check: ${esc(c.unknown.map(k=>unitFields[k]).join(', ')||'None')}</p></div><button data-action="edit-unit" data-id="${r.id}" data-index="${r.instances.indexOf(u)}">Edit</button></article>`;}).join('')||'<p>No boxed phones need completing or checking.</p>'}</div>`;}
+function mobileModel(r){return `<article class="mobile-model"><div class="mobile-model-heading">${cell(r,'image')}<button class="mobile-model-name" data-action="${r.kind==='phone'?'expand':'edit'}" data-id="${r.id}"><strong>${esc(name(r))}</strong>${isWanted(r)?'<small class="wanted-tag">Wanted</small>':''}<small>${esc([r.alias,r.type].filter(Boolean).join(' · '))}</small></button><span class="number-pill">${value(r,'qty')}</span></div>${acquireButton(r)}<p class="mobile-model-meta">${esc([value(r,'colors'),value(r,'editions')].filter(Boolean).join(' · '))}</p>${expanded.has(r.id)&&r.kind==='phone'?`<div class="mobile-units">${shownUnits(r).map(u=>{const i=r.instances.indexOf(u),keys=unique(['inv','colors','editions','state','location','box','rating','alias','type','os','battery','charger','gsm','wiki','note',...db.settings.columns]).filter(k=>!['select','image','model','brand','actions','qty','parts','owned','completeness'].includes(k));return `<section class="mobile-unit"><div class="mobile-unit-heading">${unitImage(r,u)}<strong>Unit ${esc(u.inv)||'—'}</strong>${forParts(u)?'<span>For parts</span>':''}</div><div class="mobile-unit-fields">${keys.map(k=>`<div class="unit-field"><small>${esc(columns.find(c=>c[0]===k)?.[1]||k)}</small>${unitCell(r,u,i,k)}</div>`).join('')}</div>${unitCell(r,u,i,'actions')}</section>`;}).join('')}${modelActions(r,false)}</div>`:''}</article>`;}
+function accessoryOptions(r,key){
+ if(key==='battery_present')return unique([r.battery,...batteryAlternatives(r.battery).map(x=>x.name),...batterySuggestions(r.brand,r.model).filter(x=>!x.warning).map(x=>x.battery.name)]);
+ if(key==='charger_present')return unique([r.charger,...chargerSuggestions(r).map(x=>x.name)]);
+ return [];
+}
+function accessoryStock(r,key){
+ const category=key==='battery_present'?'battery':key==='charger_present'?'charger':null;
+ const codes=accessoryOptions(r,key).map(normal);
+ return db.records.filter(p=>{if(p.kind!=='part'||!category)return false;const item=(db.catalog||[]).find(x=>x.id===p.catalog_item);
+ return item?.category===category&&(codes.includes(normal(item.name))||(p.compatible||[]).includes(r.id)||(item.compatible||[]).includes(r.id));});
+}
+function completionReport(rows){const entries=rows.flatMap(r=>live(r).filter(needsCompletion).map(u=>({r,u})));return `<h2>What is missing?</h2><p class="subtle">Confirmed missing items for collection phones. Donor phones are excluded. Unknown fields are not treated as missing.</p><div class="completion-list">${entries.map(({r,u})=>{const c=completeness(u);return `<article><div>${unitImage(r,u)}</div><div><strong>${esc(name(r))} · ${esc(u.inv)}</strong><small>${esc([u.color,enumLabel(u.edition)].filter(Boolean).join(' · '))}</small><p>Missing: ${esc(c.missing.map(k=>unitFields[k]).join(', '))}</p>${c.missing.map(k=>{const options=accessoryOptions(r,k),stock=accessoryStock(r,k);return `<div class="missing-accessory"><strong>${esc(unitFields[k])}</strong>${options.length?`<p>Suitable: ${esc(options.join(' · '))}</p>`:'<p class="subtle">No compatible model recorded.</p>'}${stock.length?stock.map(p=>`<p><button class="link" data-action="edit" data-id="${p.id}">${esc(name(p))}</button> · ${Math.max(0,p.quantity-(p.reserved||0))} available · ${esc(p.location||'No location')}</p>`).join(''):'<p class="subtle">No matching linked stock recorded.</p>'}</div>`;}).join('')}<p class="subtle">To check: ${esc(c.unknown.map(k=>unitFields[k]).join(', ')||'None')}</p></div><button data-action="edit-unit" data-id="${r.id}" data-index="${r.instances.indexOf(u)}">Edit</button></article>`;}).join('')||'<p>No confirmed missing items. Mark an accessory as No in a phone’s details to include it here.</p>'}</div>`;}
 
-function phoneCard(r){return `<article class="phone-card"><div class="card-image">${image(r)}<span class="card-qty">${esc(value(r,'qty'))} ${r.kind==='phone'?'units':'parts'}</span></div><div class="card-content"><small>${catalogLink('brand',r.brand)}</small><h2>${esc(r.model)}</h2><p>${esc(value(r,'colors')||r.part_category||'—')}</p><p class="subtle">${esc(value(r,'editions').split(', ').map(enumLabel).join(', '))}</p><dl><div><dt>Battery</dt><dd>${batteryCell(r.battery)}</dd></div><div><dt>Charger</dt><dd>${catalogLink('charger',r.charger)}</dd></div></dl><div class="actions"><button data-action="edit" data-id="${r.id}">Edit model</button>${r.kind==='phone'?`<button class="primary" data-action="card-units" data-id="${r.id}">View units</button>`:`<button data-action="move" data-id="${r.id}">Stock</button>`}</div></div></article>`;}
+function phoneCard(r){return `<article class="phone-card"><div class="card-image">${image(r)}<span class="card-qty">${esc(value(r,'qty'))} ${r.kind==='phone'?'units':'parts'}</span></div><div class="card-content"><small>${catalogLink('brand',r.brand)}</small><h2>${esc(r.model)}</h2>${isWanted(r)?'<small class="wanted-tag">Wanted</small>':''}${acquireButton(r)}<p>${esc(value(r,'colors')||r.part_category||'—')}</p><p class="subtle">${esc(value(r,'editions').split(', ').map(enumLabel).join(', '))}</p><dl><div><dt>Battery</dt><dd>${batteryCell(r.battery)}</dd></div><div><dt>Charger</dt><dd>${catalogLink('charger',r.charger)}</dd></div></dl><div class="actions"><button data-action="edit" data-id="${r.id}">Edit model</button>${r.kind==='phone'?`<button class="primary" data-action="card-units" data-id="${r.id}">View units</button>`:`<button data-action="move" data-id="${r.id}">Stock</button>`}</div></div></article>`;}
 
 function tableColumns(visible){
  const fixed={select:25,image:62,inv:48,actions:88},weights={model:1.3,alias:1.5,type:1,product_code:1.1,colors:1,editions:1.2,os:1.7,released:1.1,introduced:1.1,qty:.5,parts:.5,owned:.65,box:.8,gsm:.7,wiki:.7,note:.6};
@@ -280,6 +295,10 @@ function tableColumns(visible){
  return `<colgroup>${visible.map(k=>{const share=(weights[k]||1)/total;return `<col style="width:${fixed[k]?fixed[k]+'px':`calc(${share*100}% - ${share*pixels}px)`}">`;}).join('')}</colgroup>`;
 }
 function render(){renderFilters();
+ if($('wanted-toggle')){$('wanted-toggle').hidden=!['all','phone'].includes(currentView);$('wanted-toggle').textContent=showWanted?'Hide wanted list':'Show wanted list';$('wanted-toggle').setAttribute('aria-pressed',String(showWanted));}
+ if($('add-wanted'))$('add-wanted').hidden=currentView!=='wish';
+ if($('heading-add-phone'))$('heading-add-phone').hidden=currentView==='wish';
+ if($('page-title'))$('page-title').textContent=currentView==='wish'?'Wishlist':currentView==='incomplete'?'What is missing?':'My collection';
  const activeFilters=Object.values(quickFilters).filter(Boolean).length;if($('filter-toggle'))$('filter-toggle').textContent='Filters'+(activeFilters?' ('+activeFilters+')':'');
  if(quickEdit)return;
  selectedUnits=new Set([...selectedUnits].filter(id=>db.records.some(r=>(r.instances||[]).some(u=>u.id===id))));
@@ -289,10 +308,10 @@ function render(){renderFilters();
  for(const mandatory of ['select','image','model','qty','actions'])if(!visible.includes(mandatory))visible.push(mandatory);
  visible.splice(visible.indexOf('image'),1);visible.unshift('image');visible.splice(visible.indexOf('select'),1);visible.unshift('select');
  $('collection-table').innerHTML=`${tableColumns(visible)}<thead><tr>${visible.map(k=>`<th scope="col" draggable="${k!=='image'}" data-column-key="${k}" title="${k==='image'?'Image and expand control stay first':'Drag to reorder; click to sort'}" data-sort="${k}">${esc(columns.find(c=>c[0]===k)[1])}${sort.key===k?(sort.dir===1?' ↑':' ↓'):''}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${visible.map(k=>`<td data-column="${k}" class="${k==='model'?'model-cell':['colors','editions','state','note','location','type'].includes(k)?'wrap':''}">${cell(r,k)}</td>`).join('')}</tr>${expanded.has(r.id)?expandedRow(r,visible):''}`).join('')}</tbody>`;
- $('table-wrap').hidden=!rows.length||db.settings.layout==='cards';$('card-grid').hidden=db.settings.layout!=='cards'||!rows.length;$('card-grid').innerHTML=db.settings.layout==='cards'?rows.map(phoneCard).join(''):'';document.querySelectorAll('[data-action="layout"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.layout===(db.settings.layout||'list'))));$('empty').hidden=db.records.length>0;
+ $('table-wrap').hidden=!rows.length||db.settings.layout==='cards';$('card-grid').hidden=db.settings.layout!=='cards'||!rows.length;$('card-grid').innerHTML=db.settings.layout==='cards'?rows.map(phoneCard).join(''):'';document.querySelectorAll('[data-action="layout"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.layout===(db.settings.layout||'list'))));$('empty').hidden=rows.length>0;if(!rows.length&&$('empty').querySelector('h2')){$('empty').querySelector('h2').textContent=currentView==='wish'?'Your wishlist is empty':'No matching collection entries';$('empty').querySelector('p').textContent=currentView==='wish'?'Add a phone you would like to own. It stays separate until you acquire it.':'Add a phone, change the filters or show the wanted list.';}
  if($('mobile-list')){$('mobile-list').innerHTML=rows.map(mobileModel).join('');$('mobile-list').hidden=db.settings.layout==='cards'||!rows.length||currentView==='incomplete';}
  if($('completion-report')){$('completion-report').hidden=currentView!=='incomplete';if(currentView==='incomplete'){$('completion-report').innerHTML=completionReport(rows);$('table-wrap').hidden=true;$('card-grid').hidden=true;}}
- const phones=db.records.filter(r=>r.kind==='phone'), units=phones.flatMap(live),parts=db.records.filter(r=>r.kind==='part');
+ const phones=db.records.filter(r=>r.kind==='phone'&&!wantedOnly(r)), units=phones.flatMap(live),parts=db.records.filter(r=>r.kind==='part');
  $('summary').innerHTML=[[phones.length,'models'],[units.length,'phones'],[parts.reduce((s,r)=>s+r.quantity,0),'parts / accessories'],[units.filter(u=>u.state==='Ispravan').length,'working'],[units.filter(u=>u.state==='Netestiran').length,'untested']].map(([v,l])=>`<div><strong>${v}</strong><span>${l}</span></div>`).join('');
  $('results').textContent=`${rows.length} / ${db.records.length} rows`;$('footer-count').textContent='MyPhoneLibrary '+db.version+' · '+new Date().toLocaleTimeString('en-GB');
 }
@@ -325,12 +344,24 @@ function nextInventoryNumber(){const used=new Set([...(db?.records||[]),...(draf
 function blankUnit(){return {inv:nextInventoryNumber(),color:'',edition:'Standard',state:'Netestiran',condition:'U kolekciji',purpose:'Kolekcija',rating:0,location:'',currency:'KM',photos:[],box:null,battery_present:null,charger_present:null,manual:null,headphones:null,matching_box:null};}
 function newRecord(kind='phone'){return {kind,brand:'',model:'',image:'',instances:[],photos:[],compatible:[],quantity:0,reserved:0,custom:{},specs:{},currency:'KM',rating:0};}
 function record(id){return db.records.find(r=>r.id===id);}
-function showEditor(id,unitIndex=null){editorUnitIndex=unitIndex??0;draft=clone(record(id));mode='edit';addUnit=null;dirty=false;editorRender(unitIndex);$('editor').showModal();$('editor').scrollTop=0;}
+function showEditor(id,unitIndex=null){editorUnitIndex=unitIndex??0;draft=clone(record(id));mode=isWanted(draft)&&unitIndex===null?'wish':'edit';addUnit=null;dirty=false;editorRender(unitIndex);$('editor').showModal();$('editor').scrollTop=0;}
 function addPhone(id=null){
+ if(id&&isWanted(record(id))){acquireWanted(id);return;}
  mode='add';
  if(phoneDraft&&(!id||phoneDraft.id===id)){draft=clone(phoneDraft);dirty=true;}
  else {if(phoneDraft&&!confirm('Replace the saved phone draft?'))return;draft=id?clone(record(id)):newRecord();draft.instances.push(blankUnit());dirty=false;}
  addUnit=draft.instances.at(-1);lists();editorRender(draft.instances.length-1);$('editor').showModal();$('editor').scrollTop=0;
+}
+function addWanted(){
+ mode='wish';draft=newRecord();draft.wishlist=true;dirty=false;addUnit=null;lists();editorRender();$('editor').showModal();
+}
+function acquireWanted(id){
+ draft=clone(record(id));mode='acquire';dirty=false;addUnit=null;
+ const index=draft.instances.findIndex(u=>u.condition==='Wanted');
+ if(index>=0){draft.instances[index].condition='U kolekciji';editorUnitIndex=index;}
+ else{draft.instances.push(blankUnit());editorUnitIndex=draft.instances.length-1;}
+ draft.wishlist=draft.instances.some(u=>u.condition==='Wanted');
+ editorRender(editorUnitIndex);$('editor').showModal();$('editor').scrollTop=0;
 }
 function clearPhoneDraft(){
  if(uploadCount){toast('Wait for photos to finish uploading.');return;}
@@ -342,16 +373,17 @@ function readDraft(){
  if(!draft)return;
  $('editor-content').querySelectorAll('[data-r]').forEach(el=>{const k=el.dataset.r;draft[k]=el.type==='checkbox'?el.checked:el.value;});
  $('editor-content').querySelectorAll('[data-u]').forEach(el=>{const u=draft.instances[Number(el.dataset.index)],k=el.dataset.u;if(!u)return;let v=el.type==='checkbox'?el.checked:el.value;if(['box','battery_present','charger_present','manual','headphones','matching_box'].includes(k))v=v==='true'?true:v==='false'?false:null;u[k]=v;if(k==='for_parts'){if(v)u.purpose='Donor';else if(u.purpose==='Donor')u.purpose='Kolekcija';}});
- $('editor-content').querySelectorAll('[data-effective]').forEach(el=>{const key=el.dataset.effective,u=draft.instances[editorUnitIndex];if(!u)return;if(!draft.id){draft[key]=el.value;u[key]='';}else if(el.value!==(u[key]||draft[key]||'')){u[key]=el.value===draft[key]?'':el.value;}});
+ $('editor-content').querySelectorAll('[data-effective]').forEach(el=>{const key=el.dataset.effective,u=draft.instances[editorUnitIndex];if(!u||mode==='wish'){draft[key]=el.value;return;}if(!draft.id){draft[key]=el.value;u[key]='';}else if(el.value!==(u[key]||draft[key]||'')){u[key]=el.value===draft[key]?'':el.value;}});
  $('editor-content').querySelectorAll('[data-custom]').forEach(el=>{draft.custom[el.dataset.custom]=el.type==='checkbox'?el.checked:el.value;});
  const compatibility=$('compatibility');if(compatibility)draft.compatible=[...compatibility.querySelectorAll('input:checked')].map(el=>el.value);
  if(mode==='add')addUnit=draft.instances.at(-1);
 }
 function matchModel(){
- if(mode!=='add')return;readDraft();const b=draft.brand,m=draft.model;
+ if(!['add','wish'].includes(mode))return;readDraft();const b=draft.brand,m=draft.model;
  const match=db.records.find(r=>r.kind==='phone'&&normal(r.brand)===normal(b)&&normal(r.model)===normal(m));
  if((match?.id||null)===(draft.id||null))return;
- const unit=clone(addUnit);draft=match?clone(match):Object.assign(newRecord(),{brand:b,model:m});draft.instances.push(unit);addUnit=unit;editorRender(draft.instances.length-1);dirty=true;
+ if(mode==='wish'){if(match){draft=clone(match);draft.wishlist=true;editorRender();dirty=true;}return;}
+ const unit=clone(addUnit);draft=match?clone(match):Object.assign(newRecord(),{brand:b,model:m});draft.instances.push(unit);if(isWanted(draft)&&!draft.instances.some(u=>u.condition==='Wanted'))draft.wishlist=false;addUnit=unit;editorRender(draft.instances.length-1);dirty=true;
 }
 function unitHTML(u,i,open){return `
 ${field('Inventory number (blank = automatic)','inv',u.inv,{index:i})}${field('Color','color',u.color,{index:i,list:'options-color'})}${field('Edition','edition',u.edition,{index:i,list:'options-edition'})}
@@ -366,28 +398,29 @@ ${field('Purchase price ('+amountCurrency(u)+')','price',u.price||0,{index:i,typ
 <div class="gallery">${(u.photos||[]).map((src,j)=>`<figure><img src="${esc(src)}" alt="Unit photo" data-action="photo" data-url="${esc(src)}">${j===0?'<small class="good">Main photo</small>':`<button type="button" data-action="main-unit-photo" data-index="${i}" data-photo="${j}">Use as main</button>`}<button type="button" data-action="remove-unit-photo" data-index="${i}" data-photo="${j}">Remove</button></figure>`).join('')}</div><div class="actions" id="unit-photos-${i}"><button type="button" data-action="camera-unit" data-index="${i}">Take photo</button><button type="button" data-action="gallery-unit" data-index="${i}">From gallery</button><span class="subtle">Personal photos of this physical phone · ${(u.photos||[]).length}</span></div><input hidden id="camera-unit-${i}" type="file" accept="image/*" capture="environment" data-unit-upload="${i}"><input hidden id="gallery-unit-${i}" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple data-unit-upload="${i}">
 <div class="completeness-summary">${completenessHTML(u)}</div></div>`;}
 function editorRender(unitIndex=null){
- const part=draft.kind==='part';if(unitIndex!==null)editorUnitIndex=unitIndex;editorUnitIndex=Math.max(0,Math.min(editorUnitIndex,draft.instances.length-1));
+ const part=draft.kind==='part',wish=mode==='wish';if(unitIndex!==null)editorUnitIndex=unitIndex;editorUnitIndex=Math.max(0,Math.min(editorUnitIndex,draft.instances.length-1));
  const u=draft.instances[editorUnitIndex];
  $('editor-title').textContent=part?(draft.id?'Edit part / accessory':'Add part / accessory'):mode==='add'?'Add phone':name(draft);
- $('save-add-another').hidden=part;
- $('editor-kicker').textContent='';$('record-save').textContent=mode==='add'?'Add phone':'Save changes';$('editor-error').textContent='';
+ $('save-add-another').hidden=part||wish||mode==='acquire';
+ if(wish)$('editor-title').textContent=draft.id?'Wishlist — '+name(draft):'Add to wishlist';if(mode==='acquire')$('editor-title').textContent='Acquired — '+name(draft);
+ $('editor-kicker').textContent=wish?'Wanted phone · no physical unit added':mode==='acquire'?'Moves to collection only after saving':'';$('record-save').textContent=mode==='add'?'Add phone':wish?'Save to wishlist':mode==='acquire'?'Add to collection':'Save changes';$('editor-error').textContent='';
  const rf=(l,k,o={})=>field(l,k,draft[k],o);
- const ef=(l,k,o={})=>part?rf(l,k,o):field(l,k,u?.[k]||draft[k]||'',o).replace(`data-r="${k}"`,`data-effective="${k}"`);
- const selector=!part&&mode!=='add'&&draft.instances.length>1?`<label class="span-all">Phone<select id="editor-unit-select">${draft.instances.map((x,i)=>`<option value="${i}" ${i===editorUnitIndex?'selected':''}>${esc([x.inv,x.color,x.edition].filter(Boolean).join(' · '))}</option>`).join('')}</select></label>`:'';
+ const ef=(l,k,o={})=>part||wish||!u?rf(l,k,o):field(l,k,u?.[k]||draft[k]||'',o).replace(`data-r="${k}"`,`data-effective="${k}"`);
+ const selector=!part&&!wish&&mode!=='add'&&draft.instances.length>1?`<label class="span-all">Phone<select id="editor-unit-select">${draft.instances.map((x,i)=>`<option value="${i}" ${i===editorUnitIndex?'selected':''}>${esc([x.inv,x.color,x.edition].filter(Boolean).join(' · '))}</option>`).join('')}</select></label>`:'';
  $('editor-content').innerHTML=`${mode==='add'?'<div class="actions"><button type="button" data-action="draft-catalogs">Catalogs</button><button type="button" data-action="clear-phone-data">Clear data</button></div>':''}
  <div class="phone-form-grid grid">${selector}<div class="photo-box">${draft.image?`<img src="${esc(draft.image)}" alt="Model image" data-action="photo" data-url="${esc(draft.image)}">`:'<span class="thumb-placeholder">▯</span>'}<label>Model image — list and cards<input id="main-image-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>${rf('Model image URL','image')}${draft.image?'<button type="button" data-action="remove-image">Remove model image</button>':''}</div>
  ${rf('Brand','brand',{list:'options-brand',required:!part})}${rf(part?'Part name':'Model name','model',{list:part?'':'model-suggestions',required:true})}
  ${ef('Model number / Variant','alias')}${ef('Type code','type')}
  ${part?rf('Catalog item','catalog_item',{choices:[['','None'],...(db.catalog||[]).filter(x=>['battery','charger','part_category'].includes(x.category)).map(x=>[x.id,x.name])]}):ef('Operating system','os',{list:'options-os'})}
- ${part?rf('Part category','part_category',{list:'options-part_category'}):''}${rf('Battery / code','battery',{list:'options-battery'})}${rf('Charger / connector','charger',{list:'options-charger'})}<div id="editor-battery-suggestions" class="span-all">${part?'':batterySuggestionsHTML(draft.brand,draft.model)}</div><div id="editor-battery-alternatives" class="span-all subtle">${batteryAlternatives(draft.battery).length?'Compatible batteries: '+batteryAlternatives(draft.battery).map(x=>esc(x.name)).join(' · '):''}</div>
+ ${part?rf('Part category','part_category',{list:'options-part_category'}):''}${rf('Battery / code','battery',{list:'options-battery'})}${rf('Charger / connector','charger',{list:'options-charger'})}<div id="editor-battery-suggestions" class="span-all">${part?'':batterySuggestionsHTML(draft.brand,draft.model)}</div><div id="editor-charger-suggestions" class="span-all">${part?'':chargerSuggestionsHTML(draft)}</div><div id="editor-battery-alternatives" class="span-all subtle">${batteryAlternatives(draft.battery).length?'Compatible batteries: '+batteryAlternatives(draft.battery).map(x=>esc(x.name)).join(' · '):''}</div>
  ${rf('Released — year, month or date','released')}${rf('Introduced','introduced')}${ef('GSMArena link','gsm',{type:'url'})}${ef('Wikipedia link','wiki',{type:'url'})}
  ${!part?'<div class="span-all"><button type="button" data-action="gsm-preview">Get data from GSMArena</button></div>':''}
  ${rf('Unverified quantity','declared_qty')}
- <div class="span-all checks">${rf('Favorite','favorite',{type:'checkbox'})}${rf('Wishlist','wishlist',{type:'checkbox'})}</div>
- ${part?`${rf('Location','location',{list:'options-location'})}${draft.id?`<p class="hint">Total ${draft.quantity}; reserved ${draft.reserved}. Change quantities using Stock movements.</p>`:rf('Initial quantity','quantity',{type:'number'})}${rf('Part condition','condition',{choices:['Netestirano','Ispravno','Neispravno','Novo','Korišteno']})}${rf('Color','color',{list:'options-color'})}${rf('Purchase price per item ('+amountCurrency(draft)+')','price',{type:'number'})}${rf('Estimated value per item ('+amountCurrency(draft)+')','value',{type:'number'})}<div class="span-all">${rf('Notes','note',{type:'textarea'})}</div><div class="span-all checks" id="compatibility">${db.records.filter(r=>r.kind==='phone').map(r=>`<label class="check"><input type="checkbox" value="${r.id}" ${(draft.compatible||[]).includes(r.id)?'checked':''}>${esc(name(r))}</label>`).join('')}</div><div class="span-all"><h3>Photos of this part</h3><div class="gallery">${(draft.photos||[]).map((src,i)=>`<figure><img src="${esc(src)}" alt="Part photo"><button type="button" data-action="remove-photo" data-photo="${i}">Remove</button></figure>`).join('')}</div><input id="gallery-upload" type="file" multiple accept="image/*"></div>`:`<div class="span-all hint" id="imei-warning" hidden></div>${unitHTML(u,editorUnitIndex,true)}`}
+ <div class="span-all checks">${rf('Favorite','favorite',{type:'checkbox'})}${!wish&&mode!=='acquire'?rf('Wishlist','wishlist',{type:'checkbox'}):''}</div>
+ ${part?`${rf('Location','location',{list:'options-location'})}${draft.id?`<p class="hint">Total ${draft.quantity}; reserved ${draft.reserved}. Change quantities using Stock movements.</p>`:rf('Initial quantity','quantity',{type:'number'})}${rf('Part condition','condition',{choices:['Netestirano','Ispravno','Neispravno','Novo','Korišteno']})}${rf('Color','color',{list:'options-color'})}${rf('Purchase price per item ('+amountCurrency(draft)+')','price',{type:'number'})}${rf('Estimated value per item ('+amountCurrency(draft)+')','value',{type:'number'})}<div class="span-all">${rf('Notes','note',{type:'textarea'})}</div><div class="span-all checks" id="compatibility">${db.records.filter(r=>r.kind==='phone').map(r=>`<label class="check"><input type="checkbox" value="${r.id}" ${(draft.compatible||[]).includes(r.id)?'checked':''}>${esc(name(r))}</label>`).join('')}</div><div class="span-all"><h3>Photos of this part</h3><div class="gallery">${(draft.photos||[]).map((src,i)=>`<figure><img src="${esc(src)}" alt="Part photo"><button type="button" data-action="remove-photo" data-photo="${i}">Remove</button></figure>`).join('')}</div><input id="gallery-upload" type="file" multiple accept="image/*"></div>`:`<div class="span-all hint" id="imei-warning" hidden></div>${wish||!u?rf('Model notes','note',{type:'textarea'}):unitHTML(u,editorUnitIndex,true)}`}
  ${(db.settings.custom_fields||[]).map(f=>customHTML(f,draft.custom?.[f.id])).join('')}</div>
  ${Object.keys(draft.specs||{}).length?`<details class="section"><summary>Imported specifications</summary><div class="pre">${esc(Object.entries(draft.specs).filter(([,v])=>v).map(([k,v])=>k+': '+v).join('\n'))}</div></details>`:''}
- ${draft.id&&mode!=='add'?`<div class="actions"><button type="button" data-action="history" data-id="${draft.id}">History</button>${part?`<button type="button" data-action="move" data-id="${draft.id}">Stock movements</button>`:'<button type="button" data-action="append-unit">+ Another unit</button>'}<button type="button" class="danger" data-action="delete-record" data-id="${draft.id}">Move to trash</button></div>`:''}`;
+ ${draft.id&&mode!=='add'&&mode!=='acquire'?`<div class="actions"><button type="button" data-action="history" data-id="${draft.id}">History</button>${part?`<button type="button" data-action="move" data-id="${draft.id}">Stock movements</button>`:wish?acquireButton(draft):'<button type="button" data-action="append-unit">+ Another unit</button>'}<button type="button" class="danger" data-action="delete-record" data-id="${draft.id}">Move to trash</button></div>`:''}`;
 }
 function customHTML(f,v){let control;const attr=`data-custom="${esc(f.id)}"`;
  if(f.type==='select')control=`<select ${attr}><option value="">—</option>${(f.options||[]).map(s=>`<option ${s===v?'selected':''}>${esc(s)}</option>`).join('')}</select>`;
@@ -444,6 +477,13 @@ function batterySuggestions(brand,model){
  for(const item of [...found.values()])for(const alternative of batteryAlternatives(item.battery.name)){if(!alternative.suggestion_excluded&&!found.has(alternative.id))found.set(alternative.id,{battery:alternative,kind:'Compatible alternative to '+item.battery.name,note:item.note,warning:item.warning});}
  return [...found.values()];
 }
+function refreshModelOptions(brand=''){
+ const models=[...db.records.filter(r=>r.kind==='phone'),...(db.catalog||[]).filter(x=>x.category==='battery'&&!x.suggestion_excluded).flatMap(x=>x.supported_models||[])];
+ const choices=new Map();for(const r of models)if(!brand||normal(r.brand)===normal(brand))choices.set(normal(r.brand)+'|'+normal(r.model),r);
+ $('model-suggestions').innerHTML=[...choices.values()].map(r=>`<option value="${esc(r.model)}">${esc(r.brand)}</option>`).join('');
+}
+function chargerSuggestions(r){return (db.catalog||[]).filter(x=>x.category==='charger'&&(normal(x.name)===normal(r.charger)||(r.id&&(x.compatible||[]).includes(r.id))));}
+function chargerSuggestionsHTML(r){const items=chargerSuggestions(r);return `<strong>Charger suggestions</strong>${items.length?items.map(x=>`<button type="button" data-action="choose-charger-suggestion" data-value="${esc(x.name)}">${esc(x.name)}</button>`).join(' '):'<p class="subtle">No known charger for this model. Choose one manually or add a compatibility link in Catalogs.</p>'}`;}
 function batterySuggestionsHTML(brand,model){const matches=batterySuggestions(brand,model);return `<strong>Battery suggestions</strong>${matches.length?matches.map(x=>`<div class="setting-row"><button type="button" data-action="choose-battery-suggestion" data-value="${esc(x.battery.name)}">${esc(x.battery.name)}</button><div><small>${esc(x.kind)}</small>${x.note?`<p>${esc(x.note)}</p>`:''}${x.warning?`<p class="error">${esc(x.warning)}</p>`:''}</div></div>`).join(''):'<p class="subtle">No exact match in the battery catalog. Check the full model/variant or choose a battery manually.</p>'}`;}
 function refreshBatterySuggestions(){const host=$('editor-battery-suggestions');if(!host)return;const root=$('editor-content'),brand=root.querySelector('[data-r="brand"]')?.value||draft?.brand,model=root.querySelector('[data-r="model"]')?.value||draft?.model;host.innerHTML=batterySuggestionsHTML(brand,model);}
 function batteryEditor(e){const models=db.records.filter(r=>r.kind==='phone'&&(r.catalog_refs?.battery===e.id||normal(r.battery)===normal(e.name)||batteryAlternatives(r.battery).some(x=>x.id===e.id)));return `<div class="actions"><button data-action="catalog-list" data-category="battery">← Batteries</button></div><div class="settings-fields"><label>Name<input id="catalog-name" value="${esc(e.name)}"></label>${[...batteryFields,...Object.keys(e.specs||{}).filter(k=>!batteryFields.some(([f])=>f===k)).map(k=>[k,''])].map(([key,hint])=>`<label>${key}<input data-battery-spec="${key}" value="${esc(e.specs[key]||'')}" placeholder="e.g. ${hint}"></label>`).join('')}</div><label>Source link<input id="catalog-source" type="url" value="${esc(e.source||'')}"></label><label>Notes and warnings<textarea id="catalog-description" rows="8">${esc(e.description||'')}</textarea></label><details class="section"><summary>Phones listed by the source (${(e.supported_models||[]).length})</summary><p class="subtle">Exact model variants are kept separate. Entries marked for verification are suggestions only.</p><div class="settings-list">${(e.supported_models||[]).map(m=>`<div class="setting-row"><div><strong>${esc(m.brand+' '+m.model)}</strong><p>${esc(m.note||'')}</p>${m.warning?`<p class="error">${esc(m.warning)}</p>`:''}</div></div>`).join('')||'<p>No source phone list.</p>'}</div></details><h3 class="section">Compatible with</h3><p class="subtle">Select compatible battery models. These alternatives appear on linked phones. Only direct links are used.</p><div class="battery-choices">${(db.catalog||[]).filter(x=>x.category==='battery'&&x.id!==e.id).map(x=>`<label class="check"><input type="checkbox" data-battery-compatible="${x.id}" ${(e.compatible_batteries||[]).includes(x.id)?'checked':''}>${esc(x.name)}</label>`).join('')||'<p>Add other batteries to the catalog first.</p>'}</div><h3 class="section">Compatible models</h3><p class="subtle">Models in your library using this battery or a directly linked compatible alternative.</p><div class="settings-list">${models.map(r=>`<div class="setting-row"><button class="link" data-action="edit" data-id="${r.id}">${esc(name(r))}</button><span>${live(r).length} phones</span></div>`).join('')||'<p>No models currently use this battery.</p>'}</div><div class="actions settings-save"><button class="primary" data-action="catalog-save">Save item</button>${e.id?'<button class="danger" data-action="catalog-delete">Delete item</button>':''}</div>`;}
@@ -525,7 +565,7 @@ document.addEventListener('click',async event=>{
  case 'quick-start':startQuick(target);break;
  case 'quick-save':await saveQuick();break;
  case 'quick-cancel':quickEdit=null;render();break;
- case 'select-visible':for(const r of filtered())for(const u of r.instances||[])selectedUnits.add(u.id);render();break;
+ case 'select-visible':for(const r of filtered())for(const u of shownUnits(r))selectedUnits.add(u.id);render();break;
  case 'select-clear':selectedUnits.clear();render();break;
  case 'bulk-edit':openBulk();break;
  case 'bulk-save':await saveBulk();break;
@@ -539,7 +579,7 @@ document.addEventListener('click',async event=>{
  case 'return-phone':returnToPhone();break;
  case 'toggle-sidebar':sidebarState(document.documentElement.dataset.sidebar!=='collapsed');break;
  case 'combo-toggle':{const c=target.closest('.catalog-combo');if(c.querySelector('.combo-menu').hidden)openCombo(c,true);else closeCombos();break;}
- case 'choose-battery-suggestion':{const bound=$('editor-content').querySelector('[data-r="battery"]');if(!bound)break;bound.value=target.dataset.value;const combo=bound.closest('.catalog-combo');if(combo)combo.querySelector('[data-combo-query]').value=bound.value;dirty=true;bound.dispatchEvent(new Event('change',{bubbles:true}));break;}
+ case 'choose-charger-suggestion':case 'choose-battery-suggestion':{const bound=$('editor-content').querySelector(action==='choose-charger-suggestion'?'[data-r="charger"]':'[data-r="battery"]');if(!bound)break;bound.value=target.dataset.value;const combo=bound.closest('.catalog-combo');if(combo)combo.querySelector('[data-combo-query]').value=bound.value;dirty=true;bound.dispatchEvent(new Event('change',{bubbles:true}));break;}
  case 'combo-select':{const c=target.closest('.catalog-combo'),q=c.querySelector('[data-combo-query]'),bound=c.querySelector('input[type="hidden"]');q.value=target.dataset.value;syncCombo(c);closeCombos();if($('editor').open)dirty=true;else if(panelRoute)panelDirty=true;bound.dispatchEvent(new Event('change',{bubbles:true}));break;}
  case 'catalog-toggle':openCatalogCategory=openCatalogCategory===target.dataset.category?null:target.dataset.category;document.querySelectorAll('[data-catalog-section]').forEach(el=>el.hidden=el.dataset.catalogSection!==openCatalogCategory);document.querySelectorAll('[data-action="catalog-toggle"]').forEach(el=>el.setAttribute('aria-expanded',String(el.dataset.category===openCatalogCategory)));break;
  case 'field-catalog':{if(uploadCount)throw Error('Wait for photos to finish uploading.');readDraft();catalogReturn={draft:clone(draft),mode,dirty,index:editorUnitIndex};if(mode==='add')phoneDraft=dirty?clone(draft):null;$('editor').close();catalogList(target.dataset.category);break;}
@@ -549,7 +589,10 @@ document.addEventListener('click',async event=>{
  case 'clear-filters':quickFilters={brand:'',color:'',os:'',location:'',state:''};render();break;
  case 'refresh':await refresh();toast('Table refreshed.');break;
  case 'logout':if((dirty||phoneDraft||panelDirty)&&!confirm('Sign out and discard unsaved changes?'))break;await api('/api/logout',{});$('editor').close();$('panel').close();draft=null;phoneDraft=null;db=null;dirty=false;await boot();break;
- case 'add-phone':addPhone();break;case 'add-part':addPart();break;case 'add-existing':addPhone(id);break;
+ case 'toggle-wanted':showWanted=!showWanted;render();break;
+ case 'add-wanted':addWanted();break;
+ case 'acquire-wanted':if($('editor').open&&!closeEditor())break;$('panel').close();acquireWanted(id);break;
+ case 'add-phone':if(currentView==='wish')addWanted();else addPhone();break;case 'add-part':addPart();break;case 'add-existing':addPhone(id);break;
  case 'edit':showEditor(id);break;case 'edit-unit':showEditor(id,Number(target.dataset.index));break;
  case 'expand':expanded.has(id)?expanded.delete(id):expanded.add(id);render();break;
  case 'close-editor':closeEditor();break;case 'close-panel':closePanel();break;
@@ -579,7 +622,7 @@ document.addEventListener('click',async event=>{
  if(action==='server-restart')await reconnectAfterRestart(before.instance||null);
  else toast('Server stopped. Open My Phone Library to start it again.');break;
  }
- case 'nav-view':currentView=target.dataset.view;$('search').value='';render();break;
+ case 'nav-view':currentView=target.dataset.view;$('search').value='';quickFilters={};render();break;
  case 'settings-tab':settingsTab=target.dataset.tab;document.querySelectorAll('[data-settings-section]').forEach(el=>el.hidden=el.dataset.settingsSection!==settingsTab);document.querySelectorAll('[data-action="settings-tab"]').forEach(el=>el.classList.toggle('active',el.dataset.tab===settingsTab));break;
  case 'catalogs':settingsTab='options';await settingsPanel();break;
  case 'catalog-list':catalogList(target.dataset.category);break;
@@ -648,9 +691,9 @@ document.addEventListener('change',async e=>{const el=e.target;try{
  if(el.matches?.('[data-combo-query]')){const c=el.closest('.catalog-combo');if(syncCombo(c))c.querySelector('input[type="hidden"]').dispatchEvent(new Event('change',{bubbles:true}));}
  if(el.dataset.quickFilter){quickFilters[el.dataset.quickFilter]=el.value;render();return;}
  if(el.id==='editor-unit-select'){readDraft();editorRender(Number(el.value));return;}
- if(el.dataset.selectRecord){const r=record(el.dataset.selectRecord);for(const u of r.instances||[])if(!el.dataset.selectUnit||u.id===el.dataset.selectUnit){if(el.checked)selectedUnits.add(u.id);else selectedUnits.delete(u.id);}render();return;}
+ if(el.dataset.selectRecord){const r=record(el.dataset.selectRecord);for(const u of shownUnits(r))if(!el.dataset.selectUnit||u.id===el.dataset.selectUnit){if(el.checked)selectedUnits.add(u.id);else selectedUnits.delete(u.id);}render();return;}
  if(['imei','imei2'].includes(el.dataset.u))imeiWarnings();
- if(el.matches('[data-r="brand"],[data-r="model"]')){matchModel();refreshBatterySuggestions();}
+ if(el.matches('[data-r="brand"],[data-r="model"]')){matchModel();refreshBatterySuggestions();refreshModelOptions(draft?.brand);if($('editor-charger-suggestions'))$('editor-charger-suggestions').innerHTML=chargerSuggestionsHTML(draft);}
  if(el.id==='view'){const v=el.value;if(v.startsWith('saved-'))$('search').value=db.settings.views[Number(v.slice(6))]?.query||'';render();}
  if(el.dataset.column){const k=el.dataset.column;if(el.checked&&!db.settings.columns.includes(k))db.settings.columns.push(k);if(!el.checked)db.settings.columns=db.settings.columns.filter(x=>x!==k);await api('/api/settings',db.settings);render();}
  if(el.id==='main-image-upload'&&el.files.length)await uploadFiles(el.files,'main');
@@ -663,7 +706,7 @@ document.addEventListener('change',async e=>{const el=e.target;try{
  }catch(error){toast(error.message);if($('editor').open)$('editor-error').textContent=error.message;}
 });
 function prepareNextPhone(saved,previous){phoneDraft=null;draft=clone(saved);mode='add';const u=blankUnit();for(const k of ['color','edition','alias','type','os','gsm','wiki','memory'])if(previous[k])u[k]=previous[k];draft.instances.push(u);addUnit=u;dirty=false;editorRender(draft.instances.length-1);$('editor').scrollTop=0;}
-$('record-form').addEventListener('submit',async e=>{e.preventDefault();if(uploadCount){toast('Photos are still uploading.');return;}if(!validateCombos($('editor-content')))return;readDraft();const duplicates=imeiWarnings()||[];if(duplicates.length&&!confirm('Duplicate IMEI detected. Review the warning above. Save anyway?'))return;const another=e.submitter?.id==='save-add-another',previous=clone(draft.instances[editorUnitIndex]||{});$('record-save').disabled=true;$('save-add-another').disabled=true;try{const r=await api('/api/record',{record:draft,rev:draft.rev});await refresh();if(mode==='add')phoneDraft=null;dirty=false;expanded.add(r.id);render();if(another){prepareNextPhone(r,previous);toast('Phone saved. Ready for the next unit.');}else{$('editor').close();draft=null;toast('Phone / record saved.');}}catch(error){$('editor-error').textContent=error.message;}finally{$('record-save').disabled=false;$('save-add-another').disabled=false;}});
+$('record-form').addEventListener('submit',async e=>{e.preventDefault();if(uploadCount){toast('Photos are still uploading.');return;}if(!validateCombos($('editor-content')))return;readDraft();if(mode==='acquire'&&!ACTIVE.includes(draft.instances[editorUnitIndex]?.condition)){$('editor-error').textContent='Choose In collection or On loan for the acquired phone.';return;}const duplicates=imeiWarnings()||[];if(duplicates.length&&!confirm('Duplicate IMEI detected. Review the warning above. Save anyway?'))return;const another=e.submitter?.id==='save-add-another',previous=clone(draft.instances[editorUnitIndex]||{});$('record-save').disabled=true;$('save-add-another').disabled=true;try{const r=await api('/api/record',{record:draft,rev:draft.rev});await refresh();if(mode==='add')phoneDraft=null;dirty=false;expanded.add(r.id);render();if(another){prepareNextPhone(r,previous);toast('Phone saved. Ready for the next unit.');}else{$('editor').close();draft=null;toast('Phone / record saved.');}}catch(error){$('editor-error').textContent=error.message;}finally{$('record-save').disabled=false;$('save-add-another').disabled=false;}});
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();$('login-error').textContent='';$('login-submit').disabled=true;try{await api($('login-form').dataset.setup==='true'?'/api/setup':'/api/login',{password:$('password').value,remember:$('remember-me').checked});$('password').value='';window.MyPhoneLibraryAndroid?.sessionChanged?.();await boot();}catch(error){$('login-error').textContent=error.message;}finally{$('login-submit').disabled=false;}});
 $('editor-content').addEventListener('input',e=>{dirty=true;if(e.target?.dataset?.r==='model')refreshBatterySuggestions();});
 $('editor-content').addEventListener('change',()=>dirty=true);
