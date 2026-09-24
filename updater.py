@@ -12,6 +12,79 @@ import urllib.request
 import urllib.error
 import zipfile
 
+def data_locations():
+    legacy=Path(os.environ.get('LOCALAPPDATA',str(Path.home()/'.local/share')))/'MyPhoneLibrary'
+    target=Path(os.environ.get('PROGRAMDATA',os.environ.get('ProgramData','C:/ProgramData')))/'MyPhoneLibrary' if os.name=='nt' else legacy
+    return legacy.resolve(),target.resolve()
+
+def resolve_data_directory(requested=None):
+    legacy,target=data_locations()
+    chosen=Path(requested).expanduser().resolve() if requested else target
+    if chosen not in (legacy,target):return chosen
+    if target==legacy:return target
+    migrate_data(legacy,target)
+    return target
+
+def migrate_data(source,target):
+    """Copy a stopped legacy store; keep the source intact as a recovery copy."""
+    import sqlite3
+    import contextlib
+    source,target=Path(source),Path(target)
+    if (target/'library.sqlite3').exists():return
+    if not (source/'library.sqlite3').exists():
+        target.mkdir(parents=True,exist_ok=True);return
+    running=source/'server-running.json'
+    if running.exists():
+        try:
+            info=json.loads(running.read_text())
+            with urllib.request.urlopen('http://127.0.0.1:'+str(int(info['port']))+'/api/status',timeout=2) as response:status=json.load(response)
+        except (OSError,ValueError,KeyError):status={}
+        if status.get('product')=='MyPhoneLibrary':raise ValueError('Stop the existing MyPhoneLibrary server before moving its data to ProgramData.')
+    target.parent.mkdir(parents=True,exist_ok=True)
+    lock=target.parent/(target.name+'.migration-lock')
+    try:fd=os.open(lock,os.O_CREAT|os.O_EXCL|os.O_WRONLY)
+    except FileExistsError:raise ValueError('Data migration is already running. Wait for it to finish before starting another instance.')
+    os.close(fd)
+    try:
+        if (target/'library.sqlite3').exists():return
+        if target.exists() and any(target.iterdir()):raise ValueError('The new data folder is not empty. Existing files were not overwritten: '+str(target))
+        with tempfile.TemporaryDirectory(prefix='MyPhoneLibrary-migration-',dir=target.parent) as tmp:
+            stage=Path(tmp)/'verified';stage.mkdir()
+            with contextlib.closing(sqlite3.connect(source/'library.sqlite3')) as src,contextlib.closing(sqlite3.connect(stage/'library.sqlite3')) as dst:
+                src.backup(dst)
+                if dst.execute('PRAGMA integrity_check').fetchone()[0]!='ok':raise ValueError('The legacy database failed its integrity check. Original data was preserved.')
+                row=dst.execute("SELECT value FROM meta WHERE key='settings'").fetchone()
+                if row:
+                    settings=json.loads(row[0])
+                    for key in ('backup_primary','backup_directory'):
+                        if settings.get(key) and Path(settings[key]).resolve()==(source/'backups').resolve():settings[key]=str(target/'backups')
+                    dst.execute("UPDATE meta SET value=? WHERE key='settings'",(json.dumps(settings),));dst.commit()
+            for folder in ('media','backups'):
+                origin=source/folder
+                if not origin.exists():continue
+                for item in origin.rglob('*'):
+                    if item.is_symlink():raise ValueError('Data migration cannot copy symbolic links: '+str(item))
+                    dest=stage/item.relative_to(source)
+                    if item.is_dir():dest.mkdir(parents=True,exist_ok=True)
+                    elif item.is_file():
+                        dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(item,dest)
+                        with item.open('rb') as a,dest.open('rb') as b:
+                            if hashlib.file_digest(a,'sha256').digest()!=hashlib.file_digest(b,'sha256').digest():raise ValueError('File verification failed: '+str(item))
+            (stage/'migration.json').write_text(json.dumps({'source':str(source),'verified':True}),encoding='utf-8')
+            if target.exists():target.rmdir()
+            stage.replace(target)
+    finally:lock.unlink(missing_ok=True)
+
+def read_update_status(directory):
+    directory=Path(directory)
+    current=directory/'updates/status.json'
+    if current.exists():return read_status(current)
+    # The updater that launched the migration still reports to the old data folder.
+    try:
+        migration=json.loads((directory/'migration.json').read_text(encoding='utf-8'))
+        return read_status(Path(migration['source'])/'updates/status.json')
+    except (OSError,ValueError,KeyError):return read_status(current)
+
 def version(v):
     if not re.fullmatch(r'\d+\.\d+\.\d+',str(v)):raise ValueError('Invalid package version.')
     return tuple(map(int,v.split('.')))
@@ -282,9 +355,11 @@ if __name__=='__main__':
     root=Path(__file__).resolve().parent
     import argparse
     parser=argparse.ArgumentParser()
-    parser.add_argument('--data',default=str(Path(os.environ.get('LOCALAPPDATA',str(Path.home()/'.local/share')))/'MyPhoneLibrary'))
+    parser.add_argument('--data',default=None)
     args,_=parser.parse_known_args()
-    directory=Path(args.data).resolve()
+    legacy,target=data_locations()
+    directory=Path(args.data).resolve() if args.data else (target if (target/'library.sqlite3').exists() else legacy)
+    if directory==legacy and (target/'library.sqlite3').exists():directory=target
     directory.mkdir(parents=True,exist_ok=True)
     if sys.stdout is None or sys.stderr is None:
         stream=open(directory/'updater.log','a',encoding='utf-8',buffering=1)

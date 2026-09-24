@@ -5,7 +5,7 @@ Unicode true
 !include "MUI2.nsh"
 !include "x64.nsh"
 !ifndef VERSION
-!define VERSION "1.7.1"
+!define VERSION "1.8.0"
 !endif
 Name "My Phone Library"
 OutFile "${SOURCE_ROOT}\dist\MyPhoneLibrary_Setup_${VERSION}.exe"
@@ -29,7 +29,7 @@ Function .onInit
   MessageBox MB_OK|MB_ICONSTOP "My Phone Library requires 64-bit Windows."
   Abort
  ${EndIf}
- nsExec::ExecToStack "powershell.exe -NoProfile -NonInteractive -Command $\"try { $$f=Join-Path $$env:LOCALAPPDATA 'MyPhoneLibrary\server-running.json'; if(Test-Path $$f) { $$r=Get-Content -Raw $$f|ConvertFrom-Json; $$p=Get-CimInstance Win32_Process -Filter ('ProcessId=' + [int]$$r.pid); if($$p -and $$p.CommandLine -match 'MyPhoneLibrary') { exit 1 } }; exit 0 } catch { exit 2 }$\""
+ nsExec::ExecToStack "powershell.exe -NoProfile -NonInteractive -Command $\"try { foreach($$base in @($$env:ProgramData,$$env:LOCALAPPDATA)) { $$f=Join-Path $$base 'MyPhoneLibrary\server-running.json'; if(Test-Path $$f) { $$r=Get-Content -Raw $$f|ConvertFrom-Json; $$p=Get-CimInstance Win32_Process -Filter ('ProcessId=' + [int]$$r.pid); if($$p -and $$p.CommandLine -match 'MyPhoneLibrary') { exit 1 } } }; exit 0 } catch { exit 2 }$\""
  Pop $0
  Pop $1
  StrCmp $0 "0" ready

@@ -26,3 +26,9 @@ launchers, EXE installer and update ZIP, runs tests and publishes a versioned re
 Before committing a release, bump VERSION in server.py. Existing published assets are not overwritten.
 
 Run `python -m unittest discover -s tests -v` locally.
+
+## Version 1.8.0
+
+Windows collection data is stored in `C:\ProgramData\MyPhoneLibrary`. On the first start, the previous `%LOCALAPPDATA%\MyPhoneLibrary` database, photos and backups are copied and verified. The original folder remains available as a recovery copy. Explicit custom `--data` folders are preserved.
+
+Remember me retains this browser login for 30 days across restarts and updates. Sign out or change the password to revoke it. Backup files exclude remembered login tokens.

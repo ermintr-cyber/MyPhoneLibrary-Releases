@@ -32,7 +32,7 @@ assert.match(vm.runInContext('unitHTML({product_code:"0590012",photos:[]},0,true
 console.log('UI: retained draft fields/photos, refreshed catalogs, Clear data, catalog back navigation, unsaved guard and sidebar navigation passed.');
 
 const unitForm=vm.runInContext('unitHTML(blankUnit(),0,true)',context);
-assert.ok(!unitForm.includes('data-u="type"'));assert.ok(!unitForm.includes('Originality'));
+assert.ok(unitForm.includes('data-u="type"'));assert.ok(!unitForm.includes('Originality'));
 assert.match(unitForm,/Wanted/);assert.match(unitForm,/Purchase price \(KM\)/);assert.ok(!unitForm.includes('data-u="currency"'));assert.ok(!unitForm.includes('value="CHF"'));
 assert.equal(vm.runInContext('opts.condition.length',context),2);
 const imageCell=vm.runInContext("cell(db.records[0],'image')",context);
@@ -58,6 +58,15 @@ handlers['document:click']({target:{closest(){return {dataset:{action:'field-cat
 assert.equal(node('editor').open,false);assert.equal(vm.runInContext('catalogReturn.draft.model',context),'Catalog draft');
 vm.runInContext('returnToPhone()',context);assert.equal(editor.open,true);assert.equal(vm.runInContext('draft.model',context),'Catalog draft');
 assert.match(node('editor-content').innerHTML,/data-action="field-catalog" data-category="os"/);
+vm.runInContext(`db.catalog.push({id:'silver',category:'color',name:'silver'});db.records[0].alias='N73-1';db.records[0].type='RM-133';db.records[0].os='Symbian';db.records[0].wiki='https://en.wikipedia.org/wiki/N73';db.records[0].instances.push({...db.records[0].instances[0],id:'u2',inv:'2',color:'Black',alias:'N73-ME',os:'Symbian ME',edition:'Music Edition',wiki:'https://en.wikipedia.org/wiki/Music_Edition'});`,context);
+const aligned=vm.runInContext("expandedRow(db.records[0],['image','alias','colors','editions','os','wiki','actions'])",context);
+assert.equal((aligned.match(/class="unit-table-row"/g)||[]).length,2);
+assert.match(aligned,/N73-1/);assert.match(aligned,/N73-ME/);assert.match(aligned,/>Silver</);assert.match(aligned,/Music Edition/);assert.match(aligned,/Symbian ME/);assert.match(aligned,/wiki\/Music_Edition/);
+assert.equal(vm.runInContext("value(db.records[0],'alias')",context),'N73-1, N73-ME');
+assert.equal(vm.runInContext("value(db.records[0],'os')",context),'Symbian, Symbian ME');
+assert.match(vm.runInContext('backupContents()',context),/restore-file/);
+assert.match(vm.runInContext('backupContents()',context),/create-backup/);
+console.log('UI: aligned unit columns, individual overrides, inherited values, color casing and inline backup controls passed.');
 (async()=>{
  const saved=new Map([['mpl-update-target','1.4.1']]);let reloads=0,calls=0;
  context.sessionStorage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
@@ -86,7 +95,7 @@ assert.match(node('editor-content').innerHTML,/data-action="field-catalog" data-
  await vm.runInContext('checkConnection()',context);assert.equal(reloads,0);assert.match(node('connection-message').textContent,/unsaved draft/);
  context.fetch=async()=>{throw Error('offline')};await vm.runInContext('checkConnection()',context);
  assert.match(node('connection').textContent,/Offline/);
- context.fetch=async()=>({ok:true,json:async()=>({version:'1.7.1',instance:'new'})});
+ context.fetch=async()=>({ok:true,json:async()=>({version:'1.8.0',instance:'new'})});
  await vm.runInContext('checkConnection()',context);assert.equal(node('connection-banner').hidden,true);
  console.log('UI: stale pages reload, unsaved drafts block reload, and connection loss/recovery is visible.');
 

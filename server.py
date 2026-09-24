@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.7.1'
+VERSION = '1.8.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -116,7 +116,8 @@ class Store:
             CREATE TABLE IF NOT EXISTS history(id INTEGER PRIMARY KEY, at TEXT, record_id TEXT, action TEXT, data TEXT);
             CREATE TABLE IF NOT EXISTS repairs(id TEXT PRIMARY KEY, data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS movements(id TEXT PRIMARY KEY, data TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS inventories(id TEXT PRIMARY KEY, data TEXT NOT NULL);''')
+            CREATE TABLE IF NOT EXISTS inventories(id TEXT PRIMARY KEY, data TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS remembered_sessions(token_hash TEXT PRIMARY KEY,expires REAL NOT NULL);''')
             if not c.execute('SELECT 1 FROM meta WHERE key=?',('settings',)).fetchone(): self.setmeta(c,'settings',DEFAULTS)
             settings=self.meta('settings',DEFAULTS,c)
             if not settings.get('update_repo') and DEFAULTS.get('update_repo'):
@@ -145,6 +146,19 @@ class Store:
                 c.rollback()
                 raise
             finally:c.close()
+    def remember(self,token,expires):
+        with self.connect() as c:
+            c.execute('DELETE FROM remembered_sessions WHERE expires<=?',(time.time(),))
+            c.execute('INSERT OR REPLACE INTO remembered_sessions VALUES(?,?)',(hashlib.sha256(token.encode()).hexdigest(),expires))
+    def remembered(self,token):
+        if not token or len(token)>128:return None
+        with self.connect() as c:
+            row=c.execute('SELECT expires FROM remembered_sessions WHERE token_hash=? AND expires>?',(hashlib.sha256(token.encode()).hexdigest(),time.time())).fetchone()
+            return row[0] if row else None
+    def forget(self,token=None):
+        with self.connect() as c:
+            if token:c.execute('DELETE FROM remembered_sessions WHERE token_hash=?',(hashlib.sha256(token.encode()).hexdigest(),))
+            else:c.execute('DELETE FROM remembered_sessions')
     def meta(self,key,default=None,c=None):
         if c is None:
             with self.connect() as db: return self.meta(key,default,db)
@@ -201,7 +215,8 @@ class Store:
             other_ids={u.get('id') for other in self.records(c)+self.records(c,True) if other['id']!=rid for u in other.get('instances',[])}
             own_ids=set()
             for item in incoming:
-                u={k:str(item.get(k,'') or '')[:4000] for k in ['inv','color','edition','type','product_code','memory','firmware','state','condition','purpose','location','imei','imei2','serial','note','source','purchase_date','currency','lock','originality']}
+                u={k:str(item.get(k,'') or '')[:4000] for k in ['inv','color','edition','alias','type','os','gsm','wiki','product_code','memory','firmware','state','condition','purpose','location','imei','imei2','serial','note','source','purchase_date','currency','lock','originality']}
+                for link in ('gsm','wiki'):u[link]=url(u[link].strip())
                 if not u['currency']:u['currency']='KM'
                 u['id']=item.get('id') or ident()
                 if not re.fullmatch(r'[a-f0-9]{32}',u['id']) or u['id'] in own_ids or u['id'] in other_ids: raise ValueError('Duplicate or invalid unit ID.')
@@ -426,7 +441,7 @@ class Store:
     def all_data(self):
         with self.lock,self.connect() as c:
             catalog=self.catalog(c)
-            return {'catalog':catalog,'backup_default':str(self.backups),'product':PRODUCT,'version':VERSION,'schema':1,'at':stamp(),'records':self.records(c),'trash':self.records(c,True),'settings':self.meta('settings',DEFAULTS,c), **{t:[json.loads(x[0]) for x in c.execute('SELECT data FROM '+t+' ORDER BY rowid DESC')] for t in ('repairs','movements','inventories')}}
+            return {'catalog':catalog,'data_directory':str(self.directory),'backup_default':str(self.backups),'product':PRODUCT,'version':VERSION,'schema':1,'at':stamp(),'records':self.records(c),'trash':self.records(c,True),'settings':self.meta('settings',DEFAULTS,c), **{t:[json.loads(x[0]) for x in c.execute('SELECT data FROM '+t+' ORDER BY rowid DESC')] for t in ('repairs','movements','inventories')}}
     def backup(self):
         with self.lock:
             name='MyPhoneLibrary-'+dt.datetime.now().strftime('%Y%m%d-%H%M%S')+'-'+secrets.token_hex(2)+'.zip'
@@ -434,6 +449,7 @@ class Store:
             try:
                 with self.connect() as src,contextlib.closing(sqlite3.connect(tmp)) as dst: src.backup(dst)
                 with contextlib.closing(sqlite3.connect(tmp)) as check:
+                    check.execute('DELETE FROM remembered_sessions');check.commit()
                     if check.execute('PRAGMA integrity_check').fetchone()[0]!='ok': raise ValueError('Database verification failed.')
                 hashes={}
                 with zipfile.ZipFile(target.with_suffix('.tmp'),'w',zipfile.ZIP_DEFLATED) as z:
@@ -492,6 +508,9 @@ class Store:
                 for table in ('meta','records','history','repairs','movements','inventories'): c.execute('SELECT * FROM '+table+' LIMIT 1')
                 schema=c.execute('SELECT value FROM meta WHERE key=?',('schema',)).fetchone()
                 if not schema or json.loads(schema[0])!=1: raise ValueError('Unsupported database version.')
+            with contextlib.closing(sqlite3.connect(tmp)) as c:
+                c.execute('CREATE TABLE IF NOT EXISTS remembered_sessions(token_hash TEXT PRIMARY KEY,expires REAL NOT NULL)')
+                c.execute('DELETE FROM remembered_sessions');c.commit()
             previous=self.backup()
             media=staging/'media'
             if media.exists():
@@ -750,6 +769,11 @@ class Handler(BaseHTTPRequestHandler):
         with self.server.state_lock:
             s=self.server.sessions.get(token)
             if s and s['expires']>time.time():return token,s
+        expiry=self.server.store.remembered(token)
+        if expiry:
+            with self.server.state_lock:
+                s=self.server.sessions.setdefault(token,{'csrf':secrets.token_urlsafe(24),'expires':expiry})
+            return token,s
         return '',None
     def read_body(self):
         n=int(self.headers.get('Content-Length','0'))
@@ -803,8 +827,8 @@ class Handler(BaseHTTPRequestHandler):
                 d={} if binary else json.loads(raw or b'{}')
                 if not isinstance(d,dict):raise ValueError('Expected an object.')
             if path=='/api/status' and not post:
-                from updater import read_status
-                return self.send(200,{'update_job':read_status(store.directory/'updates/status.json'),'version':VERSION,'instance':self.server.instance_id,'product':PRODUCT,'setup':not bool(store.meta('auth')),'authenticated':bool(session),'csrf':session['csrf'] if session else None})
+                from updater import read_update_status
+                return self.send(200,{'update_job':read_update_status(store.directory),'version':VERSION,'instance':self.server.instance_id,'product':PRODUCT,'setup':not bool(store.meta('auth')),'authenticated':bool(session),'csrf':session['csrf'] if session else None})
             if path in ('/api/setup','/api/login') and post:
                 ip=self.client_address[0]
                 with self.server.state_lock:
@@ -822,9 +846,11 @@ class Handler(BaseHTTPRequestHandler):
                         if len(password)<8:raise ValueError('Password must have at least 8 characters.')
                         auth=password_hash(password);store.setmeta(c,'auth',auth)
                     elif not auth or not hmac.compare_digest(password_hash(password,auth['salt'])['hash'],auth['hash']):return self.send(401,{'error':'Incorrect password.'})
-                token=secrets.token_urlsafe(32);s={'csrf':secrets.token_urlsafe(24),'expires':time.time()+12*3600}
+                remember=d.get('remember') is True
+                token=secrets.token_urlsafe(32);s={'csrf':secrets.token_urlsafe(24),'expires':time.time()+(30*86400 if remember else 12*3600)}
+                if remember:store.remember(token,s['expires'])
                 with self.server.state_lock:self.server.sessions[token]=s;self.server.attempts.pop(ip,None)
-                return self.send(200,{'ok':True,'csrf':s['csrf']},extra={'Set-Cookie':'mpl_session='+token+'; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200'})
+                return self.send(200,{'ok':True,'csrf':s['csrf']},extra={'Set-Cookie':'mpl_session='+token+'; Path=/; HttpOnly; SameSite=Strict'+('; Max-Age=2592000' if remember else '')})
             if path.startswith('/api/') or path.startswith('/media/'):
                 if not session:return self.send(401,{'error':'Sign in to access the collection.'})
                 if post and not hmac.compare_digest(self.headers.get('X-MPL-CSRF',''),session['csrf']):return self.send(403,{'error':'Session expired. Refresh the app.'})
@@ -835,8 +861,8 @@ class Handler(BaseHTTPRequestHandler):
                 result=start_install(BASE,store.directory,artifact,self.server.server_port,self.server.server_address[0],os.getpid(),self.server.instance_id,token,session['csrf'])
                 return self.send(202,result)
             if path=='/api/update-quiesce' and post:
-                from updater import read_status
-                state=read_status(store.directory/'updates/status.json')
+                from updater import read_update_status
+                state=read_update_status(store.directory)
                 if not ipaddress.ip_address(self.client_address[0]).is_loopback or state.get('status')!='installing':return self.send(403,{'error':'No local update worker is installing.'})
                 cancel_folder_picker()
                 with store.lock:store.backup();self.server.installing=True
@@ -852,6 +878,7 @@ class Handler(BaseHTTPRequestHandler):
                 threading.Thread(target=self.server.shutdown,daemon=True).start()
                 return
             if path=='/api/logout' and post:
+                store.forget(token)
                 with self.server.state_lock:self.server.sessions.pop(token,None)
                 return self.send(200,{'ok':True},extra={'Set-Cookie':'mpl_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'})
             if path=='/api/data' and not post:return self.send(200,store.all_data())
@@ -889,8 +916,8 @@ class Handler(BaseHTTPRequestHandler):
                 pending=store.directory/'pending-update/app-manifest.json'
                 target=json.loads(pending.read_text(encoding='utf-8'))['version'] if pending.exists() else None
                 error=store.directory/'update-error.txt'
-                from updater import read_status
-                return self.send(200,{'job':read_status(store.directory/'updates/status.json'),'installed':VERSION,'pending':target,'error':error.read_text(encoding='utf-8') if error.exists() else ''})
+                from updater import read_update_status
+                return self.send(200,{'job':read_update_status(store.directory),'installed':VERSION,'pending':target,'error':error.read_text(encoding='utf-8') if error.exists() else ''})
             if path=='/api/update-check' and post:
                 from updater import latest_installer
                 info=latest_installer(store.meta('settings',DEFAULTS).get('update_repo'),VERSION)
@@ -927,6 +954,7 @@ class Handler(BaseHTTPRequestHandler):
                 auth=store.meta('auth');old=str(d.get('old',''));new=str(d.get('password',''))
                 if not hmac.compare_digest(password_hash(old,auth['salt'])['hash'],auth['hash']):raise ValueError('Current password is incorrect.')
                 if not 8<=len(new)<=512:raise ValueError('New password must have 8–512 characters.')
+                store.forget()
                 with store.lock,store.connect() as c:store.setmeta(c,'auth',password_hash(new))
                 with self.server.state_lock:self.server.sessions.clear()
                 return self.send(200,{'ok':True})
@@ -1006,9 +1034,11 @@ def ensure_windows_port(port):
 def main():
     parser=argparse.ArgumentParser(description=PRODUCT)
     parser.add_argument('--port',type=int,default=None);parser.add_argument('--host',default='0.0.0.0')
-    parser.add_argument('--data',default=str(Path(os.environ.get('LOCALAPPDATA',str(Path.home()/'.local/share')))/PRODUCT))
+    parser.add_argument('--data',default=None)
     parser.add_argument('--no-browser',action='store_true');parser.add_argument('--reset-password',action='store_true')
-    args=parser.parse_args();store=Store(args.data)
+    args=parser.parse_args()
+    from updater import resolve_data_directory
+    store=Store(resolve_data_directory(args.data))
     if sys.stdout is None or sys.stderr is None:
         logfile=store.directory/'server.log'
         if logfile.exists() and logfile.stat().st_size>2*1024*1024:
@@ -1018,6 +1048,7 @@ def main():
         if sys.stdout is None:sys.stdout=stream
         if sys.stderr is None:sys.stderr=stream
     if args.reset_password:
+        store.forget()
         import getpass
         pw=getpass.getpass('Nova lozinka: ')
         if len(pw)<8:raise SystemExit('Najmanje 8 znakova.')
