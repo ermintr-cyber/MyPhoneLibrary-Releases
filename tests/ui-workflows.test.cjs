@@ -19,7 +19,7 @@ vm.runInContext("selectedUnits.add('u2');openBulk()",context);assert.equal(vm.ru
 vm.runInContext("locationContents('room')",context);assert.match(node('panel-body').innerHTML,/Spare battery/);assert.match(node('panel-body').innerHTML,/Nokia N73/);
 vm.runInContext("currentView='incomplete';render()",context);assert.match(node('collection-table').innerHTML,/N73/);assert.doesNotMatch(node('collection-table').innerHTML,/Spare battery/);
 vm.runInContext("catalogEditor('location','box')",context);assert.match(node('panel-body').innerHTML,/location-parent/);
-vm.runInContext("catalogEditor('battery','bat')",context);assert.match(node('panel-body').innerHTML,/data-catalog-compatible="a"/);
+vm.runInContext("catalogEditor('battery','bat')",context);assert.match(node('panel-body').innerHTML,/data-battery-spec="Voltage"/);assert.ok(!node('panel-body').innerHTML.includes('Additional compatible'));assert.ok(!node('panel-body').innerHTML.includes('catalog-source'));
 let submitted;context.fetch=async(path,init)=>({ok:true,json:async()=>{if(path==='/api/bulk-units'){submitted=JSON.parse(init.body);return {updated:1};}if(path==='/api/data')return vm.runInContext('db',context);if(path.startsWith('/api/history'))return [];return {};}});
 (async()=>{
  vm.runInContext("quickEdit={record_id:'a',unit_id:'u2',rev:3,key:'color'}",context);node('quick-value').value='Blue';await vm.runInContext('saveQuick()',context);assert.equal(submitted.changes.color,'Blue');assert.equal(submitted.targets[0].unit_id,'u2');assert.equal(vm.runInContext('quickEdit',context),null);

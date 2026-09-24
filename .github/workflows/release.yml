@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: ['main']
-    paths: ['server.py', 'web/**', 'updater.py', 'packaging/**', 'tests/**', '.github/workflows/release.yml']
+    paths: ['server.py', 'web/**', 'android/**', 'updater.py', 'packaging/**', 'tests/**', '.github/workflows/release.yml']
 permissions:
   contents: write
 jobs:
@@ -51,6 +51,15 @@ jobs:
         run: python packaging/windows_smoke.py
       - name: Verify independent Windows installer update
         run: python packaging/windows_update_smoke.py
+      - name: Build combined Windows installer
+        shell: pwsh
+        run: |
+          python packaging/download_media.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" "/DSOURCE_ROOT=$env:GITHUB_WORKSPACE" "/DVERSION=$env:APP_VERSION" packaging/MyLibraries.nsi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test combined Windows installer
+        run: python packaging/windows_suite_smoke.py
       - uses: actions/upload-artifact@v4
         with:
           name: MyPhoneLibrary-Windows
