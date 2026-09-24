@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.6.0'
+VERSION = '1.6.1'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -541,44 +541,75 @@ class Store:
             return {'rows':valid,'errors':errors,'skipped':skipped,'imported':len(valid) if commit else 0}
 
 _folder_picker_lock=threading.Lock()
+_folder_picker_process=None
+
+def cancel_folder_picker():
+    global _folder_picker_process
+    with _folder_picker_lock:
+        process=_folder_picker_process
+        _folder_picker_process=None
+        if process and process.poll() is None:
+            process.terminate()
+
+def native_folder_dialog(initial=''):
+    """Native Windows shell picker in a separate background Python process."""
+    import ctypes
+    from ctypes import wintypes as w
+    shell=ctypes.WinDLL('shell32');user=ctypes.WinDLL('user32');ole=ctypes.WinDLL('ole32')
+    callback_type=ctypes.WINFUNCTYPE(ctypes.c_int,w.HWND,w.UINT,w.LPARAM,w.LPARAM)
+    class BrowseInfo(ctypes.Structure):
+        _fields_=[('owner',w.HWND),('root',ctypes.c_void_p),('display',w.LPWSTR),('title',w.LPCWSTR),('flags',w.UINT),('callback',callback_type),('param',w.LPARAM),('image',ctypes.c_int)]
+    user.SendMessageW.argtypes=[w.HWND,w.UINT,w.WPARAM,w.LPARAM];user.SendMessageW.restype=w.LPARAM
+    user.SetWindowPos.argtypes=[w.HWND,w.HWND,ctypes.c_int,ctypes.c_int,ctypes.c_int,ctypes.c_int,w.UINT]
+    user.SetForegroundWindow.argtypes=[w.HWND]
+    initial_buffer=ctypes.create_unicode_buffer(initial)
+    @callback_type
+    def on_event(hwnd,message,param,data):
+        if message==1:
+            if initial:user.SendMessageW(hwnd,0x467,1,ctypes.addressof(initial_buffer))
+            user.SetWindowPos(hwnd,ctypes.c_void_p(-1),0,0,0,0,0x43)
+            user.SetForegroundWindow(hwnd)
+        return 0
+    shell.SHBrowseForFolderW.argtypes=[ctypes.POINTER(BrowseInfo)];shell.SHBrowseForFolderW.restype=ctypes.c_void_p
+    shell.SHGetPathFromIDListW.argtypes=[ctypes.c_void_p,w.LPWSTR];shell.SHGetPathFromIDListW.restype=w.BOOL
+    ole.CoTaskMemFree.argtypes=[ctypes.c_void_p]
+    ole.OleInitialize(None)
+    try:
+        display=ctypes.create_unicode_buffer(260)
+        info=BrowseInfo(None,None,ctypes.cast(display,w.LPWSTR),'Select backup folder',0x51,on_event,0,0)
+        pidl=shell.SHBrowseForFolderW(ctypes.byref(info))
+        if not pidl:return None
+        try:
+            path=ctypes.create_unicode_buffer(260)
+            if not shell.SHGetPathFromIDListW(pidl,path):raise ValueError('The selected location is not a filesystem folder.')
+            return path.value
+        finally:ole.CoTaskMemFree(pidl)
+    finally:ole.OleUninitialize()
 
 def choose_backup_folder(value=''):
+    global _folder_picker_process
     if os.name!='nt':raise ValueError('Windows Browse is available on the Windows host. You can also type a folder path.')
-    if not _folder_picker_lock.acquire(blocking=False):raise ValueError('A folder browser is already open on the host computer.')
+    initial=base64.b64encode(str(value).encode('utf-8')).decode('ascii')
+    with _folder_picker_lock:
+        previous=_folder_picker_process
+        if previous and previous.poll() is None:previous.terminate()
+        process=subprocess.Popen([sys.executable,str(BASE/'server.py'),'--folder-picker',initial],stdout=subprocess.PIPE,stderr=subprocess.PIPE,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+        _folder_picker_process=process
     try:
-        # Pass the initial path as base64 data, never as executable PowerShell text.
-        initial=base64.b64encode(str(value).encode('utf-8')).decode('ascii')
-        script="""$ErrorActionPreference='Stop'
-Add-Type -AssemblyName System.Windows.Forms
-$owner=New-Object System.Windows.Forms.Form
-$owner.ShowInTaskbar=$false
-$owner.TopMost=$true
-$owner.Opacity=0
-$owner.Width=1
-$owner.Height=1
-$dialog=New-Object System.Windows.Forms.FolderBrowserDialog
-$dialog.Description='Select backup folder'
-$dialog.ShowNewFolderButton=$true
-$dialog.SelectedPath=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('__INITIAL__'))
-try {
- $owner.Show()
- $owner.Activate()
- if($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
-  [Console]::Write([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($dialog.SelectedPath)))
- }
-} finally { $dialog.Dispose(); $owner.Dispose() }
-""".replace('__INITIAL__',initial)
-        command=base64.b64encode(script.encode('utf-16le')).decode('ascii')
-        try:
-            result=subprocess.run(['powershell.exe','-NoProfile','-STA','-WindowStyle','Hidden','-EncodedCommand',command],capture_output=True,timeout=300,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-        except subprocess.TimeoutExpired:raise ValueError('Folder selection timed out. Click Browse to try again.')
-        if result.returncode:raise ValueError('Windows could not open Browse. Enter the backup folder path manually.')
-        output=result.stdout.strip()
-        if not output:return {'path':None}
-        selected=base64.b64decode(output,validate=True).decode('utf-8')
+        try:output,error=process.communicate(timeout=120)
+        except subprocess.TimeoutExpired:
+            process.kill();process.communicate()
+            raise ValueError('Folder selection timed out. Click Browse to try again.')
+        with _folder_picker_lock:
+            if _folder_picker_process is not process:return {'path':None}
+        if process.returncode:raise ValueError('Windows could not open Browse. Enter the backup folder path manually.')
+        if not output.strip():return {'path':None}
+        selected=base64.b64decode(output.strip(),validate=True).decode('utf-8')
         if not Path(selected).is_dir():raise ValueError('The selected folder is no longer available.')
         return {'path':selected}
-    finally:_folder_picker_lock.release()
+    finally:
+        with _folder_picker_lock:
+            if _folder_picker_process is process:_folder_picker_process=None
 
 def folder_listing(value=''):
     import string
@@ -675,7 +706,7 @@ class HostHTTPServer(ThreadingHTTPServer):
 class AppServer(HostHTTPServer):
     daemon_threads=False
     def __init__(self,address,store):
-        super().__init__(address,Handler);self.store=store;self.sessions={};self.attempts={};self.state_lock=threading.RLock()
+        super().__init__(address,Handler);self.store=store;self.instance_id=secrets.token_hex(12);self.sessions={};self.attempts={};self.state_lock=threading.RLock()
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version='HTTP/1.1'
@@ -684,7 +715,8 @@ class Handler(BaseHTTPRequestHandler):
         if args and 'password' not in str(args[0]):super().log_message(fmt,*args)
     def send(self,status,value,ctype='application/json; charset=utf-8',extra=None):
         b=dump(value).encode() if isinstance(value,(dict,list)) else value.encode() if isinstance(value,str) else value
-        self.send_response(status);self.send_header('Content-Type',ctype);self.send_header('Content-Length',str(len(b)))
+        self.close_connection=True
+        self.send_response(status);self.send_header('Connection','close');self.send_header('Content-Type',ctype);self.send_header('Content-Length',str(len(b)))
         self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff')
         self.send_header('Referrer-Policy','no-referrer');self.send_header('X-Frame-Options','DENY')
         self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
@@ -692,7 +724,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers();self.wfile.write(b)
     def send_file(self,path,ctype,download_name):
         with path.open('rb') as source:
-            self.send_response(200);self.send_header('Content-Type',ctype)
+            self.close_connection=True
+            self.send_response(200);self.send_header('Connection','close');self.send_header('Content-Type',ctype)
             self.send_header('Content-Length',str(os.fstat(source.fileno()).st_size))
             self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff')
             self.send_header('Content-Disposition','attachment; filename="'+download_name+'"')
@@ -749,7 +782,7 @@ class Handler(BaseHTTPRequestHandler):
                 d={} if binary else json.loads(raw or b'{}')
                 if not isinstance(d,dict):raise ValueError('Expected an object.')
             if path=='/api/status' and not post:
-                return self.send(200,{'version':VERSION,'product':PRODUCT,'setup':not bool(store.meta('auth')),'authenticated':bool(session),'csrf':session['csrf'] if session else None})
+                return self.send(200,{'version':VERSION,'instance':self.server.instance_id,'product':PRODUCT,'setup':not bool(store.meta('auth')),'authenticated':bool(session),'csrf':session['csrf'] if session else None})
             if path in ('/api/setup','/api/login') and post:
                 ip=self.client_address[0]
                 with self.server.state_lock:
@@ -775,6 +808,7 @@ class Handler(BaseHTTPRequestHandler):
                 if post and not hmac.compare_digest(self.headers.get('X-MPL-CSRF',''),session['csrf']):return self.send(403,{'error':'Session expired. Refresh the app.'})
             if path=='/api/server-control' and post:
                 if d.get('action') not in ('stop','restart'):raise ValueError('Unknown action.')
+                cancel_folder_picker()
                 self.server.restart_requested=d['action']=='restart'
                 self.send(200,{'ok':True})
                 threading.Thread(target=self.server.shutdown,daemon=True).start()
@@ -970,7 +1004,7 @@ def main():
     try:server.serve_forever()
     except KeyboardInterrupt:pass
     finally:
-        server.stopping=True;server.server_close()
+        server.stopping=True;cancel_folder_picker();server.server_close()
         if legacy:legacy.shutdown();legacy.server_close()
         with store.lock:pass  # Let an active backup finish before process exit.
         try:
@@ -991,4 +1025,8 @@ def restart_server(root,directory,port,host):
         print('Update failed; restarting the previous version: '+str(e),flush=True)
     return subprocess.Popen([sys.executable,str(Path(root)/'server.py'),'--no-browser','--port',str(port),'--host',host,'--data',str(directory)],cwd=root,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),start_new_session=os.name!='nt')
 
-if __name__=='__main__':raise SystemExit(main())
+if __name__=='__main__':
+    if len(sys.argv)>1 and sys.argv[1]=='--folder-picker':
+        selected=native_folder_dialog(base64.b64decode(sys.argv[2]).decode('utf-8'))
+        if selected:sys.stdout.write(base64.b64encode(selected.encode('utf-8')).decode('ascii'));sys.stdout.flush()
+    else:raise SystemExit(main())

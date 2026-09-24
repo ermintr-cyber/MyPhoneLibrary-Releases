@@ -1,4 +1,6 @@
 'use strict';
+const UI_VERSION='1.6.1';
+let serverInstance=null,versionMismatch=false,connectionCheckBusy=false,catalogReturn=null;
 let settingsTab='appearance',currentView='all',dragColumn=null,ignoreSortUntil=0;
 const $=id=>document.getElementById(id), clone=x=>JSON.parse(JSON.stringify(x));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -14,6 +16,7 @@ const unique=a=>[...new Set(a.filter(Boolean))];
 const name=r=>[r.brand,r.model].filter(Boolean).join(' ');
 function toast(msg){const dialog=[...document.querySelectorAll('dialog[open]')].at(-1);let node=$('toast');if(dialog){node=dialog.querySelector('.dialog-notice');if(!node){node=document.createElement('p');node.className='dialog-notice hint';node.setAttribute('role','status');dialog.prepend(node);}}node.textContent=msg;node.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>node.hidden=true,9000);}
 async function api(path,data,binary=false){
+ if(data!==undefined&&versionMismatch&&!['/api/login','/api/logout'].includes(path))throw Error('A newer application version is active. Reload this page before saving changes.');
  const init={headers:{'X-MPL-Client':'1'}};
  if(data!==undefined){init.method='POST';init.headers['X-MPL-CSRF']=csrf;if(!binary)init.headers['Content-Type']='application/json';init.body=binary?data:JSON.stringify(data);}
  const response=await fetch(path,init);let result;try{result=await response.json();}catch{throw Error('The server returned an invalid response.');}
@@ -30,7 +33,7 @@ function startupStatus(message,detail='',failed=false){
  $('startup-progress').hidden=failed;$('startup-retry').hidden=!failed;$('startup-dismiss').hidden=!failed;
 }
 function hideStartup(){$('startup-status').style.display='none';}
-async function reconnectAfterRestart(){
+async function reconnectAfterRestart(previousInstance=serverInstance){
  if(reconnecting)return;reconnecting=true;
  const target=sessionStorage.getItem('mpl-update-target');
  const message='Restarting server…';
@@ -43,7 +46,7 @@ async function reconnectAfterRestart(){
    const options={cache:'no-store'};
    if(typeof AbortSignal!=='undefined'&&AbortSignal.timeout)options.signal=AbortSignal.timeout(2000);
    const response=await fetch('/api/status',options);const status=await response.json();
-   if(response.ok&&(!target||status.version===target)){
+   if(response.ok&&(!target||status.version===target)&&(!previousInstance||status.instance!==previousInstance)){
     if(target)sessionStorage.setItem('mpl-update-complete',target);
     startupStatus('Server is ready. Loading MyPhoneLibrary…',target?'Version '+target+' confirmed.':'Connection restored.');
     location.reload();return;
@@ -55,7 +58,7 @@ async function reconnectAfterRestart(){
  }finally{reconnecting=false;}
 }
 async function boot(){
- try{const status=await api('/api/status');csrf=status.csrf||'';$('login').hidden=status.authenticated;$('application').hidden=!status.authenticated;
+ try{const status=await api('/api/status');serverInstance=status.instance||null;csrf=status.csrf||'';$('login').hidden=status.authenticated;$('application').hidden=!status.authenticated;
  $('login-description').textContent=status.setup?'Set a password for your collection.':'Sign in to access your phones.';
  $('login-submit').textContent=status.setup?'Create collection':'Sign in';$('login-form').dataset.setup=String(status.setup);
  if(status.authenticated)await refresh();
@@ -65,6 +68,40 @@ async function boot(){
   sessionStorage.removeItem('mpl-update-complete');sessionStorage.removeItem('mpl-update-target');
  }
  }catch(e){$('login').hidden=false;$('login-error').textContent='Server unavailable. Start MyPhoneLibrary on your computer.';}finally{hideStartup();}
+}
+function hasUnsavedWork(){return !!(dirty||phoneDraft||panelDirty||catalogReturn||uploadCount);}
+function connectionBanner(message){const el=$('connection-banner');el.hidden=false;$('connection-message').textContent=message;}
+async function checkConnection(){
+ if(connectionCheckBusy||reconnecting)return;connectionCheckBusy=true;
+ try{
+  const options={cache:'no-store'};if(typeof AbortSignal!=='undefined'&&AbortSignal.timeout)options.signal=AbortSignal.timeout(4000);
+  const response=await fetch('/api/status',options);if(!response.ok)throw Error('unavailable');
+  const status=await response.json();
+  versionMismatch=status.version!==UI_VERSION;
+  if(versionMismatch){
+   $('connection').textContent='New version available';
+   connectionBanner('Version '+status.version+' is active on the server. This page is using '+UI_VERSION+'.'+(hasUnsavedWork()?' Your unsaved draft is retained. Finish or copy your changes before reloading.':' Reloading…'));
+   if(!hasUnsavedWork()){startupStatus('Loading version '+status.version+'…');location.reload();}
+   return;
+  }
+  if(db&&!status.authenticated){
+   connectionBanner('The server restarted or your session expired. Sign in again.'+(hasUnsavedWork()?' Copy your unsaved details before reloading.':''));
+   $('connection').textContent='Sign in required';
+   if(!hasUnsavedWork())location.reload();
+   return;
+  }
+  serverInstance=status.instance||serverInstance;$('connection').textContent='Connected';$('connection-banner').hidden=true;
+ }catch{
+  $('connection').textContent='Offline — server unavailable';
+  connectionBanner('Connection to MyPhoneLibrary is lost. Displayed data may be out of date; changes cannot be saved until the server returns.');
+ }finally{connectionCheckBusy=false;}
+}
+async function monitorConnection(){await checkConnection();setTimeout(monitorConnection,10000);}
+function returnToPhone(){
+ if(!catalogReturn||!allowPanelLeave())return;
+ const state=catalogReturn;catalogReturn=null;$('panel').close();panelRoute=null;panelDirty=false;
+ draft=state.draft;mode=state.mode;dirty=state.dirty;addUnit=mode==='add'?draft.instances.at(-1):null;
+ lists();editorRender(state.index);$('editor').showModal();
 }
 async function refresh(){db=await api('/api/data');document.documentElement.dataset.theme=db.settings.theme||'dark';$('connection').textContent='Connected';lists();render();}
 function lists(){
@@ -96,7 +133,7 @@ function filtered(){
  let rows=db.records.filter(r=>{if(view==='phone'||view==='part'){if(r.kind!==view)return false;}if(view==='wish'&&!r.wishlist&&!(r.instances||[]).some(u=>u.condition==='Wanted'))return false;if(view==='duplicates'&&live(r).length<2)return false;if(view==='untested'&&!live(r).some(u=>u.state==='Netestiran'))return false;if(view==='repair'&&!live(r).some(u=>u.purpose==='Za popravak'||u.state==='Neispravan'||u.state==='Djelimično ispravan'))return false;return !q||normal(JSON.stringify(r)).includes(q);});
  return rows.sort((a,b)=>{const av=value(a,sort.key),bv=value(b,sort.key);return sort.dir*(typeof av==='number'&&typeof bv==='number'?av-bv:String(av).localeCompare(String(bv),'bs',{numeric:true}));});
 }
-function image(r){const src=r.image||(r.photos||[])[0]||(r.instances||[]).flatMap(u=>u.photos||[])[0];return src?`<img class="thumb" src="${esc(src)}" alt="${esc(name(r))}" loading="lazy" data-action="photo" data-url="${esc(src)}">`:'<span class="thumb-placeholder" aria-label="No photo">▯</span>';}
+function image(r){const src=r.image||(r.photos||[])[0];return src?`<img class="thumb" src="${esc(src)}" alt="${esc(name(r))}" loading="lazy" data-action="photo" data-url="${esc(src)}">`:'<span class="thumb-placeholder" aria-label="No photo">▯</span>';}
 function cell(r,key){const v=value(r,key);if(catalogNames[key])return catalogLink(key,v);if(key==='colors')return unique(live(r).map(u=>u.color)).map(v=>catalogLink('color',v)).join(', ');if(key==='state')return esc(unique(live(r).map(u=>enumLabel(u.state))).join(', ')||enumLabel(r.condition)||'—');if(key==='editions')return esc(unique(live(r).map(u=>enumLabel(u.edition))).join(', '));if(key==='image')return `<div class="model-image-cell">${r.kind==='phone'?`<button class="expand-model" data-action="expand" data-id="${r.id}" aria-label="Show or hide units" aria-expanded="${expanded.has(r.id)}">${expanded.has(r.id)?'▾':'▸'}</button>`:'<span class="expand-spacer"></span>'}${image(r)}</div>`;
  if(key==='model')return `<strong>${esc(r.model)}</strong><small>${r.kind==='part'?'Part / accessory':(r.wishlist||(r.instances||[]).some(u=>u.condition==='Wanted'))?'Wanted':''}</small>`;
  if(key==='qty')return `<button class="number-pill" data-action="${r.kind==='part'?'move':'expand'}" data-id="${r.id}">${esc(v)}</button>${r.declared_qty?`<small class="muted"> To verify: ${esc(r.declared_qty)}</small>`:''}`;
@@ -134,7 +171,9 @@ function field(label,key,val,{index=null,type='text',list='',choices=null,requir
  else if(type==='textarea')control=`<textarea ${attr}>${esc(val)}</textarea>`;
  else if(type==='checkbox')return `<label class="check"><input ${attr} type="checkbox" ${val?'checked':''}>${esc(label)}</label>`;
  else control=`<input ${attr} type="${type}" value="${esc(val)}" ${list?`list="${esc(list)}"`:''} ${required?'required':''} ${type==='number'?'min="0" step="any"':''}>`;
- return `<label>${esc(label)}${control}</label>`;
+ const category=list.startsWith('options-')?list.slice(8):null;
+ const heading=category&&catalogNames[category]?`<button type="button" class="link catalog-field-label" data-action="field-catalog" data-category="${category}">${esc(label)} ↗</button>`:esc(label);
+ return `<label>${heading}${control}</label>`;
 }
 function triField(label,key,val,index){return field(label,key,val===true?'true':val===false?'false':'',{index,choices:[['','Nepoznato'],['true','Yes'],['false','No']]});}
 function amountCurrency(obj){return !['KM','BAM',''].includes(obj.currency||'')&&(Number(obj.price)||Number(obj.value))?obj.currency:'KM';}
@@ -178,7 +217,7 @@ ${triField('Box','box',u.box,i)}${triField('Battery included','battery_present',
 ${field('Acquisition date','purchase_date',u.purchase_date,{index:i,type:'date'})}${field('Purchased from / source','source',u.source,{index:i})}${field('Lock status','lock',u.lock||'Nepoznato',{index:i,choices:opts.lock})}
 ${field('Purchase price ('+amountCurrency(u)+')','price',u.price||0,{index:i,type:'number'})}${field('Estimated value ('+amountCurrency(u)+')','value',u.value||0,{index:i,type:'number'})}
 <div class="span-all">${field('Unit notes / faults','note',u.note,{index:i,type:'textarea'})}</div></div>
-<div class="gallery">${(u.photos||[]).map((src,j)=>`<figure><img src="${esc(src)}" alt="Unit photo" data-action="photo" data-url="${esc(src)}"><button type="button" data-action="remove-unit-photo" data-index="${i}" data-photo="${j}">Remove</button></figure>`).join('')}</div><div class="actions" id="unit-photos-${i}"><button type="button" data-action="camera-unit" data-index="${i}">Take photo</button><button type="button" data-action="gallery-unit" data-index="${i}">From gallery</button><span class="subtle">Photos of this unit · ${(u.photos||[]).length}</span></div><input hidden id="camera-unit-${i}" type="file" accept="image/*" capture="environment" data-unit-upload="${i}"><input hidden id="gallery-unit-${i}" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple data-unit-upload="${i}">
+<div class="gallery">${(u.photos||[]).map((src,j)=>`<figure><img src="${esc(src)}" alt="Unit photo" data-action="photo" data-url="${esc(src)}"><button type="button" data-action="remove-unit-photo" data-index="${i}" data-photo="${j}">Remove</button></figure>`).join('')}</div><div class="actions" id="unit-photos-${i}"><button type="button" data-action="camera-unit" data-index="${i}">Take photo</button><button type="button" data-action="gallery-unit" data-index="${i}">From gallery</button><span class="subtle">Personal photos of this physical phone · ${(u.photos||[]).length}</span></div><input hidden id="camera-unit-${i}" type="file" accept="image/*" capture="environment" data-unit-upload="${i}"><input hidden id="gallery-unit-${i}" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple data-unit-upload="${i}">
 <small>These details belong to this physical unit only. IMEI is optional.</small></div></details>`;}
 function editorRender(unitIndex=null){
  const part=draft.kind==='part';$('editor-title').textContent=part?(draft.id?'Edit part / accessory':'Add part / accessory'):mode==='add'?'Add phone':name(draft);
@@ -186,14 +225,14 @@ function editorRender(unitIndex=null){
  const rf=(l,k,o={})=>field(l,k,draft[k],o);
  const indices=part?[]:mode==='add'?[draft.instances.length-1]:draft.instances.map((_,i)=>i);
  const addIndex=draft.instances.length-1;
- const displayImage=mode==='add'?(draft.instances[addIndex].photos||[])[0]:draft.image;
- $('editor-content').innerHTML=`${mode==='add'?'<div class="actions"><button type="button" data-action="draft-catalogs">Catalogs</button><button type="button" data-action="clear-phone-data">Clear data</button><small>Close keeps this draft until you save or clear it.</small></div>':''}<div class="editor-overview"><div class="photo-box">${displayImage?`<img src="${esc(displayImage)}" alt="Phone photo" data-action="photo" data-url="${esc(displayImage)}">`:'<span class="thumb-placeholder">▯</span>'}${mode==='add'?`<small>Photos of this unit</small><button type="button" data-action="camera-unit" data-index="${addIndex}">Take photo</button><button type="button" data-action="gallery-unit" data-index="${addIndex}">From gallery</button>`:`<label>Model catalog image<input id="main-image-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>${draft.image?'<button type="button" data-action="remove-image">Remove image</button>':''}`}</div><div class="grid two">
+ const displayImage=draft.image;
+ $('editor-content').innerHTML=`${mode==='add'?'<div class="actions"><button type="button" data-action="draft-catalogs">Catalogs</button><button type="button" data-action="clear-phone-data">Clear data</button><small>Close keeps this draft until you save or clear it.</small></div>':''}<div class="editor-overview"><div class="photo-box">${displayImage?`<img src="${esc(displayImage)}" alt="Phone photo" data-action="photo" data-url="${esc(displayImage)}">`:'<span class="thumb-placeholder">▯</span>'}<label>Model image — list and cards<input id="main-image-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label><small>Shared catalog image for this model. Add your own unit photos below.</small>${draft.image?'<button type="button" data-action="remove-image">Remove model image</button>':''}</div><div class="grid two">
 ${rf('Brand','brand',{list:'options-brand',required:!part})}${rf(part?'Part name':'Model name','model',{list:part?'':'model-suggestions',required:true})}${rf('Model number / Variant','alias')}${rf('Type code','type')}
 ${part?rf('Part category','part_category',{list:'options-part_category'}):rf('Operating system','os',{list:'options-os'})}${rf('Battery / code','battery',{list:'options-battery'})}${rf('Charger / connector','charger',{list:'options-charger'})}
 ${part?rf('Location','location',{list:'options-location'}):''}</div></div>
 ${mode==='add'?`<p class="hint" id="match-message">${draft.id?`Existing model <strong>${esc(name(draft))}</strong>. The new unit will join this row. Current units: ${(record(draft.id)?live(record(draft.id)).length:0)} .`:'Enter brand and model. An existing model will receive this new unit in the same row.'}</p>`:''}
 <details class="section" ${part?'open':''}><summary>Additional model details ${part?' / part':''}</summary><div class="grid" style="margin-top:15px">
-${rf('Released — year, month or date','released')}${rf('Introduced','introduced')}${rf('GSMArena link','gsm',{type:'url'})}${rf('Wikipedia link','wiki',{type:'url'})}${rf('Image URL (HTTPS) or uploaded image path','image')}
+${rf('Released — year, month or date','released')}${rf('Introduced','introduced')}${rf('GSMArena link','gsm',{type:'url'})}${rf('Wikipedia link','wiki',{type:'url'})}${rf('Model image URL — list and cards','image')}
 ${part?`${draft.id?`<p class="hint">Total ${draft.quantity}; reserved ${draft.reserved}. Change quantities using Stock movements.</p>`:rf('Initial quantity','quantity',{type:'number'})}${rf('Part condition','condition',{choices:['Netestirano','Ispravno','Neispravno','Novo','Korišteno']})}${rf('Color','color',{list:'options-color'})}${rf('Purchase price per item ('+amountCurrency(draft)+')','price',{type:'number'})}${rf('Estimated value per item ('+amountCurrency(draft)+')','value',{type:'number'})}`:''}
 ${rf('Unverified quantity (e.g. 2???)','declared_qty')}${rf('Unverified legacy parts count','declared_parts')}
 <div class="span-all">${rf('Model / part notes','note',{type:'textarea'})}</div></div><div class="checks">${rf('Favorite','favorite',{type:'checkbox'})}${rf('Wishlist','wishlist',{type:'checkbox'})}</div>
@@ -212,6 +251,7 @@ function customHTML(f,v){let control;const attr=`data-custom="${esc(f.id)}"`;
 }
 function panel(title,html,route=null){
  const el=$('panel');if(el.open)el.close();el.querySelector('.dialog-notice')?.remove();el.classList.remove('settings-page');
+ if(catalogReturn)html='<div class="actions"><button data-action="return-phone">← Return to phone</button></div>'+html;
  panelRoute=route;panelDirty=false;$('panel-title').textContent=title;$('panel-body').innerHTML=html;
  if(route){el.classList.add('settings-page');el.show();}else el.showModal();
 }
@@ -219,6 +259,7 @@ function allowPanelLeave(){return !panelDirty||confirm('Discard unsaved settings
 function closePanel(){
  if(!allowPanelLeave())return;const route=panelRoute;
  if(route?.kind==='item'){catalogList(route.category);return;}
+ if(route?.kind==='catalog'&&catalogReturn){returnToPhone();return;}
  if(route?.kind==='catalog'){settingsTab='options';settingsPanel();return;}
  $('panel').close();panelRoute=null;panelDirty=false;
 }
@@ -256,14 +297,13 @@ async function settingsPanel(){
  ${section('about',`<h2>MyPhoneLibrary</h2><p>Version ${esc(db.version)}</p><p class="subtle">Your personal phone, unit and parts collection.</p>${updateContents()}`)}
  <div class="actions settings-save"><button data-action="save-settings" class="primary">Save settings</button></div></div></div>`,{kind:'settings'});loadNetwork().catch(e=>{if($('network-status'))$('network-status').textContent=e.message;});loadUpdateState().catch(e=>updateMessage(e.message));
 }
-let folderPickerBusy=false;
+let folderPickerRequest=0;
 async function openFolderPicker(field){
- if(folderPickerBusy)return;
- const input=$(field);folderPickerBusy=true;
+ const input=$(field),request=++folderPickerRequest;
  try{
   const result=await api('/api/backup-folder',{path:input.value||db.backup_default});
-  if(result.path&&input===$(field)) {input.value=result.path;panelDirty=true;}
- }finally{folderPickerBusy=false;}
+  if(request===folderPickerRequest&&result.path&&input===$(field)){input.value=result.path;panelDirty=true;}
+ }catch(error){if(request===folderPickerRequest)throw error;}
 }
 function outsideDialog(event,dialog){
  if(event.target!==dialog)return false;const r=dialog.getBoundingClientRect();
@@ -304,6 +344,9 @@ document.addEventListener('click',async event=>{
  switch(action){
  case 'retry-reconnect':await reconnectAfterRestart();break;
  case 'dismiss-reconnect':hideStartup();break;
+ case 'reload-current':if(!hasUnsavedWork()||confirm('Reload and discard unsaved changes?')){dirty=false;phoneDraft=null;panelDirty=false;catalogReturn=null;location.reload();}break;
+ case 'return-phone':returnToPhone();break;
+ case 'field-catalog':{if(uploadCount)throw Error('Wait for photos to finish uploading.');readDraft();catalogReturn={draft:clone(draft),mode,dirty,index:mode==='add'?draft.instances.length-1:null};if(mode==='add')phoneDraft=clone(draft);$('editor').close();catalogList(target.dataset.category);break;}
  case 'refresh':await refresh();toast('Table refreshed.');break;
  case 'logout':if((dirty||phoneDraft||panelDirty)&&!confirm('Sign out and discard unsaved changes?'))break;await api('/api/logout',{});$('editor').close();$('panel').close();draft=null;phoneDraft=null;db=null;dirty=false;await boot();break;
  case 'add-phone':addPhone();break;case 'add-part':addPart();break;case 'add-existing':addPhone(id);break;
@@ -325,7 +368,16 @@ document.addEventListener('click',async event=>{
  case 'copy-unit':copyUnit(id,Number(target.dataset.index));break;
  case 'card-units':{const r=record(id);panel(name(r),unitTiles(r)+modelActions(r));break;}
  case 'layout':await api('/api/settings',{layout:target.dataset.layout});db.settings.layout=target.dataset.layout;render();break;
- case 'server-stop':case 'server-restart':{if(dirty)throw Error('Save or discard your current edits first.');if(action==='server-stop'&&!confirm('Stop MyPhoneLibrary on this computer?'))break;await api('/api/server-control',{action:action==='server-stop'?'stop':'restart'});toast(action==='server-stop'?'Server stopped. Open My Phone Library to start it again.':'Restarting… reconnecting shortly.');if(action==='server-restart'){await reconnectAfterRestart();}break;}
+ case 'server-stop':case 'server-restart':{
+ if(dirty||uploadCount||catalogReturn)throw Error('Save or discard your current edits first.');
+ if(action==='server-stop'&&!confirm('Stop MyPhoneLibrary on this computer?'))break;
+ const before=await api('/api/status');
+ if(action==='server-restart'){reconnecting=true;startupStatus('Restarting server…','Applying the staged update. Keep this page open.');}
+ try{await api('/api/server-control',{action:action==='server-stop'?'stop':'restart'});}catch(error){reconnecting=false;startupStatus('Restart request failed',error.message,true);throw error;}
+ reconnecting=false;
+ if(action==='server-restart')await reconnectAfterRestart(before.instance||null);
+ else toast('Server stopped. Open My Phone Library to start it again.');break;
+ }
  case 'nav-view':currentView=target.dataset.view;$('search').value='';render();break;
  case 'settings-tab':settingsTab=target.dataset.tab;document.querySelectorAll('[data-settings-section]').forEach(el=>el.hidden=el.dataset.settingsSection!==settingsTab);document.querySelectorAll('[data-action="settings-tab"]').forEach(el=>el.classList.toggle('active',el.dataset.tab===settingsTab));break;
  case 'catalogs':settingsTab='options';await settingsPanel();break;
@@ -417,7 +469,10 @@ $('collection-table').addEventListener('dragover',e=>{const th=e.target.closest(
 $('collection-table').addEventListener('drop',async e=>{const th=e.target.closest('[data-column-key]');if(!th||!dragColumn||th.dataset.columnKey==='image')return;e.preventDefault();const keys=[...$('collection-table').querySelectorAll('[data-column-key]')].map(t=>t.dataset.columnKey);const from=dragColumn,to=th.dataset.columnKey;dragColumn=null;ignoreSortUntil=Date.now()+400;if(from===to)return;keys.splice(keys.indexOf(from),1);keys.splice(keys.indexOf(to),0,from);try{await api('/api/settings',{columns:keys});db.settings.columns=keys;render();}catch(error){toast(error.message);}});
 $('collection-table').addEventListener('dragend',()=>{dragColumn=null;document.querySelectorAll('.dragging').forEach(e=>e.classList.remove('dragging'));});
 window.addEventListener('beforeunload',e=>{if(dirty||phoneDraft||panelDirty){e.preventDefault();e.returnValue='';}});
-window.addEventListener('offline',()=>$('connection').textContent='Disconnected');
+window.addEventListener('offline',checkConnection);
+window.addEventListener('online',checkConnection);
+window.addEventListener('focus',checkConnection);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkConnection();});
 window.addEventListener('hashchange',()=>{if(!db)return;const params=new URLSearchParams(location.hash.slice(1));const id=params.get('record'),unit=params.get('unit'),r=record(id);if(r)showEditor(id,r.instances.findIndex(u=>u.id===unit));});
 document.addEventListener('error',e=>{if(e.target.tagName==='IMG'){e.target.alt='Image unavailable';e.target.style.background='var(--surface2)';}},true);
-boot().then(()=>{if(location.hash&&db)window.dispatchEvent(new Event('hashchange'));});
+boot().then(()=>{setTimeout(monitorConnection,10000);if(location.hash&&db)window.dispatchEvent(new Event('hashchange'));});

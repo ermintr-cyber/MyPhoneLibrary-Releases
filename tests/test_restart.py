@@ -1,5 +1,5 @@
 """Exercise HTTP staging and real process restart with a non-default data folder."""
-import hashlib,io,json,os,shutil,socket,subprocess,sys,tempfile,time,unittest,urllib.request,http.cookiejar,zipfile
+import hashlib,io,json,os,shutil,socket,subprocess,sys,tempfile,time,unittest,urllib.request,http.cookiejar,http.client,zipfile
 from pathlib import Path
 from unittest.mock import patch
 from updater import apply,stage
@@ -34,7 +34,14 @@ class RestartTests(unittest.TestCase):
     with zipfile.ZipFile(stream,'w') as z:z.writestr('server.py',code);z.writestr('web/app.js',b'// restart test');z.writestr('app-manifest.json',json.dumps(manifest))
     self.assertEqual(request('/api/update',stream.getvalue())['version'],'9.9.9')
     self.assertEqual(request('/api/update-state')['pending'],'9.9.9')
+    # A browser can leave an HTTP/1.1 keep-alive socket open. It must not
+    # keep the old server alive while applying an update.
+    idle=http.client.HTTPConnection('127.0.0.1',port,timeout=2)
+    idle.request('GET','/api/status',headers={'Connection':'keep-alive'})
+    response=idle.getresponse();response.read()
+    self.assertEqual(response.getheader('Connection'),'close')
     request('/api/server-control',{'action':'restart'});proc.wait(timeout=15)
+    idle.close()
     wait_version('9.9.9');csrf=request('/api/login',{'password':'restart-test-password'})['csrf']
     self.assertEqual(request('/api/data')['records'][0]['instances'][0]['imei'],'123456789012345')
     self.assertIsNone(request('/api/update-state')['pending'])

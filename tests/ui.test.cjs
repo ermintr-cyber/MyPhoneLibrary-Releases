@@ -53,6 +53,11 @@ handlers['document:keydown']({key:'Escape',preventDefault(){}});
 assert.equal(vm.runInContext('panelRoute.kind',context),'catalog');
 assert.equal(vm.runInContext("amountCurrency({currency:'CHF',price:25})",context),'CHF');
 console.log('UI: Escape retains phone draft, returns to catalog list, and old currencies remain labelled correctly.');
+vm.runInContext("addPhone();draft.model='Catalog draft';dirty=true",context);
+handlers['document:click']({target:{closest(){return {dataset:{action:'field-catalog',category:'os'}}}}});
+assert.equal(node('editor').open,false);assert.equal(vm.runInContext('catalogReturn.draft.model',context),'Catalog draft');
+vm.runInContext('returnToPhone()',context);assert.equal(editor.open,true);assert.equal(vm.runInContext('draft.model',context),'Catalog draft');
+assert.match(node('editor-content').innerHTML,/data-action="field-catalog" data-category="os"/);
 (async()=>{
  const saved=new Map([['mpl-update-target','1.4.1']]);let reloads=0,calls=0;
  context.sessionStorage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
@@ -73,4 +78,15 @@ console.log('UI: Escape retains phone draft, returns to catalog list, and old cu
  assert.ok(!node('folder-picker').open);
  assert.equal(node('backup-primary').value,'C:\\Backup');assert.ok(!node('folder-picker').open);
  console.log('UI: host folder picker opens and selects a backup destination without discarding settings.');
+
+ vm.runInContext("dirty=false;phoneDraft=null;panelDirty=false;catalogReturn=null;db=null",context);
+ context.fetch=async()=>({ok:true,json:async()=>({version:'1.6.2',instance:'new'})});reloads=0;
+ await vm.runInContext('checkConnection()',context);assert.equal(reloads,1);
+ vm.runInContext("phoneDraft={model:'Unsaved'}",context);reloads=0;
+ await vm.runInContext('checkConnection()',context);assert.equal(reloads,0);assert.match(node('connection-message').textContent,/unsaved draft/);
+ context.fetch=async()=>{throw Error('offline')};await vm.runInContext('checkConnection()',context);
+ assert.match(node('connection').textContent,/Offline/);
+ context.fetch=async()=>({ok:true,json:async()=>({version:'1.6.1',instance:'new'})});
+ await vm.runInContext('checkConnection()',context);assert.equal(node('connection-banner').hidden,true);
+ console.log('UI: stale pages reload, unsaved drafts block reload, and connection loss/recovery is visible.');
 })().catch(error=>{console.error(error);process.exitCode=1});
