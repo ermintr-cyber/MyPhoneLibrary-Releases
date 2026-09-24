@@ -22,13 +22,29 @@ const path = require('node:path');
       }
       throw new Error('Collection data did not load');
     };
-    page = await attach();
-    console.log('Attached to Android WebView');
-    page.setDefaultTimeout(30000);
-    await page.locator('#password').fill('Android-test-password');
-    await page.locator('#remember-me').check();
-    await page.locator('#login-submit').click();
-    await page.locator('#application').waitFor({ state: 'visible' });
+    // Fresh API 35 emulators can relaunch the Activity when system packages
+    // finish initial configuration. Recover only that pre-login WebView loss;
+    // a changed app PID (process crash) or any later test failure remains fatal.
+    const appPid = (await device.shell('pidof com.myphonelibrary.app')).toString().trim();
+    assert(appPid, 'App must be running before attaching');
+    for (let attempt = 0; ; attempt++) {
+      page = await attach();
+      console.log('Attached to Android WebView');
+      page.setDefaultTimeout(30000);
+      try {
+        await page.locator('#password').fill('Android-test-password');
+        await page.locator('#remember-me').check();
+        await page.locator('#login-submit').click();
+        await page.locator('#application').waitFor({ state: 'visible' });
+        break;
+      } catch (error) {
+        const currentPid = (await device.shell('pidof com.myphonelibrary.app')).toString().trim();
+        if (!page.isClosed() || currentPid !== appPid || attempt >= 2) throw error;
+        console.log('Activity recreated during emulator setup; reattaching to the same app process');
+        // Allow Android device discovery to retire the old WebView socket.
+        await new Promise(resolve => setTimeout(resolve, 2500));
+      }
+    }
     await waitForData();
     console.log('Signed in to disposable collection');
     assert(await page.evaluate(() => BUNDLED_ANDROID_UI), 'APK must use its packaged frontend');
