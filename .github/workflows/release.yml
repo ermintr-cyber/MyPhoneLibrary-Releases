@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: ['main']
-    paths: ['server.py', 'web/**', 'android/**', 'updater.py', 'packaging/**', 'tests/**', '.github/workflows/release.yml']
+    paths: ['server.py', 'web/**', 'updater.py', 'packaging/**', 'tests/**', '.github/workflows/release.yml']
 permissions:
   contents: write
 jobs:
