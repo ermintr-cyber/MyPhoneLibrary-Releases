@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const elements=new Map(),handlers={};
-function node(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',hidden:false,classList:{toggle(){},remove(){},add(){}},setAttribute(){},addEventListener(type,fn){handlers[id+':'+type]=fn;},querySelectorAll(){return []}});return elements.get(id);}
-const context=vm.createContext({document:{getElementById:node,querySelectorAll(){return []},addEventListener(){},documentElement:{dataset:{}}},window:{addEventListener(){}},location:{hash:''},console,setTimeout,clearTimeout,URLSearchParams});
+function node(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',hidden:false,classList:{toggle(){},remove(){},add(){}},setAttribute(){},addEventListener(type,fn){handlers[id+':'+type]=fn;},querySelectorAll(){return []},querySelector(){return null},show(){this.open=true;this.modal=false},showModal(){this.open=true;this.modal=true},close(){this.open=false}});return elements.get(id);}
+const context=vm.createContext({document:{getElementById:node,querySelectorAll(){return []},addEventListener(type,fn){handlers['document:'+type]=fn;},documentElement:{dataset:{}}},window:{addEventListener(){}},location:{hash:''},console,setTimeout,clearTimeout,URLSearchParams,confirm:()=>true});
 let source=fs.readFileSync(require('node:path').join(__dirname,'../web/app.js'),'utf8');source=source.slice(0,source.lastIndexOf('boot().then('));vm.runInContext(source,context);
 vm.runInContext(`db={version:'1.3.0',settings:{layout:'cards',columns:['brand','model','inv'],options:{},views:[]},catalog:[],records:[{id:'a',kind:'phone',brand:'Nokia',model:'N73',battery:'BL-5J',charger:'2mm',instances:[{id:'u1',inv:'1',condition:'U kolekciji',state:'Ispravan',color:'Silver',edition:'Standard',imei:'123456789012345',photos:[]}]}]};`,context);
 vm.runInContext('render()',context);assert.equal(node('table-wrap').hidden,true);assert.equal(node('card-grid').hidden,false);assert.match(node('card-grid').innerHTML,/View units/);assert.match(node('card-grid').innerHTML,/N73/);
@@ -9,3 +9,24 @@ const units=vm.runInContext('unitTiles(db.records[0])',context);assert.ok(!units
 vm.runInContext("currentView='part';render()",context);assert.equal(node('card-grid').hidden,true);
 vm.runInContext("currentView='all';db.settings.layout='list';render()",context);assert.equal(node('table-wrap').hidden,false);assert.match(node('collection-table').innerHTML,/draggable="true"/);
 console.log('UI: cards/list, sidebar filter, masked IMEI, unit details and draggable headers passed.');
+
+vm.runInContext("db.settings.custom_fields=[];db.trash=[];db.settings.options={os:['Symbian']};",context);
+vm.runInContext("addPhone();draft.brand='Nokia';draft.model='N97 Mini';draft.os='New OS';draft.instances[0].color='Silver';draft.instances[0].product_code='0590012';draft.instances[0].photos=['/media/photo.jpg'];dirty=true;closeEditor();",context);
+assert.equal(node('editor').open,false);
+vm.runInContext("db.settings.options.os.push('New OS');addPhone();",context);
+assert.equal(vm.runInContext('draft.model',context),'N97 Mini');
+assert.equal(vm.runInContext('draft.instances[0].product_code',context),'0590012');
+assert.equal(vm.runInContext('draft.instances[0].photos[0]',context),'/media/photo.jpg');
+assert.match(node('datalists').innerHTML,/New OS/);
+assert.match(node('editor-content').innerHTML,/Clear data/);
+vm.runInContext('clearPhoneDraft()',context);
+assert.equal(vm.runInContext('draft.brand',context),'');assert.equal(vm.runInContext('draft.instances[0].photos.length',context),0);
+vm.runInContext("db.catalog=[{id:'os1',category:'os',name:'Symbian',description:'',source:'',specs:{}}];catalogList('os');catalogEditor('os','os1');closePanel();",context);
+assert.equal(vm.runInContext('panelRoute.kind',context),'catalog');assert.equal(node('panel').modal,false);
+assert.equal(node('panel-title').textContent,'Operating systems');
+vm.runInContext('panelDirty=true',context);context.confirm=()=>false;
+vm.runInContext('closePanel()',context);assert.equal(vm.runInContext('panelRoute.kind',context),'catalog');context.confirm=()=>true;
+handlers['document:click']({target:{closest(){return {dataset:{action:'nav-view',view:'phone'}}}}});
+assert.equal(node('panel').open,false);assert.equal(vm.runInContext('currentView',context),'phone');
+assert.match(vm.runInContext('unitHTML({product_code:"0590012",photos:[]},0,true)',context),/value="0590012"/);
+console.log('UI: retained draft fields/photos, refreshed catalogs, Clear data, catalog back navigation, unsaved guard and sidebar navigation passed.');

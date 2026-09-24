@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.3.0'
+VERSION = '1.4.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -43,7 +43,7 @@ MAX_BODY = 100 * 1024 * 1024
 ACTIVE = {'U kolekciji', 'Posuđen'}
 STATES = ['Netestiran', 'Ispravan', 'Djelimično ispravan', 'Neispravan']
 TEXT_FIELDS = ['brand','model','alias','type','battery','charger','os','introduced','released','note','gsm','wiki','color','location','source','purchase_date','currency','condition','purpose','declared_qty','declared_parts','part_category']
-DEFAULTS = {'columns':['image','inv','brand','model','alias','type','colors','editions','battery','charger','rating','owned','box','os','released','introduced','qty','parts','gsm','wiki','note','actions'], 'options':{'brand':['Nokia','Sony Ericsson','Ericsson','Motorola','Samsung','Siemens','Apple','LG','HTC','BlackBerry','Alcatel','Huawei'], 'color':['Crna','Bijela','Srebrna','Crvena','Plava','Zlatna'], 'location':[], 'battery':['BL-5J','BL-4D','BL-4U','BL-6F','BP-4L','BP-5M'], 'charger':['2mm','3.5mm Nokia','microUSB 2.0','miniUSB','USB-C','Lightning','Vlasnički'], 'os':['Series 40','Symbian','Maemo 5','Android','iOS','Windows Mobile','Windows Phone'], 'part_category':['Baterija','Punjač','Ekran','Kućište','Tipkovnica','Poklopac','Kutija','Kabl','Ostalo']}, 'custom_fields':[], 'views':[], 'backup_days':1, 'backup_copies':14, 'backup_directory':'', 'backup_primary':'', 'network_local':'', 'network_remote':'', 'theme':'dark', 'layout':'list', 'update_repo':'ermintr-cyber/MyPhoneLibrary-Releases'}
+DEFAULTS = {'columns':['image','inv','brand','model','alias','type','product_code','colors','editions','battery','charger','rating','owned','box','os','released','introduced','qty','parts','gsm','wiki','note','actions'], 'options':{'brand':['Nokia','Sony Ericsson','Ericsson','Motorola','Samsung','Siemens','Apple','LG','HTC','BlackBerry','Alcatel','Huawei'], 'color':['Crna','Bijela','Srebrna','Crvena','Plava','Zlatna'], 'location':[], 'battery':['BL-5J','BL-4D','BL-4U','BL-6F','BP-4L','BP-5M'], 'charger':['2mm','3.5mm Nokia','microUSB 2.0','miniUSB','USB-C','Lightning','Vlasnički'], 'os':['Series 40','Symbian','Maemo 5','Android','iOS','Windows Mobile','Windows Phone'], 'part_category':['Baterija','Punjač','Ekran','Kućište','Tipkovnica','Poklopac','Kutija','Kabl','Ostalo']}, 'custom_fields':[], 'views':[], 'backup_days':1, 'backup_copies':14, 'backup_directory':'', 'backup_primary':'', 'network_local':'', 'network_remote':'', 'theme':'dark', 'layout':'list', 'update_repo':'ermintr-cyber/MyPhoneLibrary-Releases'}
 
 def stamp(): return dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')
 def ident(): return uuid.uuid4().hex
@@ -121,7 +121,17 @@ class Store:
             settings=self.meta('settings',DEFAULTS,c)
             if not settings.get('update_repo') and DEFAULTS.get('update_repo'):
                 settings['update_repo']=DEFAULTS['update_repo'];self.setmeta(c,'settings',settings)
+            if not self.meta('product_code_column',False,c):
+                cols=settings.get('columns',[])
+                if 'product_code' not in cols:cols.insert(cols.index('type')+1 if 'type' in cols else len(cols),'product_code')
+                settings['columns']=cols;self.setmeta(c,'settings',settings)
+                self.setmeta(c,'product_code_column',True)
             self.setmeta(c,'schema',1)
+            # Older versions reserved inventory numbers in Trash.
+            for r in self.records(c,True):
+                if any(u.get('inv') for u in r.get('instances',[])):
+                    self.release_numbers(r)
+                    c.execute('UPDATE records SET data=?,rev=rev+1 WHERE id=?',(dump(r),r['id']))
         self.last_backup=max((p.stat().st_mtime for p in self.backups.glob('*.zip')),default=0)
     @contextlib.contextmanager
     def connect(self):
@@ -158,6 +168,7 @@ class Store:
         if not re.fullmatch(r'[a-f0-9]{32}',rid): raise ValueError('Invalid ID.')
         found=c.execute('SELECT 1 FROM records WHERE id=?',(rid,)).fetchone()
         old=self.get(c,rid) if found else None
+        if old and old['deleted']: raise ValueError('Restore this record from Trash before editing it.')
         if old and expected != old['rev']: raise Conflict('Record changed on another device. Reopen it before saving.')
         r={'id':rid,'kind':data.get('kind','phone'),'created':old['created'] if old else stamp(),'updated':stamp()}
         if r['kind'] not in ('phone','part'): raise ValueError('Unknown record type.')
@@ -185,11 +196,11 @@ class Store:
             existing={u['id']:u for u in (old or {}).get('instances',[])}
             incoming=data.get('instances',[])
             if not isinstance(incoming,list) or len(incoming)>500: raise ValueError('Maximum 500 units per model.')
-            used={u.get('inv') for other in self.records(c)+self.records(c,True) if other['id']!=rid for u in other.get('instances',[]) if u.get('inv')}
+            used={u.get('inv') for other in self.records(c) if other['id']!=rid for u in other.get('instances',[]) if u.get('inv')}
             other_ids={u.get('id') for other in self.records(c)+self.records(c,True) if other['id']!=rid for u in other.get('instances',[])}
             own_ids=set()
             for item in incoming:
-                u={k:str(item.get(k,'') or '')[:4000] for k in ['inv','color','edition','type','memory','firmware','state','condition','purpose','location','imei','imei2','serial','note','source','purchase_date','currency','lock','originality']}
+                u={k:str(item.get(k,'') or '')[:4000] for k in ['inv','color','edition','type','product_code','memory','firmware','state','condition','purpose','location','imei','imei2','serial','note','source','purchase_date','currency','lock','originality']}
                 u['id']=item.get('id') or ident()
                 if not re.fullmatch(r'[a-f0-9]{32}',u['id']) or u['id'] in own_ids or u['id'] in other_ids: raise ValueError('Duplicate or invalid unit ID.')
                 own_ids.add(u['id'])
@@ -199,7 +210,7 @@ class Store:
                     seq=self.meta('sequence',0,c)+1
                     while 'MOB-'+str(seq).zfill(5) in used: seq+=1
                     self.setmeta(c,'sequence',seq);u['inv']='MOB-'+str(seq).zfill(5)
-                if u['inv'] in used: raise ValueError('Inventory number already exists (including records in Trash): '+u['inv'])
+                if u['inv'] in used: raise ValueError('Inventory number already exists: '+u['inv'])
                 used.add(u['inv'])
                 u['rating']=number(item.get('rating'),0,5,True)
                 for k in ('price','value'): u[k]=number(item.get(k),0,100000000)
@@ -223,22 +234,52 @@ class Store:
         self.catalog(c)
         self.log(c,rid,'Izmjena' if old else 'Dodavanje',{'before':old,'after':r})
         return dict(r,rev=rev,deleted=bool((old or {}).get('deleted',False)))
+    @staticmethod
+    def release_numbers(record):
+        for unit in record.get('instances',[]):
+            if unit.get('inv'):unit['previous_inv']=unit['inv']
+            unit['inv']=''
+    def purge(self,rid,rev):
+        with self.connect() as c:
+            r=self.get(c,rid)
+            if r['rev']!=rev:raise Conflict('Record changed. Refresh Trash.')
+            if not r['deleted']:raise ValueError('Move the record to Trash first.')
+            # Historical repairs, stock movements and inventory snapshots remain audit records.
+            for other in self.records(c)+self.records(c,True):
+                if rid in other.get('compatible',[]):
+                    other['compatible'].remove(rid)
+                    c.execute('UPDATE records SET data=?,rev=rev+1 WHERE id=?',(dump(other),other['id']))
+            c.execute('DELETE FROM records WHERE id=?',(rid,))
+            self.log(c,rid,'Permanently deleted',{'name':r.get('model','')})
     def trash(self,rid,rev,restore=False):
         with self.lock,self.connect() as c:
             old=self.get(c,rid)
             if old['rev']!=rev: raise Conflict('Record changed. Refresh the table.')
+            if old['deleted']!=restore:raise ValueError('Record is already in the requested location.')
             if restore and old['kind']=='phone' and any(r['kind']=='phone' and ' '.join(r['brand'].casefold().split())==' '.join(old['brand'].casefold().split()) and ' '.join(r['model'].casefold().split())==' '.join(old['model'].casefold().split()) for r in self.records(c)):
                 raise Conflict('A model with this name already exists. Resolve the duplicate before restoring from Trash.')
             if not restore and old['kind']=='part' and old.get('reserved',0): raise ValueError('Release reserved stock first.')
-            c.execute('UPDATE records SET deleted=?,rev=rev+1 WHERE id=?',(0 if restore else 1,rid))
+            if restore:
+                used={u.get('inv') for r in self.records(c) for u in r.get('instances',[])}
+                for u in old.get('instances',[]):
+                    candidate=u.get('previous_inv','')
+                    if not candidate or candidate in used:
+                        seq=self.meta('sequence',0,c)+1
+                        while 'MOB-'+str(seq).zfill(5) in used:seq+=1
+                        self.setmeta(c,'sequence',seq);candidate='MOB-'+str(seq).zfill(5)
+                    u['inv']=candidate;used.add(candidate)
+            else:self.release_numbers(old)
+            c.execute('UPDATE records SET deleted=?,rev=rev+1,data=? WHERE id=?',(0 if restore else 1,dump(old),rid))
             self.log(c,rid,'Vraćanje iz korpe' if restore else 'Premještanje u korpu',{})
     def catalog(self,c):
         items=self.meta('catalog',[],c)
+        blocked={tuple(x) for x in self.meta('catalog_deleted',[],c)}
         known={(e['category'],e['name'].strip().casefold()):e for e in items}
         def ensure(category,name):
             name=str(name or '').strip()
             if not name:return None
             key=(category,name.casefold())
+            if key in blocked:return None
             if key not in known:
                 e={'id':ident(),'rev':1,'category':category,'name':name,'description':'','specs':{},'source':''}
                 items.append(e);known[key]=e
@@ -251,6 +292,7 @@ class Store:
             changed=False
             for obj in [r]+r.get('instances',[]):
                 refs={k:ensure(k,obj.get(k)) for k in DEFAULTS['options'] if obj.get(k)}
+                refs={k:v for k,v in refs.items() if v}
                 if obj.get('catalog_refs')!=refs:obj['catalog_refs']=refs;changed=True
             if changed:
                 c.execute('UPDATE records SET data=? WHERE id=?',(dump(r),r['id']))
@@ -258,6 +300,22 @@ class Store:
         settings['options']={k:[e['name'] for e in items if e['category']==k] for k in DEFAULTS['options']}
         self.setmeta(c,'settings',settings)
         return items
+    def delete_catalog(self,data):
+        with self.connect() as c:
+            items=self.catalog(c)
+            item=next((e for e in items if e['id']==data.get('id')),None)
+            if not item:raise ValueError('Catalog item not found.')
+            if item['rev']!=data.get('rev'):raise Conflict('Catalog item changed. Reopen it.')
+            linked=[r for r in self.records(c)+self.records(c,True) if any(o.get('catalog_refs',{}).get(item['category'])==item['id'] for o in [r]+r.get('instances',[]))]
+            if linked and not data.get('confirm_linked'):raise Conflict('This item is linked to records. Confirm deletion to keep their text and remove the catalog link.')
+            blocked=self.meta('catalog_deleted',[],c)
+            blocked.append([item['category'],item['name'].strip().casefold()])
+            self.setmeta(c,'catalog_deleted',blocked)
+            self.setmeta(c,'catalog',[e for e in items if e['id']!=item['id']])
+            self.catalog(c)
+            for r in linked:
+                c.execute('UPDATE records SET rev=rev+1 WHERE id=?',(r['id'],))
+                self.log(c,r['id'],'Catalog item deleted',{'category':item['category'],'name':item['name']})
     def save_catalog(self,data):
         with self.connect() as c:
             items=self.catalog(c)
@@ -282,6 +340,7 @@ class Store:
                         self.log(c,r['id'],'Catalog rename',{'id':old['id'],'before':old['name'],'after':name})
                 items[items.index(old)]=item
             else:items.append(item)
+            self.setmeta(c,'catalog_deleted',[x for x in self.meta('catalog_deleted',[],c) if x!=[category,name.casefold()]])
             self.setmeta(c,'catalog',items)
             settings=self.meta('settings',DEFAULTS,c)
             settings['options']={k:[e['name'] for e in items if e['category']==k] for k in DEFAULTS['options']}
@@ -622,6 +681,8 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/data' and not post:return self.send(200,store.all_data())
             if path=='/api/record' and post:return self.send(200,store.save_record(d.get('record'),d.get('rev')))
             if path in ('/api/trash','/api/untrash') and post:store.trash(d['id'],d['rev'],path.endswith('untrash'));return self.send(200,{'ok':True})
+            if path=='/api/purge' and post:store.purge(d['id'],d['rev']);return self.send(200,{'ok':True})
+            if path=='/api/catalog-delete' and post:store.delete_catalog(d);return self.send(200,{'ok':True})
             if path=='/api/catalog' and post:return self.send(200,store.save_catalog(d))
             if path=='/api/network-test' and post:return self.send(200,network_info(self.server.server_port,True))
             if path=='/api/network' and not post:return self.send(200,network_info(self.server.server_port))

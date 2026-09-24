@@ -28,7 +28,7 @@ with tempfile.TemporaryDirectory(prefix='mpl-smoke-') as folder:
             try:status=request('/api/status');break
             except OSError:time.sleep(.25)
         else:raise RuntimeError('Background server did not start')
-        assert status['version']=='1.3.0'
+        assert status['version']==json.loads((installed/'app-manifest.json').read_text(encoding='utf-8'))['version']
         login=request('/api/setup',{'password':'temporary-build-test-password'});csrf=login['csrf']
         assert request('/api/data')['settings']['update_repo']=='ermintr-cyber/MyPhoneLibrary-Releases'
         assert (Path(folder)/'server.log').exists()
