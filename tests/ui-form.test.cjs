@@ -13,6 +13,11 @@ await page.evaluate(()=>{readDraft();});assert.equal(await page.evaluate(()=>dra
 await page.evaluate(()=>{document.getElementById('editor').close();db.records=[{id:'a',kind:'phone',brand:'Nokia',model:'N73',alias:'N73-1',type:'RM-133',os:'Symbian OS 9.2',photos:['/media/old.jpg'],custom:{},instances:[{id:'u1',inv:'1',photos:[],type:''},{id:'u2',inv:'2',photos:[],type:'RM-ME'}]}];showEditor('a',1);});
 await page.locator('[data-effective=type]').fill('RM-new');await page.locator('#editor-unit-select').selectOption('0');assert.equal(await page.locator('[data-effective=type]').inputValue(),'RM-133');assert.equal(await page.evaluate(()=>draft.instances[1].type),'RM-new');assert.equal(await page.evaluate(()=>draft.photos[0]),'/media/old.jpg');
 await page.evaluate(()=>{dirty=false;closeEditor();sidebarState(true);});assert.equal(await page.locator('main').evaluate(el=>getComputedStyle(el).marginLeft),'0px');
+// Empty and cleared phone forms must not block installation; real drafts must.
+await page.evaluate(()=>{phoneDraft=null;catalogReturn=null;panelDirty=false;addPhone();closeEditor();});assert.equal(await page.evaluate(()=>hasUnsavedWork()),false);
+await page.evaluate(()=>addPhone());await page.locator('[data-r=model]').fill('Unsaved test phone');await page.evaluate(()=>closeEditor());assert.equal(await page.evaluate(()=>hasUnsavedWork()),true);assert.match(await page.evaluate(()=>unsavedWorkReasons().join(' ')),/Add phone draft/);
+page.once('dialog',d=>d.accept());await page.evaluate(()=>{addPhone();clearPhoneDraft();closeEditor();});assert.equal(await page.evaluate(()=>hasUnsavedWork()),false);assert.equal(await page.evaluate(()=>phoneDraft),null);
+console.log('Update guard: untouched and cleared forms allow updates; real drafts identify Add phone as the source.');
 // A long catalog must scroll inside Settings with aligned compact columns.
 await page.evaluate(()=>{db.catalog.push(...Array.from({length:50},(_,i)=>({id:'brand'+i,category:'brand',name:i%2?'Sony Ericsson '+i:'Nokia '+i,description:i%2?'A description':'',specs:i%2?{Origin:'Test'}:{}})));catalogList('brand');});
 await page.locator('[data-catalog-section=brand] .catalog-item-row').last().scrollIntoViewIfNeeded();

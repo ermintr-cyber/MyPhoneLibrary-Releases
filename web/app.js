@@ -1,5 +1,5 @@
 'use strict';
-const UI_VERSION='1.10.1';
+const UI_VERSION='1.10.2';
 let serverInstance=null,versionMismatch=false,connectionCheckBusy=false,catalogReturn=null;
 let editorUnitIndex=0,openCatalogCategory=null,comboSerial=0;
 let settingsTab='appearance',currentView='all',dragColumn=null,ignoreSortUntil=0;
@@ -101,7 +101,16 @@ async function boot(){
  }
  }catch(e){$('login').hidden=false;$('login-error').textContent='Server unavailable. Start MyPhoneLibrary on your computer.';}finally{hideStartup();}
 }
-function hasUnsavedWork(){return !!(quickEdit||dirty||phoneDraft||panelDirty||catalogReturn||uploadCount);}
+function unsavedWorkReasons(){
+ const reasons=[];
+ if(phoneDraft||(dirty&&mode==='add')||(catalogReturn?.dirty&&catalogReturn.mode==='add'))reasons.push('Add phone draft: open Add phone, then save it or use Clear data and close the form.');
+ if((dirty&&mode!=='add')||(catalogReturn?.dirty&&catalogReturn.mode!=='add'))reasons.push('Phone / part details: save or discard the open editor changes.');
+ if(quickEdit)reasons.push('Quick cell edit: use Save or Cancel in the collection table.');
+ if(panelDirty)reasons.push(panelRoute?.kind==='item'?'Catalog item: save the item or close it and discard its changes.':panelRoute?.kind==='bulk'?'Bulk edit: apply the changes or close the editor and discard them.':'Settings: use Save settings (or Save source for the update repository), or close Settings and discard the changes.');
+ if(uploadCount)reasons.push('Photos are uploading: wait for uploads to finish.');
+ return reasons;
+}
+function hasUnsavedWork(){return unsavedWorkReasons().length>0;}
 function connectionBanner(message){const el=$('connection-banner');el.hidden=false;$('connection-message').textContent=message;}
 async function checkConnection(){
  if(connectionCheckBusy||reconnecting)return;connectionCheckBusy=true;
@@ -375,7 +384,7 @@ function closePanel(){
 }
 function closeEditor(){
  if(uploadCount){toast('Wait for photos to finish uploading.');return false;}
- if(mode==='add'){readDraft();phoneDraft=clone(draft);}
+ if(mode==='add'){readDraft();phoneDraft=dirty?clone(draft):null;}
  else if(dirty&&!confirm('Discard unsaved changes?'))return false;
  $('editor').close();draft=null;dirty=false;return true;
 }
@@ -483,7 +492,7 @@ document.addEventListener('click',async event=>{
  case 'combo-toggle':{const c=target.closest('.catalog-combo');if(c.querySelector('.combo-menu').hidden)openCombo(c,true);else closeCombos();break;}
  case 'combo-select':{const c=target.closest('.catalog-combo'),q=c.querySelector('[data-combo-query]'),bound=c.querySelector('input[type="hidden"]');q.value=target.dataset.value;syncCombo(c);closeCombos();if($('editor').open)dirty=true;else if(panelRoute)panelDirty=true;bound.dispatchEvent(new Event('change',{bubbles:true}));break;}
  case 'catalog-toggle':openCatalogCategory=openCatalogCategory===target.dataset.category?null:target.dataset.category;document.querySelectorAll('[data-catalog-section]').forEach(el=>el.hidden=el.dataset.catalogSection!==openCatalogCategory);document.querySelectorAll('[data-action="catalog-toggle"]').forEach(el=>el.setAttribute('aria-expanded',String(el.dataset.category===openCatalogCategory)));break;
- case 'field-catalog':{if(uploadCount)throw Error('Wait for photos to finish uploading.');readDraft();catalogReturn={draft:clone(draft),mode,dirty,index:editorUnitIndex};if(mode==='add')phoneDraft=clone(draft);$('editor').close();catalogList(target.dataset.category);break;}
+ case 'field-catalog':{if(uploadCount)throw Error('Wait for photos to finish uploading.');readDraft();catalogReturn={draft:clone(draft),mode,dirty,index:editorUnitIndex};if(mode==='add')phoneDraft=dirty?clone(draft):null;$('editor').close();catalogList(target.dataset.category);break;}
  case 'refresh':await refresh();toast('Table refreshed.');break;
  case 'logout':if((dirty||phoneDraft||panelDirty)&&!confirm('Sign out and discard unsaved changes?'))break;await api('/api/logout',{});$('editor').close();$('panel').close();draft=null;phoneDraft=null;db=null;dirty=false;await boot();break;
  case 'add-phone':addPhone();break;case 'add-part':addPart();break;case 'add-existing':addPhone(id);break;
@@ -568,7 +577,7 @@ document.addEventListener('click',async event=>{
  case 'update-info':await updatePanel();break;
  case 'save-update-repo':{db.settings.update_repo=$('update-repo').value.trim();await api('/api/settings',db.settings);panelDirty=false;toast('Update source saved.');break;}
  case 'check-update':{target.disabled=true;try{const result=await api('/api/update-check',{});$('update-result').textContent=result.available?'Available version '+result.version:'The latest version is installed.';$('install-update').hidden=!result.available;}finally{target.disabled=false;}break;}
- case 'install-update':{if(hasUnsavedWork())throw Error('Save or clear unsaved changes before updating.');target.disabled=true;try{updateMessage('Starting updater…',true);const result=await api('/api/update-install',{});sessionStorage.setItem('mpl-install-target',result.version);await watchInstallation();}finally{target.disabled=false;}break;}
+ case 'install-update':{const pending=unsavedWorkReasons();if(pending.length)throw Error('Unsaved changes — '+pending.join(' '));target.disabled=true;try{updateMessage('Starting updater…',true);const result=await api('/api/update-install',{});sessionStorage.setItem('mpl-install-target',result.version);await watchInstallation();}finally{target.disabled=false;}break;}
 
  }}catch(e){toast(e.message);if(['check-update','install-update','server-restart','save-update-repo'].includes(action))updateMessage('Update operation failed: '+e.message);if($('editor').open)$('editor-error').textContent=e.message;}
 });
