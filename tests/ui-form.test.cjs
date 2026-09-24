@@ -51,7 +51,7 @@ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=windo
 assert.equal(await page.locator('.mobile-primary-nav').evaluate(el=>el.getBoundingClientRect().height),66);
 assert.ok(await page.locator('#mobile-list .state-working').count()>0);
 assert.equal(await page.locator('#collection-table th[data-column-key=state]').count(),0);
-assert.ok(await page.locator('#collection-table .unit-extra .state-working').count()>0);
+assert.ok(await page.locator('#collection-table .unit-details-table .state-working').count()>0);
 await page.screenshot({path:'mobile-collection-113.png',fullPage:true});
 await page.evaluate(()=>{currentView='incomplete';render();});assert.equal(await page.locator('#completion-report').isVisible(),true);assert.match(await page.locator('#completion-report').textContent(),/Missing: Charger/);
 await page.evaluate(()=>{currentView='all';showEditor('a',0);});assert.equal(await page.locator('[data-r=declared_parts]').count(),0);await page.locator('[data-u=for_parts]').check();await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purpose),'Donor');await page.locator('[data-u=for_parts]').uncheck();await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purpose),'Kolekcija');
@@ -63,7 +63,15 @@ assert.match(await page.evaluate(()=>batteryCell('BL-6F')),/Test alternative 1/)
 assert.match(await page.evaluate(()=>catalogItems('battery')),/Nominal Capacity/);assert.match(await page.evaluate(()=>catalogItems('battery')),/3.7V/);
 await page.evaluate(()=>{$('panel').close();panelDirty=false;panelRoute=null;render();});await page.setViewportSize({width:1700,height:950});
 assert.equal(await page.locator('#collection-table .unit-table-row [data-column=os]').first().evaluate(el=>getComputedStyle(el).whiteSpace),'nowrap');
-assert.equal(await page.locator('#collection-table .unit-extra').first().evaluate(el=>getComputedStyle(el).display),'grid');
+assert.equal(await page.locator('#collection-table .unit-extra-row').count(),0);
+await page.evaluate(()=>{db.records[0].os='Symbian OS 9.2, S60 rel. 3.1';db.records[0].instances[0].os='';db.records[0].instances[0].location='On shelf';render();});
+const row=page.locator('#collection-table .unit-table-row').first();
+for(const key of ['location','box','state','rating','note'])assert.equal(await row.locator('[data-column='+key+']').count(),1);
+const osCell=row.locator('[data-column=os]');
+assert.match(await osCell.textContent(),/Symbian OS 9.2, S60 rel. 3.1/);
+assert.equal(await osCell.locator('button').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+assert.equal(await row.locator('[data-column=image] small').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
 await page.screenshot({path:'desktop-collection-114.png',fullPage:true});
 console.log('Battery summaries, multi-selection, automatic alternatives and compact expanded rows passed.');
 console.log('DOM: one field per property, search/select/reject, Escape, effective unit switching, retained gallery, collapsed layout passed.');await browser.close();})().catch(e=>{console.error(e);process.exit(1)});

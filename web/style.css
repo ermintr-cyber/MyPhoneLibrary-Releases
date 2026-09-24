@@ -110,13 +110,20 @@ dialog.settings-page .dialog-header{padding:20px 26px 4px;border:0;background:tr
 @media(max-width:380px){.grid,.grid.two{grid-template-columns:1fr}.mobile-unit-fields{gap:10px}.card-image{height:150px}}
 
 .battery-catalog-row{grid-template-columns:minmax(95px,1fr) minmax(0,4fr) 60px}.battery-summary{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;font-size:12px}.battery-summary small{display:block;color:var(--muted);font-size:10px}.battery-choices{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;max-height:260px;overflow:auto;padding:8px 0}.battery-alternatives{display:block;line-height:1.4}.battery-alternatives .catalog-link{font-size:10px}
+/* Expanded units have independent content-sized columns: one row per phone. */
 @media(min-width:801px){
- #collection-table .unit-table-row td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal;height:52px}
- #collection-table .unit-table-row td .quick-edit{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle}
- #collection-table .unit-table-row td small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9px}
- #collection-table .unit-table-row [data-column=image]{overflow:visible}#collection-table .unit-photo small{font-size:8px;white-space:nowrap}
- #collection-table .unit-table-row [data-column=actions]{overflow:visible}#collection-table .unit-actions{flex-wrap:nowrap}
- .unit-extra{display:grid;grid-template-columns:minmax(100px,1.1fr) 70px 110px 90px minmax(140px,3fr);align-items:center;gap:12px;padding:2px 6px 6px 87px}
- .unit-extra .unit-field{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.unit-extra small{display:inline;margin-right:6px;font-size:9px}.unit-extra button{padding:2px;font-size:11px}.unit-extra .parts-tag{grid-column:1/-1}
+ #collection-table .row-expanded>td{padding:0;overflow:hidden}
+ .unit-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+ #collection-table .unit-details-table{table-layout:auto;width:max-content;min-width:100%;border-collapse:collapse}
+ #collection-table .unit-details-table th,#collection-table .unit-details-table td{white-space:nowrap;overflow-wrap:normal;word-break:normal;padding:6px 9px;overflow:visible;text-overflow:clip}
+ #collection-table .unit-details-table th{font-size:10px;font-weight:400;color:var(--muted);background:var(--bg);position:static}
+ #collection-table .unit-details-table td{height:54px;border-bottom:1px solid var(--line)}
+ #collection-table .unit-details-table button.link,#collection-table .unit-details-table .quick-edit{white-space:nowrap;max-width:none;overflow:visible;text-overflow:clip}
+ #collection-table .unit-details-table small{white-space:nowrap;overflow:visible;text-overflow:clip;font-size:9px}
+ #collection-table .unit-details-table .unit-photo{min-width:40px}
+ #collection-table .unit-details-table .unit-actions{flex-wrap:nowrap}
+ #collection-table .unit-details-table .battery-alternatives{white-space:nowrap}
+ #collection-table .unit-details-table [data-column=note]{max-width:none}
+ #collection-table .unit-details-table .expand-spacer{display:none}
 }
 @media(max-width:600px){.battery-catalog-row{grid-template-columns:minmax(65px,.8fr) minmax(0,3fr) 52px;gap:6px}.battery-summary{gap:6px;grid-template-columns:1.2fr .7fr 1fr;font-size:11px}.battery-summary small{font-size:9px}}

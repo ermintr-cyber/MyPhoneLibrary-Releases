@@ -6,7 +6,7 @@ Unicode true
 !define SOURCE_ROOT "${__FILEDIR__}/.."
 !endif
 !ifndef VERSION
-!define VERSION "1.14.0"
+!define VERSION "1.14.1"
 !endif
 Name "My Libraries"
 OutFile "${SOURCE_ROOT}\dist\MyLibraries_Setup_${VERSION}.exe"
