@@ -9,6 +9,7 @@ import tempfile
 import threading
 import time
 import xml.etree.ElementTree as ET
+import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -65,6 +66,12 @@ with tempfile.TemporaryDirectory() as folder:
     out = Path.cwd()/'release'
     out.mkdir(exist_ok=True)
     try:
+        # Initial collection setup is deliberately restricted to the host computer.
+        request = urllib.request.Request('http://127.0.0.1:9000/api/setup',
+            data=b'{"password":"Android-test-password"}',
+            headers={'Content-Type': 'application/json', 'X-MPL-Client': '1'})
+        with urllib.request.urlopen(request) as response:
+            assert response.status == 200
         adb('shell', 'am', 'start', '-n', 'com.myphonelibrary.app/.MainActivity')
         connect_native()
         subprocess.run(['node', str(ROOT/'packaging/android_client_smoke.cjs')], check=True,

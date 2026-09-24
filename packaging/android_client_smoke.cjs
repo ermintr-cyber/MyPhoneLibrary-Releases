@@ -8,9 +8,10 @@ const path = require('node:path');
   const [device] = await _android.devices();
   assert(device, 'No Android emulator connected');
   let page;
+  let view;
   try {
     const attach = async () => {
-      const view = await device.webView({ pkg: 'com.myphonelibrary.app' }, { timeout: 60000 });
+      view = await device.webView({ pkg: 'com.myphonelibrary.app' }, { timeout: 60000 });
       return view.page();
     };
     page = await attach();
@@ -55,7 +56,8 @@ const path = require('node:path');
     assert.equal(await page.locator('#update-file').count(), 0);
     await page.screenshot({ path: 'release/android-about.png' });
     await device.shell('input keyevent 3');
-    const closed = page.waitForEvent('close');
+    // Wait for device discovery to discard the old process before reattaching.
+    const closed = new Promise(resolve => view.once('close', resolve));
     await device.shell('am force-stop com.myphonelibrary.app');
     await closed;
     await device.shell('am start -n com.myphonelibrary.app/.MainActivity');
@@ -65,6 +67,7 @@ const path = require('node:path');
     assert.equal(await page.evaluate('UI_VERSION'), installedUi);
     console.log('PASS: APK UI isolation, native scrolling, reachable Save, Android-only updates, persistent login.');
   } catch (error) {
+    if (page && !page.isClosed()) console.error('Visible login error:', await page.locator('#login-error').textContent().catch(() => 'unavailable'));
     if (page && !page.isClosed()) await page.screenshot({ path: 'release/android-failure.png' }).catch(() => {});
     throw error;
   } finally {
