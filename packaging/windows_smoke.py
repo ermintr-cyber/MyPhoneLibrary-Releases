@@ -1,5 +1,5 @@
 """Exercise the shipped GUI runtime on a Windows build runner, with isolated data."""
-import http.cookiejar,json,os,subprocess,tempfile,time,urllib.request,hashlib,io,zipfile
+import http.cookiejar,json,os,subprocess,tempfile,time,urllib.request,hashlib,io,zipfile,winreg
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 if os.name!='nt':raise SystemExit('This verification runs on Windows.')
@@ -11,6 +11,11 @@ for attempt in range(2):
     assert marker.read_text(encoding='utf-8')=='preserve this collection marker'
 installed=Path(os.environ['LOCALAPPDATA'])/'Programs/MyPhoneLibrary'
 assert (installed/'MyPhoneLibrary.exe').is_file()
+with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Run') as key:
+    startup=winreg.QueryValueEx(key,'MyPhoneLibrary')[0]
+assert startup=='"'+str(installed/'MyPhoneLibrary.exe')+'" --no-browser',startup
+print('Windows Startup registration points to the installed background launcher.')
+
 command="$r=Get-NetFirewallRule -DisplayName 'MyPhoneLibrary - TCP 9000' -ErrorAction Stop; if(@($r).Count -ne 1) { exit 1 }; $p=$r|Get-NetFirewallPortFilter; if($p.LocalPort -ne '9000') { exit 2 }"
 subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',command],check=True,timeout=15)
 print('Installer ran twice; collection marker preserved; exactly one firewall rule remains.')

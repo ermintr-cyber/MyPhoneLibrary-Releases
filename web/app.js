@@ -1,5 +1,5 @@
 'use strict';
-const UI_VERSION='1.8.0';
+const UI_VERSION='1.8.1';
 let serverInstance=null,versionMismatch=false,connectionCheckBusy=false,catalogReturn=null;
 let settingsTab='appearance',currentView='all',dragColumn=null,ignoreSortUntil=0;
 const $=id=>document.getElementById(id), clone=x=>JSON.parse(JSON.stringify(x));
@@ -96,6 +96,7 @@ async function boot(){
  if(completed&&status.version===completed){
   $('update-banner').hidden=false;$('update-banner').textContent='Update completed successfully. Installed version: '+completed;
   sessionStorage.removeItem('mpl-update-complete');sessionStorage.removeItem('mpl-update-target');
+  setTimeout(()=>$('update-banner').hidden=true,5000);
  }
  }catch(e){$('login').hidden=false;$('login-error').textContent='Server unavailable. Start MyPhoneLibrary on your computer.';}finally{hideStartup();}
 }
@@ -181,7 +182,7 @@ function unitTiles(r){return `<div class="unit-list">${(r.instances||[]).map((u,
 function modelActions(r){return `<div class="row-actions"><button class="primary" data-action="add-existing" data-id="${r.id}">+ Add another</button><button data-action="repairs" data-id="${r.id}">Repairs</button><button data-action="labels" data-id="${r.id}">QR labels</button><button data-action="history" data-id="${r.id}">History</button><button data-action="edit" data-id="${r.id}">Model details and images</button></div>`;}
 function unitCell(r,u,i,key){
  const effective={...r,...Object.fromEntries(['alias','type','os','gsm','wiki'].map(k=>[k,u[k]||r[k]||''])),instances:[u]};
- if(key==='image')return `<div class="unit-photo">${unitImage(r,u)}</div>`;
+ if(key==='image')return `<div class="model-image-cell"><span class="expand-spacer"></span><div class="unit-photo">${unitImage(r,u)}</div></div>`;
  if(key==='model')return `<strong>${esc(r.model)}</strong><small>${esc(enumLabel(u.condition))}</small>`;
  if(key==='actions')return `<div class="unit-actions"><button data-action="edit-unit" data-id="${r.id}" data-index="${i}">Edit</button><button data-action="copy-unit" data-id="${r.id}" data-index="${i}">Copy</button></div>`;
  if(key==='colors')return catalogLink('color',u.color);
@@ -198,16 +199,21 @@ function unitCell(r,u,i,key){
  if(key==='owned')return ACTIVE.includes(u.condition)?'<span class="good">✓</span>':'—';
  return cell(effective,key);
 }
-function expandedRow(r,visible){return r.kind==='phone'?`${(r.instances||[]).map((u,i)=>`<tr class="unit-table-row">${visible.map(k=>`<td class="wrap">${unitCell(r,u,i,k)}</td>`).join('')}</tr>`).join('')}<tr class="row-expanded"><td colspan="${visible.length}">${modelActions(r)}</td></tr>`:'';}
+function expandedRow(r,visible){return r.kind==='phone'?`${(r.instances||[]).map((u,i)=>`<tr class="unit-table-row">${visible.map(k=>`<td data-column="${k}" class="wrap">${unitCell(r,u,i,k)}</td>`).join('')}</tr>`).join('')}<tr class="row-expanded"><td colspan="${visible.length}">${modelActions(r)}</td></tr>`:'';}
 
 function phoneCard(r){return `<article class="phone-card"><div class="card-image">${image(r)}<span class="card-qty">${esc(value(r,'qty'))} ${r.kind==='phone'?'units':'parts'}</span></div><div class="card-content"><small>${catalogLink('brand',r.brand)}</small><h2>${esc(r.model)}</h2><p>${esc(value(r,'colors')||r.part_category||'—')}</p><p class="subtle">${esc(value(r,'editions').split(', ').map(enumLabel).join(', '))}</p><dl><div><dt>Battery</dt><dd>${catalogLink('battery',r.battery)}</dd></div><div><dt>Charger</dt><dd>${catalogLink('charger',r.charger)}</dd></div><div><dt>Condition</dt><dd>${esc(value(r,'state').split(', ').map(enumLabel).join(', '))||'—'}</dd></div></dl><div class="actions"><button data-action="edit" data-id="${r.id}">Edit model</button>${r.kind==='phone'?`<button class="primary" data-action="card-units" data-id="${r.id}">View units</button>`:`<button data-action="move" data-id="${r.id}">Stock</button>`}</div></div></article>`;}
 
+function tableColumns(visible){
+ const fixed={image:62,inv:86,actions:88},weights={model:1.3,alias:1.5,type:1,product_code:1.1,colors:1,editions:1.2,os:1.7,released:1.1,introduced:1.1,qty:.5,parts:.5,owned:.65,box:.8,gsm:.7,wiki:.7,note:.6};
+ const pixels=visible.reduce((n,k)=>n+(fixed[k]||0),0),total=visible.reduce((n,k)=>n+(fixed[k]?0:weights[k]||1),0);
+ return `<colgroup>${visible.map(k=>{const share=(weights[k]||1)/total;return `<col style="width:${fixed[k]?fixed[k]+'px':`calc(${share*100}% - ${share*pixels}px)`}">`;}).join('')}</colgroup>`;
+}
 function render(){
  document.querySelectorAll('[data-action="nav-view"]').forEach(el=>el.classList.toggle('active',el.dataset.view===currentView));
  const rows=filtered(), visible=db.settings.columns.filter(k=>columns.some(c=>c[0]===k));
  for(const mandatory of ['image','model','qty','actions'])if(!visible.includes(mandatory))visible.push(mandatory);
  visible.splice(visible.indexOf('image'),1);visible.unshift('image');
- $('collection-table').innerHTML=`<thead><tr>${visible.map(k=>`<th scope="col" draggable="${k!=='image'}" data-column-key="${k}" title="${k==='image'?'Image and expand control stay first':'Drag to reorder; click to sort'}" data-sort="${k}">${esc(columns.find(c=>c[0]===k)[1])}${sort.key===k?(sort.dir===1?' ↑':' ↓'):''}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${visible.map(k=>`<td class="${k==='model'?'model-cell':['colors','editions','state','note','location','type'].includes(k)?'wrap':''}">${cell(r,k)}</td>`).join('')}</tr>${expanded.has(r.id)?expandedRow(r,visible):''}`).join('')}</tbody>`;
+ $('collection-table').innerHTML=`${tableColumns(visible)}<thead><tr>${visible.map(k=>`<th scope="col" draggable="${k!=='image'}" data-column-key="${k}" title="${k==='image'?'Image and expand control stay first':'Drag to reorder; click to sort'}" data-sort="${k}">${esc(columns.find(c=>c[0]===k)[1])}${sort.key===k?(sort.dir===1?' ↑':' ↓'):''}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${visible.map(k=>`<td data-column="${k}" class="${k==='model'?'model-cell':['colors','editions','state','note','location','type'].includes(k)?'wrap':''}">${cell(r,k)}</td>`).join('')}</tr>${expanded.has(r.id)?expandedRow(r,visible):''}`).join('')}</tbody>`;
  $('table-wrap').hidden=!rows.length||db.settings.layout==='cards';$('card-grid').hidden=db.settings.layout!=='cards'||!rows.length;$('card-grid').innerHTML=db.settings.layout==='cards'?rows.map(phoneCard).join(''):'';document.querySelectorAll('[data-action="layout"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.layout===(db.settings.layout||'list'))));$('empty').hidden=db.records.length>0;
  const phones=db.records.filter(r=>r.kind==='phone'), units=phones.flatMap(live),parts=db.records.filter(r=>r.kind==='part');
  $('summary').innerHTML=[[phones.length,'models'],[units.length,'phones'],[parts.reduce((s,r)=>s+r.quantity,0),'parts / accessories'],[units.filter(u=>u.state==='Ispravan').length,'working'],[units.filter(u=>u.state==='Netestiran').length,'untested']].map(([v,l])=>`<div><strong>${v}</strong><span>${l}</span></div>`).join('');

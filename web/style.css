@@ -47,3 +47,17 @@ dialog.settings-page{z-index:15}
 
 .unit-table-row td{padding:5px 7px;vertical-align:middle;background:var(--bg);border-bottom:1px solid var(--border)}
 .unit-table-row .unit-photo{padding-left:14px}.unit-table-row small{display:block}.unit-table-row .unit-actions{display:flex;gap:4px}
+
+/* Shared geometry for model and unit rows; content wraps within the viewport. */
+#collection-table{table-layout:fixed;width:100%;min-width:0}
+#collection-table th,#collection-table td{min-width:0;max-width:none;padding:5px 4px;white-space:normal;overflow-wrap:anywhere}
+#collection-table td>button.link{white-space:normal}
+#collection-table .model-image-cell{gap:4px;min-width:0}
+#collection-table .expand-spacer{flex:0 0 18px}
+#collection-table .unit-photo{padding-left:0;min-width:0}
+#collection-table .thumb,#collection-table .thumb-placeholder{width:30px;height:40px}
+#collection-table .unit-photo small{font-size:9px;white-space:normal}
+#collection-table .unit-actions{gap:3px;flex-wrap:wrap}
+#collection-table .unit-actions button{padding:4px 6px}
+#collection-table [data-column=inv]{text-align:left;font-variant-numeric:tabular-nums}
+#collection-table .unit-table-row td{border-bottom-color:var(--line)}
