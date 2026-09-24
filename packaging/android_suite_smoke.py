@@ -10,13 +10,17 @@ def tap(texts):
   nodes=list(ET.fromstring(xml).iter('node'))
   labels=[n.get('text','') for n in nodes if n.get('text','')]
   if labels!=last_ui:print('Visible UI:',labels,flush=True);last_ui=labels
+  if 'Allow from this source' in labels:
+   switch=next((n for n in nodes if n.get('checkable')=='true'),None)
+   if switch is not None and switch.get('checked')!='true':
+    a=list(map(int,re.findall(r'\d+',switch.get('bounds',''))));adb('shell','input','tap',str((a[0]+a[2])//2),str((a[1]+a[3])//2));time.sleep(1)
+   adb('shell','input','keyevent','4');return True
   for node in nodes:
    if node.get('text','').lower() in texts and node.get('enabled')=='true':
     a=list(map(int,re.findall(r'\d+',node.get('bounds',''))))
     if len(a)==4:adb('shell','input','tap',str((a[0]+a[2])//2),str((a[1]+a[3])//2));return True
  except Exception as e:print('UI read:',str(e),flush=True)
  return False
-adb('shell','appops','set','com.mylibraries.installer','REQUEST_INSTALL_PACKAGES','allow')
 adb('shell','am','start','-n','com.mylibraries.installer/.MainActivity')
 for i in range(50):
  tap({'install selected applications','install','update','done'})
