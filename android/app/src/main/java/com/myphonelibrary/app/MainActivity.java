@@ -271,6 +271,7 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
+                CookieManager.getInstance().flush();
                 swipeRefresh.setRefreshing(false);
                 if (pageLoadFailed || !url.equals(view.getUrl())) return;
                 connectionPanel.setVisibility(View.GONE);
@@ -287,6 +288,7 @@ public class MainActivity extends Activity {
                 if (!request.isForMainFrame()) return;
                 if (!request.getUrl().toString().equals(webView.getUrl())) return;
                 pageLoadFailed = true;
+                CookieManager.getInstance().flush();
                 swipeRefresh.setRefreshing(false);
                 tryFallbackOrShowError();
             }
@@ -414,8 +416,10 @@ public class MainActivity extends Activity {
         final int generation = ++connectionGeneration;
         String local = localUrl();
         String remote = remoteUrl();
+        String last = cleanUrl(getSharedPreferences(PREFS, MODE_PRIVATE).getString("last_server", ""));
+        String preferred = !activeUrl.isEmpty() ? activeUrl : last;
         executor.execute(() -> {
-            String chosen = healthy(local) ? local : (healthy(remote) ? remote : "");
+            String chosen = (preferred.equals(local) || preferred.equals(remote)) && healthy(preferred) ? preferred : healthy(local) ? local : (healthy(remote) ? remote : "");
             runOnUiThread(() -> {
                 connectionCheckRunning = false;
                 if (generation != connectionGeneration || isFinishing() || isDestroyed()) return;
@@ -500,6 +504,7 @@ public class MainActivity extends Activity {
         showConnectionState(false, "Opening your library", activeUrl);
         String previous = webView.getUrl();
         String route = previous != null && previous.contains("#") ? previous.substring(previous.indexOf('#')) : "";
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("last_server",activeUrl).apply();
         webView.loadUrl(activeUrl + "/" + route);
     }
 
@@ -660,6 +665,8 @@ public class MainActivity extends Activity {
 
     private class AndroidBridge {
         @JavascriptInterface
+        public void sessionChanged() { runOnUiThread(() -> CookieManager.getInstance().flush()); }
+        @JavascriptInterface
         public String getLibraryUi() {
             return getSharedPreferences(PREFS, MODE_PRIVATE).getString("library_ui", "{}");
         }
@@ -739,6 +746,7 @@ public class MainActivity extends Activity {
     protected void onPause() {
         foreground = false;
         mainHandler.removeCallbacks(scheduledConnectionCheck);
+        CookieManager.getInstance().flush();
         webView.onPause();
         super.onPause();
     }

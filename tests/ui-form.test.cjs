@@ -1,6 +1,6 @@
 const {chromium}=require('playwright');
 const fs=require('fs'),assert=require('node:assert/strict');
-(async()=>{const browser=await chromium.launch({headless:true,channel:'msedge'});const page=await browser.newPage({viewport:{width:1500,height:1000}});await page.route('**/*',r=>r.abort());
+(async()=>{const browser=await chromium.launch({headless:true,...(process.env.MPL_TEST_BROWSER?{executablePath:process.env.MPL_TEST_BROWSER}:{channel:'msedge'})});const page=await browser.newPage({viewport:{width:1500,height:1000}});await page.route('**/*',r=>r.abort());
 await page.setContent(fs.readFileSync('web/index.html','utf8').replace(/<script[^>]*><\/script>/g,'').replace(/<link[^>]*>/g,''));
 await page.addStyleTag({content:fs.readFileSync('web/style.css','utf8')});
 let source=fs.readFileSync('web/app.js','utf8');source=source.slice(0,source.lastIndexOf('restoreSidebar();'));
@@ -42,4 +42,18 @@ await page.locator('[data-battery-spec=Voltage]').fill('3.7V');
 await page.evaluate(()=>{api=async(path,data)=>{if(path==='/api/catalog'){db.catalog=db.catalog.map(x=>x.id===data.id?data:x);return data;}if(path==='/api/data')return db;return {};};});
 await page.locator('[data-action=catalog-save]').click();assert.equal(await page.evaluate(()=>db.catalog.find(x=>x.id==='bl6f').specs.Voltage),'3.7V');assert.equal(await page.evaluate(()=>db.catalog.find(x=>x.id==='bl6f').specs.Legacy),'keep');assert.equal(await page.evaluate(()=>db.catalog.find(x=>x.id==='bl6f').description),'retained legacy description');
 console.log('Battery properties, automatic models and preservation of hidden legacy data passed.');
+// A real narrow viewport must show readable units instead of compressed desktop columns.
+await page.evaluate(()=>{$('panel').close();panelRoute=null;panelDirty=false;dirty=false;currentView='all';db.settings.layout='list';db.settings.columns=columns.map(c=>c[0]);db.records[0].instances[0].box=true;db.records[0].instances[0].charger_present=false;db.records[0].instances[0].state='Ispravan';expanded.add('a');render();});
+await page.setViewportSize({width:393,height:851});
+assert.equal(await page.locator('#table-wrap').isVisible(),false);assert.equal(await page.locator('#mobile-list').isVisible(),true);
+assert.equal(await page.locator('#quick-filters').isVisible(),false);await page.locator('#filter-toggle').click();assert.equal(await page.locator('#quick-filters').isVisible(),true);await page.locator('#filter-toggle').click();
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
+assert.equal(await page.locator('.mobile-primary-nav').evaluate(el=>el.getBoundingClientRect().height),66);
+assert.ok(await page.locator('#mobile-list .state-working').count()>0);
+assert.equal(await page.locator('#collection-table th[data-column-key=state]').count(),0);
+assert.ok(await page.locator('#collection-table .unit-extra .state-working').count()>0);
+await page.screenshot({path:'mobile-collection-113.png',fullPage:true});
+await page.evaluate(()=>{currentView='incomplete';render();});assert.equal(await page.locator('#completion-report').isVisible(),true);assert.match(await page.locator('#completion-report').textContent(),/Missing: Charger/);
+await page.evaluate(()=>{currentView='all';showEditor('a',0);});assert.equal(await page.locator('[data-r=declared_parts]').count(),0);await page.locator('[data-u=for_parts]').check();await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purpose),'Donor');await page.locator('[data-u=for_parts]').uncheck();await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purpose),'Kolekcija');
+console.log('Mobile widths, collapsed filters, bottom navigation, unit-only status, boxed completion and donor checkbox passed.');
 console.log('DOM: one field per property, search/select/reject, Escape, effective unit switching, retained gallery, collapsed layout passed.');await browser.close();})().catch(e=>{console.error(e);process.exit(1)});

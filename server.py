@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.12.0'
+VERSION = '1.13.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -227,6 +227,8 @@ class Store:
             own_ids=set()
             for item in incoming:
                 u={k:str(item.get(k,'') or '')[:4000] for k in ['inv','color','edition','alias','type','os','gsm','wiki','product_code','memory','firmware','state','condition','purpose','location','imei','imei2','serial','note','source','purchase_date','currency','lock','originality']}
+                u['for_parts']=item.get('for_parts') is True or u['purpose']=='Donor'
+                if u['for_parts']:u['purpose']='Donor'
                 for link in ('gsm','wiki'):u[link]=url(u[link].strip())
                 if not u['currency']:u['currency']='KM'
                 u['id']=item.get('id') or ident()
