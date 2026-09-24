@@ -74,4 +74,17 @@ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=inner
 assert.equal(await row.locator('[data-column=image] small').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
 await page.screenshot({path:'desktop-collection-114.png',fullPage:true});
 console.log('Battery summaries, multi-selection, automatic alternatives and compact expanded rows passed.');
+await page.setViewportSize({width:393,height:851});
+await page.evaluate(async()=>{settingsTab='appearance';panelDirty=false;await settingsPanel();});
+const save=page.locator('[data-action=save-settings]');
+await save.scrollIntoViewIfNeeded();
+const bounds=await save.boundingBox(),navBounds=await page.locator('.mobile-primary-nav').boundingBox();
+assert.ok(bounds.y+bounds.height<=navBounds.y,'Save button must stay above mobile navigation');
+assert.equal(await page.locator('.theme-picker').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1);
+assert.ok(await page.locator('#panel-body').evaluate(el=>el.scrollTop>0));
+await page.locator('#panel-body').evaluate(el=>el.scrollTop=0);
+assert.equal(await page.locator('#panel-body').evaluate(el=>el.scrollTop),0);
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+await page.screenshot({path:'mobile-settings-115.png',fullPage:true});
+console.log('Mobile Settings: single-column themes, reachable Save above bottom navigation and scrolling back to top passed.');
 console.log('DOM: one field per property, search/select/reject, Escape, effective unit switching, retained gallery, collapsed layout passed.');await browser.close();})().catch(e=>{console.error(e);process.exit(1)});

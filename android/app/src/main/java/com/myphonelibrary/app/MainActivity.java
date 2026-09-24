@@ -171,7 +171,9 @@ public class MainActivity extends Activity {
         swipeRefresh = new SwipeRefreshLayout(this);
         swipeRefresh.setColorSchemeColors(GOLD);
         swipeRefresh.setProgressBackgroundColorSchemeColor(PANEL);
-        swipeRefresh.setOnRefreshListener(() -> webView.reload());
+        // Nested HTML settings/dialogs scroll independently of WebView.scrollY.
+        // Native swipe interception would reload and discard form input.
+        swipeRefresh.setEnabled(false);
         swipeRefresh.addView(webView, new SwipeRefreshLayout.LayoutParams(-1, -1));
         root.addView(swipeRefresh, new FrameLayout.LayoutParams(-1, -1));
 

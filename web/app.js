@@ -1,5 +1,5 @@
 'use strict';
-const UI_VERSION='1.14.1';
+const UI_VERSION='1.15.0';
 let serverInstance=null,versionMismatch=false,connectionCheckBusy=false,catalogReturn=null;
 let editorUnitIndex=0,openCatalogCategory=null,comboSerial=0;
 let settingsTab='appearance',currentView='all',dragColumn=null,ignoreSortUntil=0;

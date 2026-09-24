@@ -30,6 +30,7 @@ jobs:
           path: |
             mobile-collection-113.png
             desktop-collection-114.png
+            mobile-settings-115.png
       - name: Build package
         shell: pwsh
         env:
