@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.9.0'
+VERSION = '1.10.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -174,8 +174,18 @@ class Store:
         if not r: raise ValueError('Record not found.')
         return dict(json.loads(r['data']),id=r['id'],rev=r['rev'],deleted=bool(r['deleted']))
     def log(self,c,rid,action,data): c.execute('INSERT INTO history(at,record_id,action,data) VALUES(?,?,?,?)',(stamp(),rid,action,dump(data)))
-    def save_record(self,data,expected=None,importing=False):
-        with self.lock, self.connect() as c: return self._save(c,data,expected,importing)
+    def validate_catalog_values(self,c,data):
+        items=self.catalog(c);known={key:{e['name'].casefold() for e in items if e['category']==key} for key in DEFAULTS['options']}
+        old=self.get(c,data['id']) if data.get('id') else {}
+        old_units={u['id']:u for u in old.get('instances',[])}
+        for obj,previous in [(data,old)]+[(u,old_units.get(u.get('id'),{})) for u in data.get('instances',[])]:
+            for key,values in known.items():
+                value=str(obj.get(key,'') or '').strip()
+                if value and value.casefold() not in values and value!=previous.get(key):raise ValueError('Choose an existing '+key+' from Catalogs. Add the catalog item first.')
+    def save_record(self,data,expected=None,importing=False,strict_catalog=False):
+        with self.lock, self.connect() as c:
+            if strict_catalog:self.validate_catalog_values(c,data)
+            return self._save(c,data,expected,importing)
     def _save(self,c,data,expected=None,importing=False):
         if not isinstance(data,dict): raise ValueError('Invalid record.')
         rid=data.get('id') or ident()
@@ -213,6 +223,7 @@ class Store:
             if not isinstance(incoming,list) or len(incoming)>500: raise ValueError('Maximum 500 units per model.')
             used={u.get('inv') for other in self.records(c) if other['id']!=rid for u in other.get('instances',[]) if u.get('inv')}
             other_ids={u.get('id') for other in self.records(c)+self.records(c,True) if other['id']!=rid for u in other.get('instances',[])}
+            reserved_numbers=used|{str(x.get('inv','')).strip() for x in incoming if x.get('inv')}
             own_ids=set()
             for item in incoming:
                 u={k:str(item.get(k,'') or '')[:4000] for k in ['inv','color','edition','alias','type','os','gsm','wiki','product_code','memory','firmware','state','condition','purpose','location','imei','imei2','serial','note','source','purchase_date','currency','lock','originality']}
@@ -224,9 +235,10 @@ class Store:
                 if u['state'] not in STATES: u['state']='Netestiran'
                 if u['condition'] not in ACTIVE|{'Wanted','Prodan','Poklonjen','Rastavljen','Rashodovan'}: u['condition']='U kolekciji'
                 if not u['inv']:
-                    seq=self.meta('sequence',0,c)+1
-                    while 'MOB-'+str(seq).zfill(5) in used: seq+=1
-                    self.setmeta(c,'sequence',seq);u['inv']='MOB-'+str(seq).zfill(5)
+                    seq=1
+                    numeric={int(v) for v in used|reserved_numbers if v.isdecimal()}
+                    while seq in numeric:seq+=1
+                    u['inv']=str(seq)
                 if u['inv'] in used: raise ValueError('Inventory number already exists: '+u['inv'])
                 used.add(u['inv'])
                 u['rating']=number(item.get('rating'),0,5,True)
@@ -254,7 +266,7 @@ class Store:
         self.catalog(c)
         self.log(c,rid,'Izmjena' if old else 'Dodavanje',{'before':old,'after':r})
         return dict(r,rev=rev,deleted=bool((old or {}).get('deleted',False)))
-    def bulk_units(self,data):
+    def bulk_units(self,data,strict_catalog=False):
         fields={'color','edition','location','state','condition','box','battery_present','charger_present','manual','headphones','os'}
         changes=data.get('changes',{});targets=data.get('targets',[])
         if not isinstance(changes,dict) or not changes or set(changes)-fields:raise ValueError('Choose supported unit fields to change.')
@@ -274,6 +286,8 @@ class Store:
                 seen.add(uid);u=next((u for u in r['instances'] if u['id']==uid),None)
                 if not u:raise ValueError('Selected unit no longer exists.')
                 u.update(changes)
+            if strict_catalog:
+                for r in grouped.values():self.validate_catalog_values(c,r)
             result=[self._save(c,r,r['rev']) for r in grouped.values()]
             return {'updated':len(seen),'records':result}
     @staticmethod
@@ -924,8 +938,8 @@ class Handler(BaseHTTPRequestHandler):
                 with self.server.state_lock:self.server.sessions.pop(token,None)
                 return self.send(200,{'ok':True},extra={'Set-Cookie':'mpl_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'})
             if path=='/api/data' and not post:return self.send(200,store.all_data())
-            if path=='/api/bulk-units' and post:return self.send(200,store.bulk_units(d))
-            if path=='/api/record' and post:return self.send(200,store.save_record(d.get('record'),d.get('rev')))
+            if path=='/api/bulk-units' and post:return self.send(200,store.bulk_units(d,strict_catalog=True))
+            if path=='/api/record' and post:return self.send(200,store.save_record(d.get('record'),d.get('rev'),strict_catalog=True))
             if path in ('/api/trash','/api/untrash') and post:store.trash(d['id'],d['rev'],path.endswith('untrash'));return self.send(200,{'ok':True})
             if path=='/api/purge' and post:store.purge(d['id'],d['rev']);return self.send(200,{'ok':True})
             if path=='/api/catalog-delete' and post:store.delete_catalog(d);return self.send(200,{'ok':True})
