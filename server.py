@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.13.0'
+VERSION = '1.14.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -370,6 +370,8 @@ class Store:
             blocked.append([item['category'],item['name'].strip().casefold()])
             self.setmeta(c,'catalog_deleted',blocked)
             for child in items:
+                if item['id'] in child.get('compatible_batteries',[]):
+                    child['compatible_batteries']=[x for x in child['compatible_batteries'] if x!=item['id']];child['rev']+=1
                 if child.get('parent_id')==item['id']:child['parent_id']=item.get('parent_id','');child['rev']+=1
             for r in self.records(c)+self.records(c,True):
                 if r.get('catalog_item')==item['id']:
@@ -405,6 +407,17 @@ class Store:
             valid={r['id'] for r in self.records(c) if r['kind']=='phone'}
             if any(rid not in valid for rid in compatible):raise ValueError('Compatible model not found.')
             item['compatible']=compatible
+            links=data.get('compatible_batteries',(old or {}).get('compatible_batteries',[])) if category=='battery' else []
+            if not isinstance(links,list) or any(not isinstance(x,str) for x in links):raise ValueError('Choose batteries from the catalog.')
+            links=list(dict.fromkeys(links))
+            if any(x==item['id'] or x not in by_id or by_id[x]['category']!='battery' for x in links):raise ValueError('Compatible battery not found or refers to itself.')
+            item['compatible_batteries']=links
+            for other in items:
+                if other['category']!='battery' or other is old:continue
+                current_links=other.get('compatible_batteries',[])
+                next_links=[x for x in current_links if x!=item['id']]
+                if other['id'] in links:next_links.append(item['id'])
+                if set(next_links)!=set(current_links):other['compatible_batteries']=next_links;other['rev']+=1
             if old:
                 for r in self.records(c)+self.records(c,True):
                     changed=False
