@@ -2,13 +2,10 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 import os
-import re
 import subprocess
 import sys
 import tempfile
 import threading
-import time
-import xml.etree.ElementTree as ET
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,33 +14,15 @@ import server
 
 
 def adb(*args):
-    return subprocess.check_output(['adb', *args], text=True).strip()
+    return subprocess.check_output(['adb', *args], text=True, timeout=20).strip()
 
 
-def tap_node(node):
-    x1, y1, x2, y2 = map(int, re.findall(r'\d+', node.get('bounds')))
-    adb('shell', 'input', 'tap', str((x1+x2)//2), str((y1+y2)//2))
-
-
-def connect_native():
-    for _ in range(20):
-        adb('shell', 'uiautomator', 'dump', '/sdcard/window.xml')
-        nodes = list(ET.fromstring(adb('shell', 'cat', '/sdcard/window.xml')).iter('node'))
-        fields = [n for n in nodes if n.get('class') == 'android.widget.EditText']
-        if fields:
-            tap_node(fields[0])
-            adb('shell', 'input', 'text', 'http://10.0.2.2:9000')
-            adb('shell', 'input', 'keyevent', '4')
-            for n in nodes:
-                if n.get('text', '').lower() == 'save and connect':
-                    tap_node(n)
-                    return
-        for n in nodes:
-            if n.get('text', '').lower() == 'connection settings':
-                tap_node(n)
-                break
-        time.sleep(1)
-    raise AssertionError('Connection settings did not open')
+def configure_debug_client():
+    # Seed only this disposable debug APK's connection settings. Android's run-as
+    # requires a debuggable package; no production app data or device permissions change.
+    preferences = '<map><string name="local_url">http://10.0.2.2:9000</string></map>'
+    subprocess.run(['adb', 'shell', "run-as com.myphonelibrary.app sh -c 'mkdir -p shared_prefs; cat > shared_prefs/mpl_connections.xml'"],
+                   input=preferences, text=True, check=True, timeout=20)
 
 
 class TestControl(BaseHTTPRequestHandler):
@@ -75,8 +54,8 @@ with tempfile.TemporaryDirectory() as folder:
             headers={'Content-Type': 'application/json', 'X-MPL-Client': '1'})
         with urllib.request.urlopen(request) as response:
             assert response.status == 200
+        configure_debug_client()
         adb('shell', 'am', 'start', '-n', 'com.myphonelibrary.app/.MainActivity')
-        connect_native()
         subprocess.run(['node', str(ROOT/'packaging/android_client_smoke.cjs')], check=True, timeout=180,
                        env={**os.environ, 'ANDROID_TEST_CONTROL': f'http://127.0.0.1:{control.server_port}'})
     finally:
