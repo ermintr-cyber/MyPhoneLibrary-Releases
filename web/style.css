@@ -114,11 +114,13 @@ dialog.settings-page .dialog-header{padding:20px 26px 4px;border:0;background:tr
 @media(min-width:801px){
  #collection-table .row-expanded>td{padding:0;overflow:hidden}
  .unit-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
- #collection-table .unit-details-table{table-layout:auto;width:max-content;min-width:100%;border-collapse:collapse}
+ #collection-table .unit-details-table{table-layout:auto;width:100%;min-width:100%;border-collapse:collapse}
  #collection-table .unit-details-table th,#collection-table .unit-details-table td{white-space:nowrap;overflow-wrap:normal;word-break:normal;padding:6px 9px;overflow:visible;text-overflow:clip}
  #collection-table .unit-details-table th{font-size:10px;font-weight:400;color:var(--muted);background:var(--bg);position:static}
  #collection-table .unit-details-table td{height:54px;border-bottom:1px solid var(--line)}
  #collection-table .unit-details-table button.link,#collection-table .unit-details-table .quick-edit{white-space:nowrap;max-width:none;overflow:visible;text-overflow:clip}
+ #collection-table .unit-details-table [data-column=os]{width:100px;max-width:100px;white-space:normal;overflow-wrap:anywhere}
+ #collection-table .unit-details-table [data-column=os] button.link{max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:left}
  #collection-table .unit-details-table small{white-space:nowrap;overflow:visible;text-overflow:clip;font-size:9px}
  #collection-table .unit-details-table .unit-photo{min-width:40px}
  #collection-table .unit-details-table .unit-actions{flex-wrap:nowrap}

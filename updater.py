@@ -91,7 +91,7 @@ def version(v):
 
 def allowed(name):
     p=PurePosixPath(name)
-    return not p.is_absolute() and '..' not in p.parts and '\\' not in name and ':' not in name and (name in ('server.py','updater.py','Pokreni-MyPhoneLibrary.cmd','PROCITAJ-ME.md','app-manifest.json') or (len(p.parts)==2 and p.parts[0]=='web' and p.suffix in ('.js','.css','.html','.svg','.webmanifest','.txt')))
+    return not p.is_absolute() and '..' not in p.parts and '\\' not in name and ':' not in name and (name in ('battery_catalog.py','data/nokia-batteries.json','server.py','updater.py','Pokreni-MyPhoneLibrary.cmd','PROCITAJ-ME.md','app-manifest.json') or (len(p.parts)==2 and p.parts[0]=='web' and p.suffix in ('.js','.css','.html','.svg','.webmanifest','.txt')))
 
 def validate_archive(content,current):
     result={}
