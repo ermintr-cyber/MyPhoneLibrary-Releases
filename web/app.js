@@ -1,5 +1,5 @@
 'use strict';
-const UI_VERSION='1.6.1';
+const UI_VERSION='1.7.0';
 let serverInstance=null,versionMismatch=false,connectionCheckBusy=false,catalogReturn=null;
 let settingsTab='appearance',currentView='all',dragColumn=null,ignoreSortUntil=0;
 const $=id=>document.getElementById(id), clone=x=>JSON.parse(JSON.stringify(x));
@@ -55,6 +55,36 @@ async function reconnectAfterRestart(previousInstance=serverInstance){
  }
  const failure='Restart could not be confirmed'+(target?' for version '+target:'')+'. The update is not confirmed as installed. Reopen My Phone Library or check the installed version.';
  updateMessage(failure);startupStatus('Still unable to reconnect',failure,true);
+ }finally{reconnecting=false;}
+}
+async function watchInstallation(){
+ if(reconnecting)return;reconnecting=true;
+ const target=sessionStorage.getItem('mpl-install-target');
+ startupStatus('Updating MyPhoneLibrary…','The independent updater is working. Keep this page open.');
+ try{
+  for(let attempt=0;attempt<450;attempt++){
+   try{
+    const options={cache:'no-store'};if(typeof AbortSignal!=='undefined'&&AbortSignal.timeout)options.signal=AbortSignal.timeout(2000);
+    const response=await fetch('/api/status',options);
+    if(response.ok){
+     const status=await response.json(),job=status.update_job||{};
+     if(job.version===target&&job.status==='failed'){
+      updateMessage(job.message);startupStatus('Update could not be completed',job.message,true);return;
+     }
+     if(job.version===target&&job.status==='completed'&&status.version===target){
+      sessionStorage.removeItem('mpl-install-target');sessionStorage.setItem('mpl-update-complete',target);
+      startupStatus('Update completed','Opening version '+target+'…');location.reload();return;
+     }
+     if(job.version===target){
+      const detail=job.message||'Waiting for the update worker…';
+      startupStatus(job.status==='downloading'?'Downloading update…':job.status==='installing'?'Installing update…':job.status==='verifying'?'Starting the updated server…':'Updating MyPhoneLibrary…',detail+(Number.isFinite(job.progress)?' '+job.progress+'%':''));
+      updateMessage(detail,true);
+     }
+    }
+   }catch{startupStatus('Installing and reconnecting…','The server is temporarily offline while the Windows updater replaces the application.');}
+   await new Promise(resolve=>setTimeout(resolve,2000));
+  }
+  startupStatus('Update status is unavailable','The updater may still be working. Try again to reconnect; no second installation will be started.',true);
  }finally{reconnecting=false;}
 }
 async function boot(){
@@ -321,9 +351,11 @@ function inventoryPanel(id=null){const inv=id?db.inventories.find(x=>x.id===id):
  panel('Inventory check',`<p>Check the phones at a selected location.</p><div class="actions"><select id="inventory-location"><option value="">Entire collection</option>${locations.map(l=>`<option>${esc(enumLabel(l))}</option>`).join('')}</select><button class="primary" data-action="start-inventory">Start inventory check</button></div><div class="settings-list" style="margin-top:18px">${db.inventories.map(i=>`<div class="setting-row"><div>${esc(i.location||'Entire collection')}<small> · ${esc(i.at)} · ${i.closed?'Completed':'In progress'} · ${Object.keys(i.found).length}/${Object.keys(i.expected).length}</small></div><button data-action="open-inventory" data-id="${i.id}">Open</button></div>`).join('')}</div>`);}
 async function historyPanel(id){const history=await api('/api/history?id='+id);panel('Change history',history.map(h=>`<details class="setting-row" style="display:block"><summary>${esc(h.action)} · ${esc(h.at)}</summary><pre class="pre">${esc(JSON.stringify(JSON.parse(h.data),null,2))}</pre></details>`).join('')||'<p>No records yet.</p>');}
 function trashPanel(){panel('Trash',`<p class="subtle">Records are retained and can be restored. Inventory numbers are released. Restore reuses the old number if available, otherwise assigns a new one. Permanent deletion removes the collection entry; historical audit records and backups are retained.</p><div class="settings-list">${db.trash.map(r=>`<div class="setting-row"><span>${esc(name(r))} · ${r.kind==='phone'?(r.instances||[]).length+' units':'part'}</span><div class="actions"><button data-action="untrash" data-id="${r.id}">Restore</button><button class="danger" data-action="purge" data-id="${r.id}">Delete permanently</button></div></div>`).join('')||'<p>Trash is empty.</p>'}</div>`);}
-function updateContents(){return `<p>Installed version: <strong>${esc(db.version)}</strong></p><label>GitHub release repository (owner/name)<input id="update-repo" value="${esc(db.settings.update_repo||'')}" placeholder="owner/MyPhoneLibrary-Releases"></label><div class="actions"><button data-action="save-update-repo">Save source</button><button class="primary" data-action="check-update">Check for updates</button><button id="install-update" data-action="install-update" hidden>Download and stage update</button></div><p id="update-result" class="hint" role="status">${db.settings.update_repo?'Check GitHub for a new version.':'A GitHub release source has not been connected yet.'}</p><button data-action="server-restart">Restart server</button><h3 class="section">Update from file</h3><label>New release package (.zip)<input type="file" id="update-file" accept=".zip"></label><p class="hint">A backup is created before staging. Updates are applied on the next server start.</p>`;}
+function updateContents(){return `<p>Installed version: <strong>${esc(db.version)}</strong></p><label>GitHub release repository (owner/name)<input id="update-repo" value="${esc(db.settings.update_repo||'')}" placeholder="owner/MyPhoneLibrary-Releases"></label><div class="actions"><button data-action="save-update-repo">Save source</button><button class="primary" data-action="check-update">Check for updates</button><button id="install-update" data-action="install-update" hidden>Update</button></div><p id="update-result" class="hint" role="status">${db.settings.update_repo?'Check GitHub for a new version.':'A GitHub release source has not been connected yet.'}</p><p class="subtle">Update downloads the verified Windows installer, installs it in the background and restarts the server automatically.</p><h3 class="section">Manual update from file</h3><button data-action="server-restart">Restart server to apply a manual package</button><label>New release package (.zip)<input type="file" id="update-file" accept=".zip"></label><p class="hint">A backup is created before staging. Updates are applied on the next server start.</p>`;}
 async function loadUpdateState(){
  const state=await api('/api/update-state');
+ if(state.job&&['starting','downloading','installing','verifying'].includes(state.job.status)){sessionStorage.setItem('mpl-install-target',state.job.version);watchInstallation();return;}
+ if(state.job?.status==='failed'){updateMessage(state.job.message);return;}
  if(state.pending){sessionStorage.setItem('mpl-update-target',state.pending);updateMessage('Version '+state.pending+' is ready. Click Restart server to apply it.');}
  if(state.error)updateMessage('Update failed: '+state.error);
 }
@@ -342,7 +374,7 @@ document.addEventListener('click',async event=>{
   if(['nav-view','add-phone','add-part'].includes(action)){$('panel').close();panelRoute=null;}
  }
  switch(action){
- case 'retry-reconnect':await reconnectAfterRestart();break;
+ case 'retry-reconnect':if(sessionStorage.getItem('mpl-install-target'))await watchInstallation();else await reconnectAfterRestart();break;
  case 'dismiss-reconnect':hideStartup();break;
  case 'reload-current':if(!hasUnsavedWork()||confirm('Reload and discard unsaved changes?')){dirty=false;phoneDraft=null;panelDirty=false;catalogReturn=null;location.reload();}break;
  case 'return-phone':returnToPhone();break;
@@ -429,9 +461,9 @@ document.addEventListener('click',async event=>{
  case 'password':panel('Change password','<div class="grid two"><label>Current password<input type="password" id="old-password" autocomplete="current-password"></label><label>New password<input type="password" id="new-password" minlength="8" autocomplete="new-password"></label></div><div class="actions"><button class="primary" data-action="save-password">Save new password</button></div>');break;
  case 'save-password':await api('/api/password',{old:$('old-password').value,password:$('new-password').value});$('panel').close();await boot();toast('Password changed. Sign in again.');break;
  case 'update-info':await updatePanel();break;
- case 'save-update-repo':{db.settings.update_repo=$('update-repo').value.trim();await api('/api/settings',db.settings);toast('Update source saved.');break;}
+ case 'save-update-repo':{db.settings.update_repo=$('update-repo').value.trim();await api('/api/settings',db.settings);panelDirty=false;toast('Update source saved.');break;}
  case 'check-update':{target.disabled=true;try{const result=await api('/api/update-check',{});$('update-result').textContent=result.available?'Available version '+result.version:'The latest version is installed.';$('install-update').hidden=!result.available;}finally{target.disabled=false;}break;}
- case 'install-update':{target.disabled=true;try{updateMessage('Downloading and verifying update… Please wait.',true);const result=await api('/api/update-download',{});sessionStorage.setItem('mpl-update-target',result.version);updateMessage('Version '+result.version+' is ready. Click Restart server to apply it.');}finally{target.disabled=false;}break;}
+ case 'install-update':{if(hasUnsavedWork())throw Error('Save or clear unsaved changes before updating.');target.disabled=true;try{updateMessage('Starting updater…',true);const result=await api('/api/update-install',{});sessionStorage.setItem('mpl-install-target',result.version);await watchInstallation();}finally{target.disabled=false;}break;}
 
  }}catch(e){toast(e.message);if(['check-update','install-update','server-restart','save-update-repo'].includes(action))updateMessage('Update operation failed: '+e.message);if($('editor').open)$('editor-error').textContent=e.message;}
 });
@@ -475,4 +507,4 @@ window.addEventListener('focus',checkConnection);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkConnection();});
 window.addEventListener('hashchange',()=>{if(!db)return;const params=new URLSearchParams(location.hash.slice(1));const id=params.get('record'),unit=params.get('unit'),r=record(id);if(r)showEditor(id,r.instances.findIndex(u=>u.id===unit));});
 document.addEventListener('error',e=>{if(e.target.tagName==='IMG'){e.target.alt='Image unavailable';e.target.style.background='var(--surface2)';}},true);
-boot().then(()=>{setTimeout(monitorConnection,10000);if(location.hash&&db)window.dispatchEvent(new Event('hashchange'));});
+boot().then(()=>{if(sessionStorage.getItem('mpl-install-target'))watchInstallation();setTimeout(monitorConnection,10000);if(location.hash&&db)window.dispatchEvent(new Event('hashchange'));});

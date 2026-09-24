@@ -86,7 +86,21 @@ assert.match(node('editor-content').innerHTML,/data-action="field-catalog" data-
  await vm.runInContext('checkConnection()',context);assert.equal(reloads,0);assert.match(node('connection-message').textContent,/unsaved draft/);
  context.fetch=async()=>{throw Error('offline')};await vm.runInContext('checkConnection()',context);
  assert.match(node('connection').textContent,/Offline/);
- context.fetch=async()=>({ok:true,json:async()=>({version:'1.6.1',instance:'new'})});
+ context.fetch=async()=>({ok:true,json:async()=>({version:'1.7.0',instance:'new'})});
  await vm.runInContext('checkConnection()',context);assert.equal(node('connection-banner').hidden,true);
  console.log('UI: stale pages reload, unsaved drafts block reload, and connection loss/recovery is visible.');
+
+ saved.set('mpl-install-target','1.7.0');reloads=0;let installPoll=0;
+ context.fetch=async()=>{
+  installPoll++;
+  if(installPoll===2)throw Error('server stopped for install');
+  return {ok:true,json:async()=>installPoll===1?{version:'1.6.1',update_job:{status:'downloading',version:'1.7.0',progress:50,message:'Downloading'}}:{version:'1.7.0',update_job:{status:'completed',version:'1.7.0'}}};
+ };
+ await vm.runInContext('watchInstallation()',context);
+ assert.equal(reloads,1);assert.equal(installPoll,3);assert.equal(saved.has('mpl-install-target'),false);
+ saved.set('mpl-install-target','1.7.0');reloads=0;
+ context.fetch=async()=>({ok:true,json:async()=>({version:'1.6.1',update_job:{status:'failed',version:'1.7.0',message:'Installer checksum mismatch'}})});
+ await vm.runInContext('watchInstallation()',context);
+ assert.equal(reloads,0);assert.match(node('startup-detail').textContent,/checksum/);
+ console.log('UI: independent update survives server outage, reloads only after verified completion and retains installer failure details.');
 })().catch(error=>{console.error(error);process.exitCode=1});

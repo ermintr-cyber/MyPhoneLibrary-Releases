@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.6.1'
+VERSION = '1.7.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -706,7 +706,7 @@ class HostHTTPServer(ThreadingHTTPServer):
 class AppServer(HostHTTPServer):
     daemon_threads=False
     def __init__(self,address,store):
-        super().__init__(address,Handler);self.store=store;self.instance_id=secrets.token_hex(12);self.sessions={};self.attempts={};self.state_lock=threading.RLock()
+        super().__init__(address,Handler);self.store=store;self.instance_id=secrets.token_hex(12);self.operation_lock=threading.RLock();self.installing=False;self.sessions={};self.attempts={};self.state_lock=threading.RLock()
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version='HTTP/1.1'
@@ -741,7 +741,13 @@ class Handler(BaseHTTPRequestHandler):
         if n<0 or n>MAX_BODY:raise ValueError('File is too large (maximum 100 MB).')
         return self.rfile.read(n)
     def do_GET(self): self.handle_request(False)
-    def do_POST(self): self.handle_request(True)
+    def do_POST(self):
+        if urllib.parse.urlsplit(self.path).path=='/api/backup-folder':
+            if self.server.installing:return self.send(503,{'error':'Update installation is in progress.'})
+            return self.handle_request(True)
+        with self.server.operation_lock:
+            if self.server.installing:return self.send(503,{'error':'Update installation is in progress. Please wait.'})
+            self.handle_request(True)
     def handle_request(self,post):
         try:
             self.connection.settimeout(40)
@@ -782,7 +788,8 @@ class Handler(BaseHTTPRequestHandler):
                 d={} if binary else json.loads(raw or b'{}')
                 if not isinstance(d,dict):raise ValueError('Expected an object.')
             if path=='/api/status' and not post:
-                return self.send(200,{'version':VERSION,'instance':self.server.instance_id,'product':PRODUCT,'setup':not bool(store.meta('auth')),'authenticated':bool(session),'csrf':session['csrf'] if session else None})
+                from updater import read_status
+                return self.send(200,{'update_job':read_status(store.directory/'updates/status.json'),'version':VERSION,'instance':self.server.instance_id,'product':PRODUCT,'setup':not bool(store.meta('auth')),'authenticated':bool(session),'csrf':session['csrf'] if session else None})
             if path in ('/api/setup','/api/login') and post:
                 ip=self.client_address[0]
                 with self.server.state_lock:
@@ -806,6 +813,22 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith('/api/') or path.startswith('/media/'):
                 if not session:return self.send(401,{'error':'Sign in to access the collection.'})
                 if post and not hmac.compare_digest(self.headers.get('X-MPL-CSRF',''),session['csrf']):return self.send(403,{'error':'Session expired. Refresh the app.'})
+            if path=='/api/update-install' and post:
+                from updater import latest_installer,start_install
+                artifact=latest_installer(store.meta('settings',DEFAULTS).get('update_repo'),VERSION)
+                if not artifact['available']:raise ValueError('The latest version is already installed.')
+                result=start_install(BASE,store.directory,artifact,self.server.server_port,self.server.server_address[0],os.getpid(),self.server.instance_id,token,session['csrf'])
+                return self.send(202,result)
+            if path=='/api/update-quiesce' and post:
+                from updater import read_status
+                state=read_status(store.directory/'updates/status.json')
+                if not ipaddress.ip_address(self.client_address[0]).is_loopback or state.get('status')!='installing':return self.send(403,{'error':'No local update worker is installing.'})
+                cancel_folder_picker()
+                with store.lock:store.backup();self.server.installing=True
+                self.server.restart_requested=False
+                self.send(200,{'ready':True})
+                threading.Thread(target=self.server.shutdown,daemon=True).start()
+                return
             if path=='/api/server-control' and post:
                 if d.get('action') not in ('stop','restart'):raise ValueError('Unknown action.')
                 cancel_folder_picker()
@@ -851,10 +874,11 @@ class Handler(BaseHTTPRequestHandler):
                 pending=store.directory/'pending-update/app-manifest.json'
                 target=json.loads(pending.read_text(encoding='utf-8'))['version'] if pending.exists() else None
                 error=store.directory/'update-error.txt'
-                return self.send(200,{'installed':VERSION,'pending':target,'error':error.read_text(encoding='utf-8') if error.exists() else ''})
+                from updater import read_status
+                return self.send(200,{'job':read_status(store.directory/'updates/status.json'),'installed':VERSION,'pending':target,'error':error.read_text(encoding='utf-8') if error.exists() else ''})
             if path=='/api/update-check' and post:
-                from updater import latest_release
-                info=latest_release(store.meta('settings',DEFAULTS).get('update_repo'),VERSION)
+                from updater import latest_installer
+                info=latest_installer(store.meta('settings',DEFAULTS).get('update_repo'),VERSION)
                 return self.send(200,{k:v for k,v in info.items() if k in ('available','version','size')})
             if path=='/api/update-download' and post:
                 from updater import download_release,stage
@@ -912,7 +936,8 @@ def backup_worker(server):
         time.sleep(30)
         try:
             days=server.store.meta('settings',DEFAULTS).get('backup_days',1)
-            if server.store.meta('auth') and time.time()-server.store.last_backup>days*86400:server.store.backup()
+            with server.operation_lock:
+                if not server.installing and server.store.meta('auth') and time.time()-server.store.last_backup>days*86400:server.store.backup()
         except Exception as e:print('Backup:',str(e),flush=True)
 
 def port_in_use(host,port):

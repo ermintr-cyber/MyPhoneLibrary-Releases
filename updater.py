@@ -144,7 +144,141 @@ def download_release(repo,current):
     if manifest['version']!=info['version']:raise ValueError('Release and package versions do not match.')
     return content
 
+# Independent installer worker, modelled on MyMediaLibrary's update lifecycle.
+ACTIVE = {'starting','downloading','installing','verifying'}
+
+def write_status(path,**values):
+    import time
+    path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
+    values['updated_at']=time.time()
+    temporary=path.with_suffix('.tmp');temporary.write_text(json.dumps(values),encoding='utf-8');temporary.replace(path)
+
+def read_status(path):
+    try:return json.loads(Path(path).read_text(encoding='utf-8'))
+    except (OSError,ValueError):return {'status':'idle'}
+
+def latest_installer(repo,current):
+    repo=repository(repo)
+    release=json.loads(github_bytes('https://api.github.com/repos/'+repo+'/releases/latest',2*1024*1024))
+    if release.get('draft') or release.get('prerelease'):raise ValueError('A stable published release is required.')
+    tag=release.get('tag_name','');new=tag.removeprefix('v');version(new)
+    if version(new)<=version(current):return {'available':False,'version':new}
+    filename='MyPhoneLibrary_Setup_'+new+'.exe'
+    assets=[a for a in release.get('assets',[]) if a.get('name')==filename and a.get('state')=='uploaded']
+    if len(assets)!=1:raise ValueError('The Windows installer is not published yet. Try again shortly.')
+    asset=assets[0];size=asset.get('size',0);digest=asset.get('digest','')
+    if not isinstance(size,int) or not 0<size<=100*1024*1024:raise ValueError('Invalid installer size.')
+    if not re.fullmatch(r'sha256:[a-f0-9]{64}',digest or ''):raise ValueError('The installer has no verified SHA-256 digest.')
+    from urllib.parse import quote
+    expected='https://github.com/'+repo+'/releases/download/'+quote(tag,safe='')+'/'+filename
+    if asset.get('browser_download_url')!=expected:raise ValueError('The installer does not belong to this repository.')
+    return {'available':True,'version':new,'size':size,'digest':digest[7:],'url':expected}
+
+def download_installer(info,destination,progress):
+    check_download_url(info['url']);digest=hashlib.sha256();count=0
+    partial=Path(destination).with_suffix('.partial')
+    try:
+        req=urllib.request.Request(info['url'],headers={'User-Agent':'MyPhoneLibrary-Updater'})
+        with urllib.request.build_opener(GitHubRedirect()).open(req,timeout=45) as response,partial.open('wb') as output:
+            while chunk:=response.read(256*1024):
+                count+=len(chunk)
+                if count>info['size']:raise ValueError('Installer exceeds its published size.')
+                output.write(chunk);digest.update(chunk);progress(count*100//info['size'])
+        if count!=info['size'] or digest.hexdigest()!=info['digest']:raise ValueError('Installer checksum verification failed. Nothing was installed.')
+        partial.replace(destination)
+    finally:partial.unlink(missing_ok=True)
+
+def worker_request(job,path):
+    req=urllib.request.Request('http://127.0.0.1:'+str(job['port'])+path,data=b'{}',headers={'Content-Type':'application/json','X-MPL-Client':'1','X-MPL-CSRF':job['csrf'],'Cookie':'mpl_session='+job['session']})
+    with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req,timeout=120) as response:return json.load(response)
+
+def wait_for_exit(pid,timeout=30):
+    import ctypes
+    from ctypes import wintypes as w
+    kernel=ctypes.WinDLL('kernel32',use_last_error=True)
+    kernel.OpenProcess.argtypes=[w.DWORD,w.BOOL,w.DWORD];kernel.OpenProcess.restype=w.HANDLE
+    kernel.WaitForSingleObject.argtypes=[w.HANDLE,w.DWORD];kernel.WaitForSingleObject.restype=w.DWORD
+    kernel.CloseHandle.argtypes=[w.HANDLE]
+    handle=kernel.OpenProcess(0x100000,False,pid)
+    if not handle:return
+    try:
+        if kernel.WaitForSingleObject(handle,timeout*1000)!=0:raise RuntimeError('The old server did not stop. Nothing was installed. Close MyPhoneLibrary and retry.')
+    finally:kernel.CloseHandle(handle)
+
+def launch_server(job):
+    import subprocess
+    root=Path(job['root'])
+    return subprocess.Popen([str(root/'runtime/pythonw.exe'),str(root/'server.py'),'--no-browser','--host',job['host'],'--port',str(job['port']),'--data',job['data']],cwd=root,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+
+def wait_for_version(job):
+    import time
+    opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    for _ in range(90):
+        try:
+            with opener.open('http://127.0.0.1:'+str(job['port'])+'/api/status',timeout=2) as response:state=json.load(response)
+            if state.get('product')=='MyPhoneLibrary' and state.get('version')==job['version'] and state.get('instance')!=job.get('instance'):return
+        except (OSError,ValueError):pass
+        time.sleep(.5)
+    raise RuntimeError('Installation finished, but the new server could not be confirmed. Reopen MyPhoneLibrary. See updates/status.json.')
+
+def run_job(job_path):
+    import subprocess
+    job_path=Path(job_path);job=json.loads(job_path.read_text(encoding='utf-8'));status_path=Path(job['status_path'])
+    def report(stage,message,**extra):write_status(status_path,status=stage,version=job['version'],message=message,**extra)
+    stopped=False;started=False
+    try:
+        report('downloading','Downloading update…',progress=0)
+        installer=job_path.parent/'installer.exe'
+        download_installer(job['artifact'],installer,lambda p:report('downloading','Downloading update…',progress=p))
+        report('installing','Creating backup and stopping the old server…')
+        worker_request(job,'/api/update-quiesce')
+        wait_for_exit(job['pid']);stopped=True
+        report('installing','Installing the verified Windows update…')
+        # NSIS /D must be last and unquoted. The installation path is supplied by
+        # this server, not by the browser or release metadata.
+        command='"'+str(installer)+'" /S /D='+job['root']
+        result=subprocess.run(command,timeout=180,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+        if result.returncode:raise RuntimeError('Windows installer failed (code '+str(result.returncode)+').')
+        installed=json.loads((Path(job['root'])/'app-manifest.json').read_text(encoding='utf-8'))
+        if installed.get('version')!=job['version']:raise RuntimeError('Installer did not install the requested version.')
+        # Old staged ZIPs must never overwrite the newly installed application.
+        pending=Path(job['data'])/'pending-update'
+        if pending.exists():shutil.rmtree(pending)
+        report('verifying','Starting and verifying the updated server…')
+        launch_server(job);started=True;wait_for_version(job)
+        report('completed','Update completed. Version '+job['version']+' is ready.')
+        installer.unlink(missing_ok=True)
+    except Exception as error:
+        report('failed',str(error))
+        if stopped and not started:
+            try:launch_server(job)
+            except Exception:pass
+    finally:
+        # Do not leave session credentials in the update job after completion.
+        job.pop('session',None);job.pop('csrf',None)
+        job_path.write_text(json.dumps(job),encoding='utf-8')
+
+def start_install(root,directory,artifact,port,host,pid,instance,session,csrf):
+    import subprocess,uuid,time
+    if os.name!='nt':raise ValueError('Automatic Windows installation requires the Windows host.')
+    root=Path(root);directory=Path(directory);status_path=directory/'updates/status.json'
+    previous=read_status(status_path)
+    if previous.get('status') in ACTIVE and time.time()-previous.get('updated_at',0)<600:return previous
+    folder=directory/'updates'/uuid.uuid4().hex;folder.mkdir(parents=True)
+    # Copy the runtime too: the worker must not lock files Setup replaces.
+    shutil.copytree(root/'runtime',folder/'runtime')
+    shutil.copy2(root/'updater.py',folder/'updater.py')
+    job={'root':str(root),'data':str(directory),'artifact':artifact,'version':artifact['version'],'port':port,'host':host,'pid':pid,'instance':instance,'session':session,'csrf':csrf,'status_path':str(status_path)}
+    path=folder/'job.json';path.write_text(json.dumps(job),encoding='utf-8')
+    write_status(status_path,status='starting',version=artifact['version'],message='Starting independent updater…')
+    try:subprocess.Popen([str(folder/'runtime/pythonw.exe'),str(folder/'updater.py'),'--install-job',str(path)],cwd=folder,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+    except Exception as error:
+        write_status(status_path,status='failed',version=artifact['version'],message=str(error));raise
+    return read_status(status_path)
+
 if __name__=='__main__':
+    if len(sys.argv)>2 and sys.argv[1]=='--install-job':
+        run_job(sys.argv[2]);raise SystemExit(0)
     root=Path(__file__).resolve().parent
     import argparse
     parser=argparse.ArgumentParser()
