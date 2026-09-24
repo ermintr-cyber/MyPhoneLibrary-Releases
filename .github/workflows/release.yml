@@ -1,5 +1,7 @@
 name: Windows release
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   push:
     branches: ['main']
@@ -20,6 +22,8 @@ jobs:
         run: node tests/ui.test.cjs
       - name: Check collection workflows
         run: node tests/ui-workflows.test.cjs
+      - name: Check Android update isolation
+        run: node tests/ui-android.test.cjs
       - name: Test phone form in Edge
         run: |
           npm install --no-save --package-lock=false playwright@1.58.2

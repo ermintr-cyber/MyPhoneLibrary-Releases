@@ -94,7 +94,8 @@ public class MainActivity extends Activity {
     private Button retryButton;
     private Button connectionButton;
     private ValueCallback<Uri[]> pendingFileChooser;
-    private String activeUrl = "";
+    private volatile String activeUrl = "";
+    private BundledUi bundledUi;
     private boolean exitDialogVisible = false;
     private boolean foreground = false;
     private boolean connectionCheckRunning = false;
@@ -159,8 +160,14 @@ public class MainActivity extends Activity {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(BG);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
-            view.setPadding(0, insets.getSystemWindowInsetTop(), 0, 0);
-            return insets;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout() | WindowInsets.Type.ime());
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                return WindowInsets.CONSUMED;
+            }
+            view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+                    insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+            return insets.consumeSystemWindowInsets();
         });
 
         webView = new WebView(this);
@@ -218,6 +225,8 @@ public class MainActivity extends Activity {
     }
 
     private void configureWebView() {
+        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
+        bundledUi = new BundledUi(getAssets());
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -263,6 +272,11 @@ public class MainActivity extends Activity {
         });
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return bundledUi.intercept(request, activeUrl);
+            }
+
             @Override
             public void onPageFinished(WebView view, String url) {
                 CookieManager.getInstance().flush();
@@ -656,6 +670,9 @@ public class MainActivity extends Activity {
     }
 
     private class AndroidBridge {
+        @JavascriptInterface
+        public boolean hasBundledUi() { return true; }
+
         @JavascriptInterface
         public void sessionChanged() { runOnUiThread(() -> CookieManager.getInstance().flush()); }
         @JavascriptInterface

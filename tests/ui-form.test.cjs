@@ -80,7 +80,7 @@ const save=page.locator('[data-action=save-settings]');
 await save.scrollIntoViewIfNeeded();
 const bounds=await save.boundingBox(),navBounds=await page.locator('.mobile-primary-nav').boundingBox();
 assert.ok(bounds.y+bounds.height<=navBounds.y,'Save button must stay above mobile navigation');
-assert.equal(await page.locator('.theme-picker').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1);
+assert.equal(await page.locator('.theme-picker').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
 assert.ok(await page.locator('#panel-body').evaluate(el=>el.scrollTop>0));
 await page.locator('#panel-body').evaluate(el=>el.scrollTop=0);
 assert.equal(await page.locator('#panel-body').evaluate(el=>el.scrollTop),0);

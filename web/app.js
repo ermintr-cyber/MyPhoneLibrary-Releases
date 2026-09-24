@@ -1,5 +1,11 @@
 'use strict';
-const UI_VERSION='1.15.0';
+const UI_VERSION='1.16.0';
+const IS_ANDROID_APP=typeof navigator!=='undefined'&&/MyPhoneLibraryAndroid/i.test(navigator.userAgent);
+const BUNDLED_ANDROID_UI=IS_ANDROID_APP&&window.MyPhoneLibraryAndroid?.hasBundledUi?.()===true;
+function androidVersion(){
+ try{return window.MyPhoneLibraryAndroid?.getAppVersion?.()||navigator.userAgent.match(/MyPhoneLibraryAndroid\/(\d+\.\d+\.\d+)/)?.[1]||'';}catch{return '';}
+}
+
 let serverInstance=null,versionMismatch=false,connectionCheckBusy=false,catalogReturn=null;
 let editorUnitIndex=0,openCatalogCategory=null,comboSerial=0;
 let settingsTab='appearance',currentView='all',dragColumn=null,ignoreSortUntil=0;
@@ -118,7 +124,7 @@ async function checkConnection(){
   const options={cache:'no-store'};if(typeof AbortSignal!=='undefined'&&AbortSignal.timeout)options.signal=AbortSignal.timeout(4000);
   const response=await fetch('/api/status',options);if(!response.ok)throw Error('unavailable');
   const status=await response.json();
-  versionMismatch=status.version!==UI_VERSION;
+  versionMismatch=!BUNDLED_ANDROID_UI&&status.version!==UI_VERSION;
   if(versionMismatch){
    $('connection').textContent='New version available';
    connectionBanner('Version '+status.version+' is active on the server. This page is using '+UI_VERSION+'.'+(hasUnsavedWork()?' Your unsaved draft is retained. Finish or copy your changes before reloading.':' Reloading…'));
@@ -476,8 +482,11 @@ function inventoryPanel(id=null){const inv=id?db.inventories.find(x=>x.id===id):
  panel('Inventory check',`<p>Check the phones at a selected location.</p><div class="actions"><select id="inventory-location"><option value="">Entire collection</option>${locations.map(l=>`<option>${esc(enumLabel(l))}</option>`).join('')}</select><button class="primary" data-action="start-inventory">Start inventory check</button></div><div class="settings-list" style="margin-top:18px">${db.inventories.map(i=>`<div class="setting-row"><div>${esc(i.location||'Entire collection')}<small> · ${esc(i.at)} · ${i.closed?'Completed':'In progress'} · ${Object.keys(i.found).length}/${Object.keys(i.expected).length}</small></div><button data-action="open-inventory" data-id="${i.id}">Open</button></div>`).join('')}</div>`);}
 async function historyPanel(id){const history=await api('/api/history?id='+id);panel('Change history',history.map(h=>`<details class="setting-row" style="display:block"><summary>${esc(h.action)} · ${esc(h.at)}</summary><pre class="pre">${esc(JSON.stringify(JSON.parse(h.data),null,2))}</pre></details>`).join('')||'<p>No records yet.</p>');}
 function trashPanel(){panel('Trash',`<p class="subtle">Records are retained and can be restored. Inventory numbers are released. Restore reuses the old number if available, otherwise assigns a new one. Permanent deletion removes the collection entry; historical audit records and backups are retained.</p><div class="settings-list">${db.trash.map(r=>`<div class="setting-row"><span>${esc(name(r))} · ${r.kind==='phone'?(r.instances||[]).length+' units':'part'}</span><div class="actions"><button data-action="untrash" data-id="${r.id}">Restore</button><button class="danger" data-action="purge" data-id="${r.id}">Delete permanently</button></div></div>`).join('')||'<p>Trash is empty.</p>'}</div>`);}
-function updateContents(){return `<div class="about-rows"><div><span>My Phone Library</span><strong>Version ${esc(db.version)}</strong></div><div><span>Frontend build</span><strong>${UI_VERSION}</strong></div><div><span>Update channel</span><strong>Stable · manual checks</strong></div><div><span>Data storage</span><strong>Persistent and upgrade-safe</strong></div><div><span>Data folder</span><strong>${esc(db.data_directory||'')}</strong></div></div><h3 class="settings-group-title">Application updates</h3><label>GitHub release repository (owner/name)<input id="update-repo" value="${esc(db.settings.update_repo||'')}" placeholder="owner/MyPhoneLibrary-Releases"></label><div class="actions"><button data-action="save-update-repo">Save source</button><button class="primary" data-action="check-update">Check for updates</button><button id="install-update" data-action="install-update" hidden>Update</button></div><p id="update-result" class="hint" role="status">${db.settings.update_repo?'Check GitHub for a new version.':'A GitHub release source has not been connected yet.'}</p><p class="subtle">Update downloads the verified Windows installer, installs it in the background and restarts the server automatically.</p><h3 class="section">Manual update from file</h3><button data-action="server-restart">Restart server to apply a manual package</button><label>New release package (.zip)<input type="file" id="update-file" accept=".zip"></label><p class="hint">A backup is created before staging. Updates are applied on the next server start.</p>`;}
+function updateContents(){
+ if(IS_ANDROID_APP)return `<div class="about-rows"><div><span>Android app</span><strong>${esc(androidVersion())||'Unknown'}</strong></div><div><span>Android interface</span><strong>${UI_VERSION}</strong></div><div><span>Windows server</span><strong>${esc(db.version)}</strong></div><div><span>Update channel</span><strong>Android · manual checks</strong></div></div><h3 class="settings-group-title">Android updates</h3><div class="actions"><button class="primary" data-action="check-update">Check for Android updates</button><a id="android-download" hidden target="_blank" rel="noopener noreferrer">Download Android APK</a></div><p id="update-result" class="hint" role="status">Android updates are installed on this phone. Your collection stays on the server.</p>`;
+ return `<div class="about-rows"><div><span>My Phone Library</span><strong>Version ${esc(db.version)}</strong></div><div><span>Frontend build</span><strong>${UI_VERSION}</strong></div><div><span>Update channel</span><strong>Stable · manual checks</strong></div><div><span>Data storage</span><strong>Persistent and upgrade-safe</strong></div><div><span>Data folder</span><strong>${esc(db.data_directory||'')}</strong></div></div><h3 class="settings-group-title">Application updates</h3><label>GitHub release repository (owner/name)<input id="update-repo" value="${esc(db.settings.update_repo||'')}" placeholder="owner/MyPhoneLibrary-Releases"></label><div class="actions"><button data-action="save-update-repo">Save source</button><button class="primary" data-action="check-update">Check for updates</button><button id="install-update" data-action="install-update" hidden>Update</button></div><p id="update-result" class="hint" role="status">${db.settings.update_repo?'Check GitHub for a new version.':'A GitHub release source has not been connected yet.'}</p><p class="subtle">Update downloads the verified Windows installer, installs it in the background and restarts the server automatically.</p><h3 class="section">Manual update from file</h3><button data-action="server-restart">Restart server to apply a manual package</button><label>New release package (.zip)<input type="file" id="update-file" accept=".zip"></label><p class="hint">A backup is created before staging. Updates are applied on the next server start.</p>`;}
 async function loadUpdateState(){
+ if(IS_ANDROID_APP)return;
  const state=await api('/api/update-state');
  if(state.job&&['starting','downloading','installing','verifying'].includes(state.job.status)){sessionStorage.setItem('mpl-install-target',state.job.version);watchInstallation();return;}
  if(state.job?.status==='failed'){updateMessage(state.job.message);return;}
@@ -611,8 +620,14 @@ document.addEventListener('click',async event=>{
  case 'save-password':await api('/api/password',{old:$('old-password').value,password:$('new-password').value});$('panel').close();await boot();toast('Password changed. Sign in again.');break;
  case 'update-info':await updatePanel();break;
  case 'save-update-repo':{db.settings.update_repo=$('update-repo').value.trim();await api('/api/settings',db.settings);panelDirty=false;toast('Update source saved.');break;}
- case 'check-update':{target.disabled=true;try{const result=await api('/api/update-check',{});$('update-result').textContent=result.available?'Available version '+result.version:'The latest version is installed.';$('install-update').hidden=!result.available;}finally{target.disabled=false;}break;}
- case 'install-update':{const pending=unsavedWorkReasons();if(pending.length)throw Error('Unsaved changes — '+pending.join(' '));target.disabled=true;try{updateMessage('Starting updater…',true);const result=await api('/api/update-install',{});sessionStorage.setItem('mpl-install-target',result.version);await watchInstallation();}finally{target.disabled=false;}break;}
+ case 'check-update':{target.disabled=true;try{const result=await api('/api/update-check',IS_ANDROID_APP?{platform:'android',current_version:androidVersion()}:{});
+ if(IS_ANDROID_APP){
+  if(result.platform!=='android')throw Error('Update the Windows server to 1.16.0 or newer to check the Android channel.');
+  const link=$('android-download');link.hidden=!result.available;
+  if(result.available){const url=new URL(result.url);if(url.origin!=='https://github.com'||!url.pathname.startsWith('/ermintr-cyber/MyMediaLibrary-Releases/releases/download/phone-android-v')||!url.pathname.endsWith('.apk'))throw Error('Invalid Android download.');link.href=url.href;}
+ }else{$('install-update').hidden=!result.available;}
+ $('update-result').textContent=result.available?'Available '+(IS_ANDROID_APP?'Android ':'Windows ')+'version '+result.version:'The latest '+(IS_ANDROID_APP?'Android':'Windows')+' version is installed.';}finally{target.disabled=false;}break;}
+ case 'install-update':{if(IS_ANDROID_APP)throw Error('Install Windows updates from the Windows app.');const pending=unsavedWorkReasons();if(pending.length)throw Error('Unsaved changes — '+pending.join(' '));target.disabled=true;try{updateMessage('Starting updater…',true);const result=await api('/api/update-install',{});sessionStorage.setItem('mpl-install-target',result.version);await watchInstallation();}finally{target.disabled=false;}break;}
 
  }}catch(e){toast(e.message);if(['check-update','install-update','server-restart','save-update-repo'].includes(action))updateMessage('Update operation failed: '+e.message);if($('editor').open)$('editor-error').textContent=e.message;}
 });
@@ -669,6 +684,6 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkConne
 window.addEventListener('hashchange',()=>{if(!db)return;const params=new URLSearchParams(location.hash.slice(1));const id=params.get('record'),unit=params.get('unit'),r=record(id);if(r)showEditor(id,r.instances.findIndex(u=>u.id===unit));});
 document.addEventListener('error',e=>{if(e.target.tagName==='IMG'){e.target.alt='Image unavailable';e.target.style.background='var(--surface2)';}},true);
 restoreSidebar();
-boot().then(()=>{if(sessionStorage.getItem('mpl-install-target'))watchInstallation();setTimeout(monitorConnection,10000);if(location.hash&&db)window.dispatchEvent(new Event('hashchange'));});
+boot().then(()=>{if(!IS_ANDROID_APP&&sessionStorage.getItem('mpl-install-target'))watchInstallation();setTimeout(monitorConnection,10000);if(location.hash&&db)window.dispatchEvent(new Event('hashchange'));});
 
 window.mplHandleAndroidBack=function(){if($('editor').open){closeEditor();return true;}if($('panel').open){closePanel();return true;}return false;};
