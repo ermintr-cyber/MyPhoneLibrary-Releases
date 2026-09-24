@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.10.2'
+VERSION = '1.11.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -498,6 +498,19 @@ class Store:
         with self.lock,self.connect() as c:
             catalog=self.catalog(c)
             return {'catalog':catalog,'data_directory':str(self.directory),'backup_default':str(self.backups),'product':PRODUCT,'version':VERSION,'schema':1,'at':stamp(),'records':self.records(c),'trash':self.records(c,True),'settings':self.meta('settings',DEFAULTS,c), **{t:[json.loads(x[0]) for x in c.execute('SELECT data FROM '+t+' ORDER BY rowid DESC')] for t in ('repairs','movements','inventories')}}
+    def backup_status(self):
+        settings=self.meta('settings',DEFAULTS);saved=self.meta('backup_results',{})
+        result=[]
+        for key,label in [('backup_primary','First backup location'),('backup_directory','Second backup location')]:
+            path=str(settings.get(key,'')).strip() or (str(self.backups) if key=='backup_primary' else '')
+            old=saved.get(key,{}) if saved.get(key,{}).get('path')==path else {}
+            result.append({'label':label,'path':path,'status':old.get('status','pending') if path else 'disabled','message':old.get('message','No backup recorded for this location yet.') if path else 'Not configured','last_success':old.get('last_success')})
+        return result
+    def record_backup_result(self,key,path,status,message):
+        with self.connect() as c:
+            results=self.meta('backup_results',{},c);old=results.get(key,{})
+            results[key]={'path':path,'status':status,'message':message,'at':stamp(),'last_success':stamp() if status=='success' else old.get('last_success') if old.get('path')==path else None}
+            self.setmeta(c,'backup_results',results)
     def backup(self):
         with self.lock:
             name='MyPhoneLibrary-'+dt.datetime.now().strftime('%Y%m%d-%H%M%S')+'-'+secrets.token_hex(2)+'.zip'
@@ -519,7 +532,9 @@ class Store:
                 warning=''
                 for field,label in [('backup_primary','First'),('backup_directory','Second')]:
                     destination=str(settings.get(field,'')).strip()
-                    if not destination:continue
+                    if not destination:
+                        if field=='backup_primary':self.record_backup_result(field,str(self.backups),'success','Last backup completed and verified.')
+                        continue
                     temp_copy=None
                     try:
                         folder=Path(destination).expanduser();folder.mkdir(parents=True,exist_ok=True)
@@ -529,9 +544,13 @@ class Store:
                             shutil.copy2(target,temp_copy)
                             if file_hash(temp_copy)!=file_hash(target):raise OSError('Backup checksum mismatch.')
                             temp_copy.replace(dest)
-                    except OSError as e:warning+=label+' backup location failed: '+str(e)+'. A local recovery copy was saved. '
+                        self.record_backup_result(field,destination,'success','Last backup completed and verified.')
+                    except OSError as e:
+                        self.record_backup_result(field,destination,'failed','Last backup failed: '+str(e))
+                        warning+=label+' backup location failed: '+str(e)+'. A local recovery copy was saved. '
                     finally:
-                        if temp_copy:temp_copy.unlink(missing_ok=True)
+                        if temp_copy:
+                            with contextlib.suppress(OSError):temp_copy.unlink(missing_ok=True)
                 keep=int(settings.get('backup_copies',14))
                 for old in sorted(self.backups.glob('MyPhoneLibrary-*.zip'),key=lambda p:p.stat().st_mtime,reverse=True)[keep:]: old.unlink()
                 return {'name':name,'bytes':target.stat().st_size,'warning':warning}
@@ -958,6 +977,7 @@ class Handler(BaseHTTPRequestHandler):
                 with store.connect() as c:rows=[dict(r) for r in c.execute('SELECT at,action,data FROM history WHERE record_id=? ORDER BY id DESC LIMIT 100',(rid,))]
                 return self.send(200,rows)
             if path=='/api/backup' and post:return self.send(200,store.backup())
+            if path=='/api/backup-status' and not post:return self.send(200,store.backup_status())
             if path=='/api/backups' and not post:return self.send(200,[{'name':x.name,'bytes':x.stat().st_size,'at':dt.datetime.fromtimestamp(x.stat().st_mtime,dt.timezone.utc).isoformat()} for x in sorted(store.backups.glob('MyPhoneLibrary-*.zip'),reverse=True)])
             if path=='/api/download-backup' and not post:
                 name=urllib.parse.parse_qs(p.query).get('name',[''])[0]

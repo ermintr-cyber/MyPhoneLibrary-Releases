@@ -26,4 +26,14 @@ const positions=await page.locator('[data-catalog-section=brand] .catalog-item-r
 assert.deepEqual(positions[0].x,positions[1].x);assert.deepEqual(positions[1].x,positions[2].x);assert.ok(positions.every(r=>r.height<=38));
 await page.locator('[data-action=catalog-toggle][data-category=os]').click();assert.equal(await page.locator('[data-catalog-section=brand]').isVisible(),false);assert.equal(await page.locator('[data-catalog-section=os]').isVisible(),true);
 console.log('Catalog DOM: long list scrolls, columns align, compact rows and single expanded category passed.');
+// Filters use a single matching physical unit, and code searches ignore punctuation.
+await page.evaluate(()=>{quickFilters={brand:'Nokia',color:'Black',os:'',location:'Shelf',state:''};});
+assert.equal(await page.evaluate(()=>searchMatches({kind:'phone',brand:'Nokia',model:'N97 Mini',type:'RM-555',instances:[{color:'Black',location:'Box'},{color:'Silver',location:'Shelf'}]},'RM555')),false);
+await page.evaluate(()=>quickFilters.location='Box');assert.equal(await page.evaluate(()=>searchMatches({kind:'phone',brand:'Nokia',model:'N97 Mini',type:'RM-555',instances:[{color:'Black',location:'Box',product_code:'0591234'}]},'Nokia RM555 0591234')),true);
+// Choosing a photo changes only that unit; save-and-next submits and clears identifiers.
+await page.evaluate(()=>{$('panel').close();panelRoute=null;panelDirty=false;phoneDraft=null;catalogReturn=null;quickFilters={};db.records[0].instances[0].photos=['https://example.com/a.jpg','https://example.com/b.jpg'];showEditor('a',0);});
+await page.locator('[data-action=main-unit-photo]').click();assert.equal(await page.evaluate(()=>draft.instances[0].photos[0]),'https://example.com/b.jpg');
+await page.evaluate(()=>{api=async(path,data)=>{if(path==='/api/record'){const r=clone(data.record);r.rev=2;db.records=[r];return r;}if(path==='/api/data')return db;return {};};});
+await page.locator('#save-add-another').click();assert.equal(await page.locator('#editor').evaluate(el=>el.open),true);assert.equal(await page.evaluate(()=>mode),'add');assert.equal(await page.evaluate(()=>draft.instances.length),3);assert.equal(await page.evaluate(()=>addUnit.inv),'3');assert.equal(await page.evaluate(()=>addUnit.imei||''),'');assert.equal(await page.evaluate(()=>addUnit.photos.length),0);assert.equal(await page.evaluate(()=>db.records[0].instances[0].photos[0]),'https://example.com/b.jpg');
+console.log('Filters, code search, main photo and Save and add another passed.');
 console.log('DOM: one field per property, search/select/reject, Escape, effective unit switching, retained gallery, collapsed layout passed.');await browser.close();})().catch(e=>{console.error(e);process.exit(1)});
