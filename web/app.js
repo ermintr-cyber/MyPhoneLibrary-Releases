@@ -1,5 +1,5 @@
 'use strict';
-const UI_VERSION='1.16.0';
+const UI_VERSION='1.17.0';
 const IS_ANDROID_APP=typeof navigator!=='undefined'&&/MyPhoneLibraryAndroid/i.test(navigator.userAgent);
 const BUNDLED_ANDROID_UI=IS_ANDROID_APP&&window.MyPhoneLibraryAndroid?.hasBundledUi?.()===true;
 function androidVersion(){

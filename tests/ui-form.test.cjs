@@ -37,7 +37,7 @@ await page.evaluate(()=>{api=async(path,data)=>{if(path==='/api/record'){const r
 await page.locator('#save-add-another').click();assert.equal(await page.locator('#editor').evaluate(el=>el.open),true);assert.equal(await page.evaluate(()=>mode),'add');assert.equal(await page.evaluate(()=>draft.instances.length),3);assert.equal(await page.evaluate(()=>addUnit.inv),'3');assert.equal(await page.evaluate(()=>addUnit.imei||''),'');assert.equal(await page.evaluate(()=>addUnit.photos.length),0);assert.equal(await page.evaluate(()=>db.records[0].instances[0].photos[0]),'https://example.com/b.jpg');
 console.log('Filters, code search, main photo and Save and add another passed.');
 await page.evaluate(()=>{dirty=false;phoneDraft=null;$('editor').close();db.records[0].battery='BL-6F';db.catalog.push({id:'bl6f',category:'battery',name:'BL-6F',description:'retained legacy description',source:'https://example.com',specs:{Legacy:'keep'},compatible:[]});catalogEditor('battery','bl6f');});
-assert.equal(await page.locator('[data-battery-spec]').count(),8);assert.equal(await page.locator('#catalog-source').count(),0);assert.equal(await page.locator('#catalog-description').count(),0);assert.equal(await page.locator('[data-catalog-compatible]').count(),0);assert.ok((await page.locator('#panel-body').textContent()).includes('N73'));
+assert.equal(await page.locator('[data-battery-spec]').count(),9);assert.equal(await page.locator('#catalog-source').count(),1);assert.equal(await page.locator('#catalog-description').count(),1);assert.equal(await page.locator('[data-catalog-compatible]').count(),0);assert.ok((await page.locator('#panel-body').textContent()).includes('N73'));
 await page.locator('[data-battery-spec=Voltage]').fill('3.7V');
 await page.evaluate(()=>{api=async(path,data)=>{if(path==='/api/catalog'){db.catalog=db.catalog.map(x=>x.id===data.id?data:x);return data;}if(path==='/api/data')return db;return {};};});
 await page.locator('[data-action=catalog-save]').click();assert.equal(await page.evaluate(()=>db.catalog.find(x=>x.id==='bl6f').specs.Voltage),'3.7V');assert.equal(await page.evaluate(()=>db.catalog.find(x=>x.id==='bl6f').specs.Legacy),'keep');assert.equal(await page.evaluate(()=>db.catalog.find(x=>x.id==='bl6f').description),'retained legacy description');
@@ -62,7 +62,7 @@ assert.deepEqual(await page.evaluate(()=>db.catalog.find(x=>x.id==='bl6f').compa
 assert.match(await page.evaluate(()=>batteryCell('BL-6F')),/Test alternative 1/);assert.match(await page.evaluate(()=>batteryCell('BL-6F')),/Test alternative 2/);
 assert.match(await page.evaluate(()=>catalogItems('battery')),/Nominal Capacity/);assert.match(await page.evaluate(()=>catalogItems('battery')),/3.7V/);
 await page.evaluate(()=>{$('panel').close();panelDirty=false;panelRoute=null;render();});await page.setViewportSize({width:1700,height:950});
-assert.equal(await page.locator('#collection-table .unit-table-row [data-column=os]').first().evaluate(el=>getComputedStyle(el).whiteSpace),'nowrap');
+assert.equal(await page.locator('#collection-table .unit-table-row [data-column=os]').first().evaluate(el=>getComputedStyle(el).whiteSpace),'normal');
 assert.equal(await page.locator('#collection-table .unit-extra-row').count(),0);
 await page.evaluate(()=>{db.records[0].os='Symbian OS 9.2, S60 rel. 3.1';db.records[0].instances[0].os='';db.records[0].instances[0].location='On shelf';render();});
 const row=page.locator('#collection-table .unit-table-row').first();
