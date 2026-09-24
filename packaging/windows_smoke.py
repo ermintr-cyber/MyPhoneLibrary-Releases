@@ -1,5 +1,5 @@
 """Exercise the shipped GUI runtime on a Windows build runner, with isolated data."""
-import http.cookiejar,json,os,subprocess,tempfile,time,urllib.request
+import http.cookiejar,json,os,subprocess,tempfile,time,urllib.request,hashlib,io,zipfile
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 if os.name!='nt':raise SystemExit('This verification runs on Windows.')
@@ -32,7 +32,27 @@ with tempfile.TemporaryDirectory(prefix='mpl-smoke-') as folder:
         login=request('/api/setup',{'password':'temporary-build-test-password'});csrf=login['csrf']
         assert request('/api/data')['settings']['update_repo']=='ermintr-cyber/MyPhoneLibrary-Releases'
         assert (Path(folder)/'server.log').exists()
-        request('/api/server-control',{'action':'stop'});proc.wait(timeout=10)
+        original=status['version']
+        code=(installed/'server.py').read_text(encoding='utf-8').replace("VERSION = '"+original+"'","VERSION = '9.9.9'").encode()
+        manifest={'product':'MyPhoneLibrary','version':'9.9.9','files':{'server.py':hashlib.sha256(code).hexdigest(),'web/app.js':hashlib.sha256(b'// restart test').hexdigest()}}
+        archive=io.BytesIO()
+        with zipfile.ZipFile(archive,'w') as z:z.writestr('server.py',code);z.writestr('web/app.js',b'// restart test');z.writestr('app-manifest.json',json.dumps(manifest))
+        req=urllib.request.Request(base+'/api/update',data=archive.getvalue(),headers={'X-MPL-Client':'1','X-MPL-CSRF':csrf})
+        with opener.open(req,timeout=10) as response:assert json.load(response)['version']=='9.9.9'
+        request('/api/server-control',{'action':'restart'});proc.wait(timeout=15)
+        for attempt in range(100):
+            try:
+                if request('/api/status')['version']=='9.9.9':break
+            except OSError:pass
+            time.sleep(.2)
+        else:raise RuntimeError('Installed pythonw server did not apply the staged update on restart')
+        csrf=request('/api/login',{'password':'temporary-build-test-password'})['csrf']
+        assert request('/api/update-state')['pending'] is None
+        request('/api/server-control',{'action':'stop'})
+        for attempt in range(100):
+            if not (Path(folder)/'server-running.json').exists():break
+            time.sleep(.1)
+        print('Installed pythonw HTTP update + restart reached version 9.9.9 using a custom data folder.')
         assert proc.returncode==0
         assert not (Path(folder)/'server-running.json').exists()
     finally:

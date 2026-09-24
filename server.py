@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -712,6 +712,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200,result)
             if path=='/api/export' and not post:
                 return self.send(200,store.all_data(),extra={'Content-Disposition':'attachment; filename="MyPhoneLibrary-export.json"'})
+            if path=='/api/update-state' and not post:
+                pending=store.directory/'pending-update/app-manifest.json'
+                target=json.loads(pending.read_text(encoding='utf-8'))['version'] if pending.exists() else None
+                error=store.directory/'update-error.txt'
+                return self.send(200,{'installed':VERSION,'pending':target,'error':error.read_text(encoding='utf-8') if error.exists() else ''})
             if path=='/api/update-check' and post:
                 from updater import latest_release
                 info=latest_release(store.meta('settings',DEFAULTS).get('update_repo'),VERSION)
@@ -820,11 +825,18 @@ def main():
             if json.loads(running_file.read_text()).get('pid')==os.getpid():running_file.unlink()
         except (OSError,ValueError):pass
     if getattr(server,'restart_requested',False):
-        launcher=BASE/'MyPhoneLibrary.exe'
-        if os.name=='nt' and launcher.exists():
-            subprocess.Popen([str(launcher),'--no-browser','--port',str(args.port),'--host',args.host,'--data',str(store.directory)],cwd=BASE,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        else:
-            subprocess.run([sys.executable,str(BASE/'updater.py')],check=True)
-            subprocess.Popen([sys.executable,str(BASE/'server.py'),'--no-browser','--port',str(args.port),'--host',args.host,'--data',str(store.directory)],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+        restart_server(BASE,store.directory,args.port,args.host)
+
+def restart_server(root,directory,port,host):
+    # Apply to the exact running installation and data folder; do not delegate
+    # to a launcher which may use a different default data directory.
+    from updater import apply
+    try:
+        apply(root,directory)
+        (Path(directory)/'update-error.txt').unlink(missing_ok=True)
+    except Exception as e:
+        (Path(directory)/'update-error.txt').write_text(str(e),encoding='utf-8')
+        print('Update failed; restarting the previous version: '+str(e),flush=True)
+    return subprocess.Popen([sys.executable,str(Path(root)/'server.py'),'--no-browser','--port',str(port),'--host',host,'--data',str(directory)],cwd=root,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),start_new_session=os.name!='nt')
 
 if __name__=='__main__':raise SystemExit(main())

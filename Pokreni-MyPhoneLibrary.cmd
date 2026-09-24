@@ -11,7 +11,7 @@ if not exist "%~dp0runtime\python.exe" (
   pause
   exit /b 1
 )
-"%~dp0runtime\python.exe" "%~dp0updater.py"
+"%~dp0runtime\python.exe" "%~dp0updater.py" %*
 if errorlevel 1 (
   pause
   exit /b 1

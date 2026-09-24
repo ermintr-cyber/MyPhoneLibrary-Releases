@@ -37,3 +37,5 @@ dialog.settings-page{z-index:15}
 .network-card .network-result.reachable{color:#45dc83;font-weight:700;font-size:13px}
 .network-card .network-result.unreachable{color:#ff7878;font-weight:700;font-size:13px}
 @media(max-width:700px){dialog.settings-page{top:115px;height:calc(100vh - 115px)}}
+
+#update-banner{position:fixed;bottom:12px;left:220px;right:20px;z-index:100;color:#45dc83}#update-result[aria-busy=true]::before{content:'◌ ';display:inline-block;animation:update-spin 1s linear infinite}@keyframes update-spin{to{transform:rotate(360deg)}}

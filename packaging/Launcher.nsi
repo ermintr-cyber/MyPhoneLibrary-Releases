@@ -11,7 +11,7 @@ AutoCloseWindow true
 Section
  SetOutPath "$EXEDIR"
  ${GetParameters} $0
- ExecWait '"$EXEDIR\runtime\pythonw.exe" "$EXEDIR\updater.py"' $1
+ ExecWait '"$EXEDIR\runtime\pythonw.exe" "$EXEDIR\updater.py" $0' $1
  StrCmp $1 0 launch
  MessageBox MB_OK|MB_ICONEXCLAMATION "The update could not be applied. Use Settings > Maintenance > Stop server, then try again."
  Quit

@@ -30,3 +30,18 @@ handlers['document:click']({target:{closest(){return {dataset:{action:'nav-view'
 assert.equal(node('panel').open,false);assert.equal(vm.runInContext('currentView',context),'phone');
 assert.match(vm.runInContext('unitHTML({product_code:"0590012",photos:[]},0,true)',context),/value="0590012"/);
 console.log('UI: retained draft fields/photos, refreshed catalogs, Clear data, catalog back navigation, unsaved guard and sidebar navigation passed.');
+(async()=>{
+ const saved=new Map([['mpl-update-target','1.4.1']]);let reloads=0,calls=0;
+ context.sessionStorage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
+ context.location.reload=()=>reloads++;
+ context.setTimeout=fn=>{fn();return 0};
+ context.fetch=async()=>({ok:true,json:async()=>({version:++calls===1?'1.3.0':'1.4.1'})});
+ await vm.runInContext('reconnectAfterRestart()',context);
+ assert.equal(calls,2);assert.equal(reloads,1);assert.equal(saved.get('mpl-update-complete'),'1.4.1');
+ saved.delete('mpl-update-complete');reloads=0;
+ context.fetch=async()=>({ok:true,json:async()=>({version:'1.3.0'})});
+ await vm.runInContext('reconnectAfterRestart()',context);
+ assert.equal(reloads,0);assert.match(node('update-result').textContent,/not confirmed as installed/);
+ assert.equal(saved.has('mpl-update-complete'),false);
+ console.log('UI: restart waits for target version; old version produces persistent failure instead of success.');
+})().catch(error=>{console.error(error);process.exitCode=1});

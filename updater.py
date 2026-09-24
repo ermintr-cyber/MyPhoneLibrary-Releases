@@ -59,6 +59,12 @@ def apply(root,directory):
     root=Path(root);directory=Path(directory);pending=directory/'pending-update'
     if not pending.exists():return False
     manifest=json.loads((pending/'app-manifest.json').read_text(encoding='utf-8'))
+    installed=root/'app-manifest.json'
+    if installed.exists():
+        current=json.loads(installed.read_text(encoding='utf-8')).get('version')
+        if current and version(manifest['version'])<=version(current):
+            shutil.rmtree(pending)
+            return False
     files=manifest['files'];back=Path(tempfile.mkdtemp(prefix='program-before-update-',dir=directory));changed=[]
     try:
         for name,digest in files.items():
@@ -140,7 +146,11 @@ def download_release(repo,current):
 
 if __name__=='__main__':
     root=Path(__file__).resolve().parent
-    directory=Path(os.environ.get('LOCALAPPDATA',str(Path.home()/'.local/share')))/'MyPhoneLibrary'
+    import argparse
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--data',default=str(Path(os.environ.get('LOCALAPPDATA',str(Path.home()/'.local/share')))/'MyPhoneLibrary'))
+    args,_=parser.parse_known_args()
+    directory=Path(args.data).resolve()
     directory.mkdir(parents=True,exist_ok=True)
     if sys.stdout is None or sys.stderr is None:
         stream=open(directory/'updater.log','a',encoding='utf-8',buffering=1)

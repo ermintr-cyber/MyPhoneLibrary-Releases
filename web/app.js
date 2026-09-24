@@ -20,11 +20,34 @@ async function api(path,data,binary=false){
  if(!response.ok){if(response.status===401&&!path.endsWith('login')){await boot();}throw Error(result.error||'The operation failed.');}
  return result;
 }
+function updateMessage(message,busy=false){
+ const el=$('update-result');if(el){el.hidden=false;el.textContent=message;el.setAttribute('aria-busy',String(busy));}
+}
+async function reconnectAfterRestart(){
+ const target=sessionStorage.getItem('mpl-update-target');
+ updateMessage('Restarting server… waiting for '+(target?'version '+target:'the server')+'.',true);
+ for(let attempt=0;attempt<60;attempt++){
+  await new Promise(resolve=>setTimeout(resolve,1000));
+  try{
+   const response=await fetch('/api/status',{cache:'no-store'});const status=await response.json();
+   if(response.ok&&(!target||status.version===target)){
+    if(target)sessionStorage.setItem('mpl-update-complete',target);
+    location.reload();return;
+   }
+  }catch{}
+ }
+ updateMessage('Restart could not be confirmed'+(target?' for version '+target:'')+'. The update is not confirmed as installed. Reopen My Phone Library or check the installed version.');
+}
 async function boot(){
  try{const status=await api('/api/status');csrf=status.csrf||'';$('login').hidden=status.authenticated;$('application').hidden=!status.authenticated;
  $('login-description').textContent=status.setup?'Set a password for your collection.':'Sign in to access your phones.';
  $('login-submit').textContent=status.setup?'Create collection':'Sign in';$('login-form').dataset.setup=String(status.setup);
  if(status.authenticated)await refresh();
+ const completed=sessionStorage.getItem('mpl-update-complete');
+ if(completed&&status.version===completed){
+  $('update-banner').hidden=false;$('update-banner').textContent='Update completed successfully. Installed version: '+completed;
+  sessionStorage.removeItem('mpl-update-complete');sessionStorage.removeItem('mpl-update-target');
+ }
  }catch(e){$('login').hidden=false;$('login-error').textContent='Server unavailable. Start MyPhoneLibrary on your computer.';}
 }
 async function refresh(){db=await api('/api/data');document.documentElement.dataset.theme=db.settings.theme||'dark';$('connection').textContent='Connected';lists();render();}
@@ -227,7 +250,11 @@ function inventoryPanel(id=null){const inv=id?db.inventories.find(x=>x.id===id):
  panel('Inventory check',`<p>Check the phones at a selected location.</p><div class="actions"><select id="inventory-location"><option value="">Entire collection</option>${locations.map(l=>`<option>${esc(enumLabel(l))}</option>`).join('')}</select><button class="primary" data-action="start-inventory">Start inventory check</button></div><div class="settings-list" style="margin-top:18px">${db.inventories.map(i=>`<div class="setting-row"><div>${esc(i.location||'Entire collection')}<small> · ${esc(i.at)} · ${i.closed?'Completed':'In progress'} · ${Object.keys(i.found).length}/${Object.keys(i.expected).length}</small></div><button data-action="open-inventory" data-id="${i.id}">Open</button></div>`).join('')}</div>`);}
 async function historyPanel(id){const history=await api('/api/history?id='+id);panel('Change history',history.map(h=>`<details class="setting-row" style="display:block"><summary>${esc(h.action)} · ${esc(h.at)}</summary><pre class="pre">${esc(JSON.stringify(JSON.parse(h.data),null,2))}</pre></details>`).join('')||'<p>No records yet.</p>');}
 function trashPanel(){panel('Trash',`<p class="subtle">Records are retained and can be restored. Inventory numbers are released. Restore reuses the old number if available, otherwise assigns a new one. Permanent deletion removes the collection entry; historical audit records and backups are retained.</p><div class="settings-list">${db.trash.map(r=>`<div class="setting-row"><span>${esc(name(r))} · ${r.kind==='phone'?(r.instances||[]).length+' units':'part'}</span><div class="actions"><button data-action="untrash" data-id="${r.id}">Restore</button><button class="danger" data-action="purge" data-id="${r.id}">Delete permanently</button></div></div>`).join('')||'<p>Trash is empty.</p>'}</div>`);}
-function updatePanel(){panel('Application updates',`<p>Installed version: <strong>${esc(db.version)}</strong></p><label>GitHub release repository (owner/name)<input id="update-repo" value="${esc(db.settings.update_repo||'')}" placeholder="owner/MyPhoneLibrary-Releases"></label><div class="actions"><button data-action="save-update-repo">Save source</button><button class="primary" data-action="check-update">Check for updates</button><button id="install-update" data-action="install-update" hidden>Download and stage update</button></div><p id="update-result" class="hint" role="status">${db.settings.update_repo?'Check GitHub for a new version.':'A GitHub release source has not been connected yet.'}</p><button data-action="server-restart">Restart server</button><h3 class="section">Update from file</h3><label>New release package (.zip)<input type="file" id="update-file" accept=".zip"></label><p class="hint">A backup is created before staging. Updates are applied on the next server start.</p>`);}
+async function updatePanel(){panel('Application updates',`<p>Installed version: <strong>${esc(db.version)}</strong></p><label>GitHub release repository (owner/name)<input id="update-repo" value="${esc(db.settings.update_repo||'')}" placeholder="owner/MyPhoneLibrary-Releases"></label><div class="actions"><button data-action="save-update-repo">Save source</button><button class="primary" data-action="check-update">Check for updates</button><button id="install-update" data-action="install-update" hidden>Download and stage update</button></div><p id="update-result" class="hint" role="status">${db.settings.update_repo?'Check GitHub for a new version.':'A GitHub release source has not been connected yet.'}</p><button data-action="server-restart">Restart server</button><h3 class="section">Update from file</h3><label>New release package (.zip)<input type="file" id="update-file" accept=".zip"></label><p class="hint">A backup is created before staging. Updates are applied on the next server start.</p>`);
+ const state=await api('/api/update-state');
+ if(state.pending){sessionStorage.setItem('mpl-update-target',state.pending);updateMessage('Version '+state.pending+' is ready. Click Restart server to apply it.');}
+ if(state.error)updateMessage('Update failed: '+state.error);
+}
 async function gsmPanel(){readDraft();if(!draft.gsm)throw Error('Enter a GSMArena model link first.');toast('Fetching model details…');preview=await api('/api/gsm',{url:draft.gsm});panel('GSMArena details — '+preview.name,`<p>Select the details to import. Existing values are replaced only for selected fields.</p><div class="settings-list">${Object.entries(preview.fields).filter(([,v])=>v).map(([k,v])=>`<label class="check setting-row"><input type="checkbox" data-gsm="${k}" ${!draft[k]&&k!=='image'?'checked':''}><span><strong>${esc(({os:'Operating system',introduced:'Introduced',released:'Released / status',charger:'Connector',gsm:'Source',image:'Image'})[k])}</strong><br><small>${esc(v)}</small>${draft[k]?`<br><small>Current: ${esc(draft[k])}</small>`:''}</span></label>`).join('')}<label class="check setting-row"><input type="checkbox" id="gsm-specs" checked>All available extra specifications</label></div><p class="hint">Use your own photos or a permitted image source. Physical unit details are not imported.</p><div class="actions"><button class="primary" data-action="apply-gsm">Apply selected</button></div>`);}
 function labelsPanel(id){const r=record(id);panel('Labels — '+name(r),`<label class="no-print">Application address accessible from your phone<input id="qr-base" value="${esc(location.origin)}"></label><div class="actions no-print"><button data-action="generate-labels" data-id="${id}">Generate QR</button><button data-action="print">Print</button></div><p class="hint no-print">Replace localhost with your computer’s LAN or Tailscale address. QR labels do not contain IMEI.</p><div id="labels" class="qr-print" style="margin-top:15px"></div>`);}
 function generateLabels(id){const r=record(id),base=$('qr-base').value.trim();const parsed=new URL(base);if(!['http:','https:'].includes(parsed.protocol))throw Error('Invalid address.');if(typeof qrcode!=='function')throw Error('QR module unavailable.');$('labels').innerHTML=live(r).map(u=>{const qr=qrcode(0,'M');qr.addData(base.replace(/\/$/,'')+'/#record='+r.id+'&unit='+u.id);qr.make();return `<div class="label-print"><img src="${qr.createDataURL(4,8)}" alt="QR for ${esc(u.inv)}"><strong>${esc(name(r))}</strong><span>${esc(u.inv)}</span><small>${esc([u.color,u.edition].filter(Boolean).join(' · '))}</small></div>`;}).join('');}
@@ -263,7 +290,7 @@ document.addEventListener('click',async event=>{
  case 'copy-unit':copyUnit(id,Number(target.dataset.index));break;
  case 'card-units':{const r=record(id);panel(name(r),unitTiles(r)+modelActions(r));break;}
  case 'layout':await api('/api/settings',{layout:target.dataset.layout});db.settings.layout=target.dataset.layout;render();break;
- case 'server-stop':case 'server-restart':{if(dirty)throw Error('Save or discard your current edits first.');if(action==='server-stop'&&!confirm('Stop MyPhoneLibrary on this computer?'))break;await api('/api/server-control',{action:action==='server-stop'?'stop':'restart'});toast(action==='server-stop'?'Server stopped. Open My Phone Library to start it again.':'Restarting… reconnecting shortly.');if(action==='server-restart')setTimeout(()=>location.reload(),3500);break;}
+ case 'server-stop':case 'server-restart':{if(dirty)throw Error('Save or discard your current edits first.');if(action==='server-stop'&&!confirm('Stop MyPhoneLibrary on this computer?'))break;await api('/api/server-control',{action:action==='server-stop'?'stop':'restart'});toast(action==='server-stop'?'Server stopped. Open My Phone Library to start it again.':'Restarting… reconnecting shortly.');if(action==='server-restart'){await reconnectAfterRestart();}break;}
  case 'nav-view':currentView=target.dataset.view;$('search').value='';render();break;
  case 'settings-tab':settingsTab=target.dataset.tab;document.querySelectorAll('[data-settings-section]').forEach(el=>el.hidden=el.dataset.settingsSection!==settingsTab);document.querySelectorAll('[data-action="settings-tab"]').forEach(el=>el.classList.toggle('active',el.dataset.tab===settingsTab));break;
  case 'catalog-list':catalogList(target.dataset.category);break;
@@ -311,12 +338,12 @@ document.addEventListener('click',async event=>{
  case 'labels':labelsPanel(id);break;case 'generate-labels':generateLabels(id);break;case 'print':window.print();break;
  case 'password':panel('Change password','<div class="grid two"><label>Current password<input type="password" id="old-password" autocomplete="current-password"></label><label>New password<input type="password" id="new-password" minlength="8" autocomplete="new-password"></label></div><div class="actions"><button class="primary" data-action="save-password">Save new password</button></div>');break;
  case 'save-password':await api('/api/password',{old:$('old-password').value,password:$('new-password').value});$('panel').close();await boot();toast('Password changed. Sign in again.');break;
- case 'update-info':updatePanel();break;
+ case 'update-info':await updatePanel();break;
  case 'save-update-repo':{db.settings.update_repo=$('update-repo').value.trim();await api('/api/settings',db.settings);toast('Update source saved.');break;}
  case 'check-update':{target.disabled=true;try{const result=await api('/api/update-check',{});$('update-result').textContent=result.available?'Available version '+result.version:'The latest version is installed.';$('install-update').hidden=!result.available;}finally{target.disabled=false;}break;}
- case 'install-update':{target.disabled=true;try{toast('Downloading and verifying update…');const result=await api('/api/update-download',{});$('update-result').textContent='Version '+result.version+' is ready. Use Restart server to apply it.';}finally{target.disabled=false;}break;}
+ case 'install-update':{target.disabled=true;try{updateMessage('Downloading and verifying update… Please wait.',true);const result=await api('/api/update-download',{});sessionStorage.setItem('mpl-update-target',result.version);updateMessage('Version '+result.version+' is ready. Click Restart server to apply it.');}finally{target.disabled=false;}break;}
 
- }}catch(e){toast(e.message);if($('editor').open)$('editor-error').textContent=e.message;}
+ }}catch(e){toast(e.message);if($('update-result'))updateMessage('Update operation failed: '+e.message);if($('editor').open)$('editor-error').textContent=e.message;}
 });
 document.addEventListener('change',async e=>{const el=e.target;try{
  if(el.matches('[data-r="brand"],[data-r="model"]'))matchModel();
@@ -325,7 +352,7 @@ document.addEventListener('change',async e=>{const el=e.target;try{
  if(el.id==='main-image-upload'&&el.files.length)await uploadFiles(el.files,'main');
  if(el.id==='gallery-upload'&&el.files.length)await uploadFiles(el.files);
  if(el.dataset.unitUpload!==undefined&&el.files.length)await uploadFiles(el.files,Number(el.dataset.unitUpload));
- if(el.id==='update-file'&&el.files.length){const r=await api('/api/update',el.files[0],true);toast('Version '+r.version+' is staged. Close the server and restart the app.');}
+ if(el.id==='update-file'&&el.files.length){const r=await api('/api/update',el.files[0],true);sessionStorage.setItem('mpl-update-target',r.version);updateMessage('Version '+r.version+' is ready. Click Restart server to apply it.');}
  if(el.id==='import-file'&&el.files.length)await importPreview(el.files[0]);
  if(el.id==='restore-file'&&el.files.length){if(!confirm('Replace the collection with this backup? Current data will be backed up first.')){el.value='';return;}await api('/api/restore',el.files[0],true);$('panel').close();await boot();toast('Data restored. Sign in using the password from the backup.');}
  if(el.dataset.inventory){await api('/api/inventory',{id:el.dataset.inventory,instance_id:el.dataset.unit,found:el.checked});await refresh();if($('panel').open&&$('panel-body').querySelector('[data-inventory="'+el.dataset.inventory+'"]'))inventoryPanel(el.dataset.inventory);}
