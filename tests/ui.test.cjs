@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const elements=new Map(),handlers={};
-function node(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',hidden:false,dataset:{},classList:{toggle(){},remove(){},add(){}},setAttribute(){},addEventListener(type,fn){handlers[id+':'+type]=fn;},querySelectorAll(){return []},querySelector(){return null},show(){this.open=true;this.modal=false},showModal(){this.open=true;this.modal=true},close(){this.open=false}});return elements.get(id);}
+function node(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',hidden:false,style:{},dataset:{},classList:{toggle(){},remove(){},add(){}},setAttribute(){},addEventListener(type,fn){handlers[id+':'+type]=fn;},querySelectorAll(){return []},querySelector(){return null},show(){this.open=true;this.modal=false},showModal(){this.open=true;this.modal=true},close(){this.open=false}});return elements.get(id);}
 const context=vm.createContext({document:{getElementById:node,querySelectorAll(){return []},addEventListener(type,fn){handlers['document:'+type]=fn;},documentElement:{dataset:{}}},window:{addEventListener(){}},location:{hash:''},console,setTimeout,clearTimeout,URLSearchParams,confirm:()=>true});
 let source=fs.readFileSync(require('node:path').join(__dirname,'../web/app.js'),'utf8');source=source.slice(0,source.lastIndexOf('boot().then('));vm.runInContext(source,context);
 vm.runInContext(`db={version:'1.3.0',settings:{layout:'cards',columns:['brand','model','inv'],options:{},views:[]},catalog:[],records:[{id:'a',kind:'phone',brand:'Nokia',model:'N73',battery:'BL-5J',charger:'2mm',instances:[{id:'u1',inv:'1',condition:'U kolekciji',state:'Ispravan',color:'Silver',edition:'Standard',imei:'123456789012345',photos:[]}]}]};`,context);
@@ -33,7 +33,7 @@ console.log('UI: retained draft fields/photos, refreshed catalogs, Clear data, c
 
 const unitForm=vm.runInContext('unitHTML(blankUnit(),0,true)',context);
 assert.ok(!unitForm.includes('data-u="type"'));assert.ok(!unitForm.includes('Originality'));
-assert.match(unitForm,/Wanted/);assert.match(unitForm,/value="KM"/);assert.ok(!unitForm.includes('value="CHF"'));
+assert.match(unitForm,/Wanted/);assert.match(unitForm,/Purchase price \(KM\)/);assert.ok(!unitForm.includes('data-u="currency"'));assert.ok(!unitForm.includes('value="CHF"'));
 assert.equal(vm.runInContext('opts.condition.length',context),2);
 const imageCell=vm.runInContext("cell(db.records[0],'image')",context);
 assert.match(imageCell,/expand-model/);assert.ok(!vm.runInContext("cell(db.records[0],'model')",context).includes('data-action="expand"'));
@@ -45,6 +45,14 @@ handlers['editor:click']({target:editor,clientX:50,clientY:50});assert.equal(edi
 assert.equal(vm.runInContext('phoneDraft.model',context),'Backdrop draft');
 vm.runInContext('addPhone()',context);handlers['editor:click']({target:editor,clientX:150,clientY:150});assert.equal(editor.open,true);
 console.log('UI: KM, two ownership choices, removed duplicate fields, leading expand control, catalog row deletion, inline updates and backdrop draft retention passed.');
+vm.runInContext("draft.model='Escape draft';dirty=true",context);
+handlers['document:keydown']({key:'Escape',preventDefault(){}});
+assert.equal(editor.open,false);assert.equal(vm.runInContext('phoneDraft.model',context),'Escape draft');
+vm.runInContext("catalogList('os');catalogEditor('os','os1')",context);
+handlers['document:keydown']({key:'Escape',preventDefault(){}});
+assert.equal(vm.runInContext('panelRoute.kind',context),'catalog');
+assert.equal(vm.runInContext("amountCurrency({currency:'CHF',price:25})",context),'CHF');
+console.log('UI: Escape retains phone draft, returns to catalog list, and old currencies remain labelled correctly.');
 (async()=>{
  const saved=new Map([['mpl-update-target','1.4.1']]);let reloads=0,calls=0;
  context.sessionStorage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
@@ -56,13 +64,13 @@ console.log('UI: KM, two ownership choices, removed duplicate fields, leading ex
  saved.delete('mpl-update-complete');reloads=0;
  context.fetch=async()=>({ok:true,json:async()=>({version:'1.3.0'})});
  await vm.runInContext('reconnectAfterRestart()',context);
+ assert.equal(node('startup-status').style.display,'grid');assert.equal(node('startup-retry').hidden,false);
  assert.equal(reloads,0);assert.match(node('update-result').textContent,/not confirmed as installed/);
  assert.equal(saved.has('mpl-update-complete'),false);
  console.log('UI: restart waits for target version; old version produces persistent failure instead of success.');
  context.fetch=async()=>({ok:true,json:async()=>({path:'C:\\Backup',parent:'C:\\',roots:['C:\\'],folders:[{name:'Photos',path:'C:\\Backup\\Photos'}]})});
  await vm.runInContext("openFolderPicker('backup-primary')",context);
- assert.equal(node('folder-picker').modal,true);assert.match(node('folder-entries').innerHTML,/Photos/);
- await handlers['document:click']({target:{closest(){return {dataset:{action:'folder-select'}}}}});
- assert.equal(node('backup-primary').value,'C:\\Backup');assert.equal(node('folder-picker').open,false);
+ assert.ok(!node('folder-picker').open);
+ assert.equal(node('backup-primary').value,'C:\\Backup');assert.ok(!node('folder-picker').open);
  console.log('UI: host folder picker opens and selects a backup destination without discarding settings.');
 })().catch(error=>{console.error(error);process.exitCode=1});

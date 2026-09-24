@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.5.0'
+VERSION = '1.6.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -540,6 +540,46 @@ class Store:
             if not commit:c.execute('ROLLBACK TO preview_all');c.execute('RELEASE preview_all')
             return {'rows':valid,'errors':errors,'skipped':skipped,'imported':len(valid) if commit else 0}
 
+_folder_picker_lock=threading.Lock()
+
+def choose_backup_folder(value=''):
+    if os.name!='nt':raise ValueError('Windows Browse is available on the Windows host. You can also type a folder path.')
+    if not _folder_picker_lock.acquire(blocking=False):raise ValueError('A folder browser is already open on the host computer.')
+    try:
+        # Pass the initial path as base64 data, never as executable PowerShell text.
+        initial=base64.b64encode(str(value).encode('utf-8')).decode('ascii')
+        script="""$ErrorActionPreference='Stop'
+Add-Type -AssemblyName System.Windows.Forms
+$owner=New-Object System.Windows.Forms.Form
+$owner.ShowInTaskbar=$false
+$owner.TopMost=$true
+$owner.Opacity=0
+$owner.Width=1
+$owner.Height=1
+$dialog=New-Object System.Windows.Forms.FolderBrowserDialog
+$dialog.Description='Select backup folder'
+$dialog.ShowNewFolderButton=$true
+$dialog.SelectedPath=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('__INITIAL__'))
+try {
+ $owner.Show()
+ $owner.Activate()
+ if($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
+  [Console]::Write([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($dialog.SelectedPath)))
+ }
+} finally { $dialog.Dispose(); $owner.Dispose() }
+""".replace('__INITIAL__',initial)
+        command=base64.b64encode(script.encode('utf-16le')).decode('ascii')
+        try:
+            result=subprocess.run(['powershell.exe','-NoProfile','-STA','-WindowStyle','Hidden','-EncodedCommand',command],capture_output=True,timeout=300,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+        except subprocess.TimeoutExpired:raise ValueError('Folder selection timed out. Click Browse to try again.')
+        if result.returncode:raise ValueError('Windows could not open Browse. Enter the backup folder path manually.')
+        output=result.stdout.strip()
+        if not output:return {'path':None}
+        selected=base64.b64decode(output,validate=True).decode('utf-8')
+        if not Path(selected).is_dir():raise ValueError('The selected folder is no longer available.')
+        return {'path':selected}
+    finally:_folder_picker_lock.release()
+
 def folder_listing(value=''):
     import string
     roots=[str(Path(letter+':/')) for letter in string.ascii_uppercase if Path(letter+':/').is_dir()] if os.name=='nt' else ['/']
@@ -579,19 +619,51 @@ def remote_get(address,images=False):
         if len(data)>10*1024*1024:raise ValueError('Response is too large.')
         return data
 
+def parse_gsm_html(html):
+    from html.parser import HTMLParser
+    class SpecsParser(HTMLParser):
+        def __init__(self):
+            super().__init__(convert_charrefs=True)
+            self.fields={};self.meta={};self.stack=[];self.captures=[]
+        def handle_starttag(self,tag,attrs):
+            attrs=dict(attrs)
+            if tag=='meta':self.meta[attrs.get('property',attrs.get('name','')).lower()]=attrs.get('content','')
+            if tag in ('br','hr'): 
+                for _,_,parts in self.captures:parts.append(' ')
+            if tag in ('meta','img','br','hr','link','input','source','wbr'):return
+            self.stack.append(tag)
+            key=attrs.get('data-spec')
+            if not key and tag=='h1' and 'specs-phone-name-title' in attrs.get('class','').split():key='modelname'
+            if key:self.captures.append((key,len(self.stack),[]))
+        def handle_data(self,data):
+            for _,_,parts in self.captures:parts.append(data)
+        def handle_endtag(self,tag):
+            if tag not in self.stack:return
+            depth=len(self.stack)-self.stack[::-1].index(tag)
+            keep=[]
+            for key,start,parts in self.captures:
+                if start>=depth:self.fields[key]=' '.join(''.join(parts).split())
+                else:keep.append((key,start,parts))
+            self.captures=keep;self.stack=self.stack[:depth-1]
+    parser=SpecsParser();parser.feed(html);parser.close()
+    fields=parser.fields
+    if not fields.get('modelname') and any(fields.get(k) for k in ('os','nettech','dimensions','announced')):
+        title=parser.meta.get('og:title','')
+        fields['modelname']=re.sub(r'\s*[-–|]\s*(?:full phone specifications|GSMArena).*$', '', title, flags=re.I).strip()
+    return fields,parser.meta.get('og:image','')
+
 def gsm_preview(address):
     address=gsm_address(address)
     if not re.fullmatch(r'/[a-zA-Z0-9_-]+-\d+\.php',urllib.parse.urlsplit(address).path):raise ValueError('Paste the GSMArena link for a specific model.')
     html=remote_get(address).decode('utf-8','replace')
-    def clean(x):return unescape(re.sub('<[^>]+>',' ',x)).strip()
-    def spec(name):
-        match=re.search(r'data-spec=["\']'+re.escape(name)+r'["\'][^>]*>(.*?)</(?:td|span|h1)>',html,re.S|re.I)
-        return clean(match[1]) if match else ''
-    specs={key:spec(key) for key in ('modelname','os','announced','status','usb','batdescription1','dimensions','weight','displaytype','displaysize','displayresolution','internalmemory','cam1modules','nettech','colors')}
-    name=specs.pop('modelname','')
-    if not name:raise ValueError('Details unavailable. Enter the model manually or try later.')
-    image=re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',html,re.I)
-    return {'name':name,'fields':{'os':specs['os'],'introduced':specs['announced'],'released':specs['status'],'charger':specs['usb'],'gsm':address,'image':unescape(image[1]) if image else ''},'specs':specs,'source':address,'at':stamp()}
+    parsed,image=parse_gsm_html(html)
+    name=parsed.pop('modelname','')
+    if not name:
+        if any(marker in html.lower() for marker in ('captcha','cf-chl-','verify you are human','just a moment','access denied')):
+            raise ValueError('GSMArena returned an access check instead of phone specifications. Try later or enter the details manually.')
+        raise ValueError('GSMArena returned a page without recognizable phone details. Enter the model manually or try later.')
+    specs={key:parsed.get(key,'') for key in ('os','announced','status','usb','batdescription1','dimensions','weight','displaytype','displaysize','displayresolution','internalmemory','cam1modules','nettech','colors')}
+    return {'name':name,'fields':{'os':specs['os'],'introduced':specs['announced'],'released':specs['status'],'charger':specs['usb'],'gsm':address,'image':image},'specs':specs,'source':address,'at':stamp()}
 
 class HostHTTPServer(ThreadingHTTPServer):
     def server_bind(self):
@@ -718,6 +790,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/catalog' and post:return self.send(200,store.save_catalog(d))
             if path=='/api/network-test' and post:return self.send(200,network_info(self.server.server_port,True))
             if path=='/api/network' and not post:return self.send(200,network_info(self.server.server_port))
+            if path=='/api/backup-folder' and post:return self.send(200,choose_backup_folder(d.get('path','')))
             if path=='/api/folders' and post:return self.send(200,folder_listing(d.get('path','')))
             if path=='/api/settings' and post:return self.send(200,store.settings(d))
             if path=='/api/move' and post:return self.send(200,store.move(d))

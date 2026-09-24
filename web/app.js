@@ -23,20 +23,36 @@ async function api(path,data,binary=false){
 function updateMessage(message,busy=false){
  const el=$('update-result');if(el){el.hidden=false;el.textContent=message;el.setAttribute('aria-busy',String(busy));}
 }
+let reconnecting=false;
+function startupStatus(message,detail='',failed=false){
+ const el=$('startup-status');el.style.display='grid';
+ $('startup-message').textContent=message;$('startup-detail').textContent=detail;
+ $('startup-progress').hidden=failed;$('startup-retry').hidden=!failed;$('startup-dismiss').hidden=!failed;
+}
+function hideStartup(){$('startup-status').style.display='none';}
 async function reconnectAfterRestart(){
+ if(reconnecting)return;reconnecting=true;
  const target=sessionStorage.getItem('mpl-update-target');
- updateMessage('Restarting server… waiting for '+(target?'version '+target:'the server')+'.',true);
+ const message='Restarting server…';
+ updateMessage(message,true);startupStatus(message,'Waiting for '+(target?'version '+target:'the server')+'. Keep this page open.');
+ try{
  for(let attempt=0;attempt<60;attempt++){
   await new Promise(resolve=>setTimeout(resolve,1000));
+  $('startup-detail').textContent='Reconnecting'+(target?' to version '+target:'')+' · attempt '+(attempt+1)+' of 60';
   try{
-   const response=await fetch('/api/status',{cache:'no-store'});const status=await response.json();
+   const options={cache:'no-store'};
+   if(typeof AbortSignal!=='undefined'&&AbortSignal.timeout)options.signal=AbortSignal.timeout(2000);
+   const response=await fetch('/api/status',options);const status=await response.json();
    if(response.ok&&(!target||status.version===target)){
     if(target)sessionStorage.setItem('mpl-update-complete',target);
+    startupStatus('Server is ready. Loading MyPhoneLibrary…',target?'Version '+target+' confirmed.':'Connection restored.');
     location.reload();return;
    }
   }catch{}
  }
- updateMessage('Restart could not be confirmed'+(target?' for version '+target:'')+'. The update is not confirmed as installed. Reopen My Phone Library or check the installed version.');
+ const failure='Restart could not be confirmed'+(target?' for version '+target:'')+'. The update is not confirmed as installed. Reopen My Phone Library or check the installed version.';
+ updateMessage(failure);startupStatus('Still unable to reconnect',failure,true);
+ }finally{reconnecting=false;}
 }
 async function boot(){
  try{const status=await api('/api/status');csrf=status.csrf||'';$('login').hidden=status.authenticated;$('application').hidden=!status.authenticated;
@@ -48,7 +64,7 @@ async function boot(){
   $('update-banner').hidden=false;$('update-banner').textContent='Update completed successfully. Installed version: '+completed;
   sessionStorage.removeItem('mpl-update-complete');sessionStorage.removeItem('mpl-update-target');
  }
- }catch(e){$('login').hidden=false;$('login-error').textContent='Server unavailable. Start MyPhoneLibrary on your computer.';}
+ }catch(e){$('login').hidden=false;$('login-error').textContent='Server unavailable. Start MyPhoneLibrary on your computer.';}finally{hideStartup();}
 }
 async function refresh(){db=await api('/api/data');document.documentElement.dataset.theme=db.settings.theme||'dark';$('connection').textContent='Connected';lists();render();}
 function lists(){
@@ -121,14 +137,7 @@ function field(label,key,val,{index=null,type='text',list='',choices=null,requir
  return `<label>${esc(label)}${control}</label>`;
 }
 function triField(label,key,val,index){return field(label,key,val===true?'true':val===false?'false':'',{index,choices:[['','Nepoznato'],['true','Yes'],['false','No']]});}
-function currencyField(obj,index=null){
- const currency=obj.currency||'KM';
- if(!['KM','BAM'].includes(currency)&&(Number(obj.price)||Number(obj.value))){
-  const attr=index===null?'data-r="currency"':`data-u="currency" data-index="${index}"`;
-  return `<label>Currency (existing amount)<input ${attr} value="${esc(currency)}" readonly><small>Existing amounts retain their original currency. New entries use KM.</small></label>`;
- }
- return field('Currency','currency','KM',{index,choices:['KM']});
-}
+function amountCurrency(obj){return !['KM','BAM',''].includes(obj.currency||'')&&(Number(obj.price)||Number(obj.value))?obj.currency:'KM';}
 function blankUnit(){return {inv:'',color:'',edition:'Standard',state:'Netestiran',condition:'U kolekciji',purpose:'Kolekcija',rating:0,location:'',currency:'KM',photos:[],box:null,battery_present:null,charger_present:null,manual:null,headphones:null,matching_box:null};}
 function newRecord(kind='phone'){return {kind,brand:'',model:'',image:'',instances:[],photos:[],compatible:[],quantity:0,reserved:0,custom:{},specs:{},currency:'KM',rating:0};}
 function record(id){return db.records.find(r=>r.id===id);}
@@ -167,7 +176,7 @@ ${field('Working condition','state',u.state,{index:i,choices:opts.state})}${fiel
 ${field('Purpose','purpose',u.purpose,{index:i,choices:opts.purpose})}${field('Ownership status','condition',u.condition,{index:i,choices:opts.condition})}
 ${triField('Box','box',u.box,i)}${triField('Battery included','battery_present',u.battery_present,i)}${triField('Charger included','charger_present',u.charger_present,i)}${triField('Manual','manual',u.manual,i)}${triField('Headphones','headphones',u.headphones,i)}${triField('Box IMEI matches','matching_box',u.matching_box,i)}
 ${field('Acquisition date','purchase_date',u.purchase_date,{index:i,type:'date'})}${field('Purchased from / source','source',u.source,{index:i})}${field('Lock status','lock',u.lock||'Nepoznato',{index:i,choices:opts.lock})}
-${field('Purchase price','price',u.price||0,{index:i,type:'number'})}${field('Estimated value','value',u.value||0,{index:i,type:'number'})}${currencyField(u,i)}
+${field('Purchase price ('+amountCurrency(u)+')','price',u.price||0,{index:i,type:'number'})}${field('Estimated value ('+amountCurrency(u)+')','value',u.value||0,{index:i,type:'number'})}
 <div class="span-all">${field('Unit notes / faults','note',u.note,{index:i,type:'textarea'})}</div></div>
 <div class="gallery">${(u.photos||[]).map((src,j)=>`<figure><img src="${esc(src)}" alt="Unit photo" data-action="photo" data-url="${esc(src)}"><button type="button" data-action="remove-unit-photo" data-index="${i}" data-photo="${j}">Remove</button></figure>`).join('')}</div><div class="actions" id="unit-photos-${i}"><button type="button" data-action="camera-unit" data-index="${i}">Take photo</button><button type="button" data-action="gallery-unit" data-index="${i}">From gallery</button><span class="subtle">Photos of this unit · ${(u.photos||[]).length}</span></div><input hidden id="camera-unit-${i}" type="file" accept="image/*" capture="environment" data-unit-upload="${i}"><input hidden id="gallery-unit-${i}" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple data-unit-upload="${i}">
 <small>These details belong to this physical unit only. IMEI is optional.</small></div></details>`;}
@@ -185,7 +194,7 @@ ${part?rf('Location','location',{list:'options-location'}):''}</div></div>
 ${mode==='add'?`<p class="hint" id="match-message">${draft.id?`Existing model <strong>${esc(name(draft))}</strong>. The new unit will join this row. Current units: ${(record(draft.id)?live(record(draft.id)).length:0)} .`:'Enter brand and model. An existing model will receive this new unit in the same row.'}</p>`:''}
 <details class="section" ${part?'open':''}><summary>Additional model details ${part?' / part':''}</summary><div class="grid" style="margin-top:15px">
 ${rf('Released — year, month or date','released')}${rf('Introduced','introduced')}${rf('GSMArena link','gsm',{type:'url'})}${rf('Wikipedia link','wiki',{type:'url'})}${rf('Image URL (HTTPS) or uploaded image path','image')}
-${part?`${draft.id?`<p class="hint">Total ${draft.quantity}; reserved ${draft.reserved}. Change quantities using Stock movements.</p>`:rf('Initial quantity','quantity',{type:'number'})}${rf('Part condition','condition',{choices:['Netestirano','Ispravno','Neispravno','Novo','Korišteno']})}${rf('Color','color',{list:'options-color'})}${rf('Purchase price per item','price',{type:'number'})}${rf('Estimated value per item','value',{type:'number'})}${currencyField(draft)}`:''}
+${part?`${draft.id?`<p class="hint">Total ${draft.quantity}; reserved ${draft.reserved}. Change quantities using Stock movements.</p>`:rf('Initial quantity','quantity',{type:'number'})}${rf('Part condition','condition',{choices:['Netestirano','Ispravno','Neispravno','Novo','Korišteno']})}${rf('Color','color',{list:'options-color'})}${rf('Purchase price per item ('+amountCurrency(draft)+')','price',{type:'number'})}${rf('Estimated value per item ('+amountCurrency(draft)+')','value',{type:'number'})}`:''}
 ${rf('Unverified quantity (e.g. 2???)','declared_qty')}${rf('Unverified legacy parts count','declared_parts')}
 <div class="span-all">${rf('Model / part notes','note',{type:'textarea'})}</div></div><div class="checks">${rf('Favorite','favorite',{type:'checkbox'})}${rf('Wishlist','wishlist',{type:'checkbox'})}</div>
 ${!part?'<button type="button" data-action="gsm-preview">Get data from GSMArena</button>':''}</details>
@@ -247,21 +256,14 @@ async function settingsPanel(){
  ${section('about',`<h2>MyPhoneLibrary</h2><p>Version ${esc(db.version)}</p><p class="subtle">Your personal phone, unit and parts collection.</p>${updateContents()}`)}
  <div class="actions settings-save"><button data-action="save-settings" class="primary">Save settings</button></div></div></div>`,{kind:'settings'});loadNetwork().catch(e=>{if($('network-status'))$('network-status').textContent=e.message;});loadUpdateState().catch(e=>updateMessage(e.message));
 }
-let folderTarget=null;
-async function browseFolders(path=''){
- $('folder-error').textContent='';$('folder-path').value=path;
- $('folder-entries').textContent='Loading folders…';$('folder-select').disabled=true;
- try{
-  const result=await api('/api/folders',{path});$('folder-path').value=result.path;
-  $('folder-up').dataset.path=result.parent;
-  $('folder-roots').innerHTML=result.roots.map(p=>`<button data-action="folder-open" data-path="${esc(p)}">${esc(p)}</button>`).join('');
-  $('folder-entries').innerHTML=result.folders.map(f=>`<button class="folder-entry" data-action="folder-open" data-path="${esc(f.path)}">📁 ${esc(f.name)}</button>`).join('')||'<p>No subfolders. You can select this folder.</p>';
-  if(result.truncated)$('folder-error').textContent='Showing the first 1000 folders. You can also enter a full path.';
-  $('folder-select').disabled=false;
- }catch(e){$('folder-entries').textContent='';$('folder-error').textContent=e.message;}
-}
+let folderPickerBusy=false;
 async function openFolderPicker(field){
- folderTarget=field;$('folder-picker').showModal();await browseFolders($(field).value||db.backup_default);
+ if(folderPickerBusy)return;
+ const input=$(field);folderPickerBusy=true;
+ try{
+  const result=await api('/api/backup-folder',{path:input.value||db.backup_default});
+  if(result.path&&input===$(field)) {input.value=result.path;panelDirty=true;}
+ }finally{folderPickerBusy=false;}
 }
 function outsideDialog(event,dialog){
  if(event.target!==dialog)return false;const r=dialog.getBoundingClientRect();
@@ -294,12 +296,14 @@ async function uploadFiles(files,index=null){readDraft();uploadCount++;$('record
 document.addEventListener('click',async event=>{
  const target=event.target.closest('[data-action]');if(!target)return;const action=target.dataset.action,id=target.dataset.id;
  try{
- const leavesPanel=['nav-view','settings','catalog-list','catalog-item','catalog-new','add-phone','add-part','trash','backups','inventory','columns','custom-fields','password','update-info','import','export'];
+ const leavesPanel=['nav-view','settings','catalogs','catalog-list','catalog-item','catalog-new','add-phone','add-part','trash','backups','inventory','columns','custom-fields','password','update-info','import','export'];
  if($('panel').open&&leavesPanel.includes(action)){
   if(!allowPanelLeave())return;panelDirty=false;
   if(['nav-view','add-phone','add-part'].includes(action)){$('panel').close();panelRoute=null;}
  }
  switch(action){
+ case 'retry-reconnect':await reconnectAfterRestart();break;
+ case 'dismiss-reconnect':hideStartup();break;
  case 'refresh':await refresh();toast('Table refreshed.');break;
  case 'logout':if((dirty||phoneDraft||panelDirty)&&!confirm('Sign out and discard unsaved changes?'))break;await api('/api/logout',{});$('editor').close();$('panel').close();draft=null;phoneDraft=null;db=null;dirty=false;await boot();break;
  case 'add-phone':addPhone();break;case 'add-part':addPart();break;case 'add-existing':addPhone(id);break;
@@ -324,6 +328,7 @@ document.addEventListener('click',async event=>{
  case 'server-stop':case 'server-restart':{if(dirty)throw Error('Save or discard your current edits first.');if(action==='server-stop'&&!confirm('Stop MyPhoneLibrary on this computer?'))break;await api('/api/server-control',{action:action==='server-stop'?'stop':'restart'});toast(action==='server-stop'?'Server stopped. Open My Phone Library to start it again.':'Restarting… reconnecting shortly.');if(action==='server-restart'){await reconnectAfterRestart();}break;}
  case 'nav-view':currentView=target.dataset.view;$('search').value='';render();break;
  case 'settings-tab':settingsTab=target.dataset.tab;document.querySelectorAll('[data-settings-section]').forEach(el=>el.hidden=el.dataset.settingsSection!==settingsTab);document.querySelectorAll('[data-action="settings-tab"]').forEach(el=>el.classList.toggle('active',el.dataset.tab===settingsTab));break;
+ case 'catalogs':settingsTab='options';await settingsPanel();break;
  case 'catalog-list':catalogList(target.dataset.category);break;
  case 'catalog-item':{const item=db.catalog.find(x=>x.id===id);catalogEditor(item.category,id);break;}
  case 'catalog-new':catalogEditor(target.dataset.category);break;
@@ -337,10 +342,7 @@ document.addEventListener('click',async event=>{
  }
  case 'catalog-save':{const specs={};for(const row of document.querySelectorAll('.spec-row')){const key=row.querySelector('[data-spec-key]').value.trim(),value=row.querySelector('[data-spec-value]').value;if(!key&&value)throw Error('Enter a property name.');if(key){if(key in specs)throw Error('Property names must be unique.');specs[key]=value;}}const saved=await api('/api/catalog',{...catalogDraft,name:$('catalog-name').value,description:$('catalog-description').value,source:$('catalog-source').value,specs});await refresh();catalogEditor(saved.category,saved.id);toast('Catalog item saved. Linked records updated.');break;}
  case 'browse-backup':await openFolderPicker(target.dataset.field);break;
- case 'folder-open':await browseFolders(target.dataset.path);break;
- case 'folder-go':await browseFolders($('folder-path').value);break;
- case 'folder-close':$('folder-picker').close();break;
- case 'folder-select':$(folderTarget).value=$('folder-path').value;panelDirty=true;$('folder-picker').close();break;
+
  case 'network-test':target.disabled=true;try{await loadNetwork(true);}finally{target.disabled=false;}break;
  case 'network-refresh':target.disabled=true;try{await loadNetwork();}finally{target.disabled=false;}break;
  case 'settings':await settingsPanel();break;
@@ -397,12 +399,16 @@ document.addEventListener('change',async e=>{const el=e.target;try{
 $('record-form').addEventListener('submit',async e=>{e.preventDefault();if(uploadCount){toast('Photos are still uploading.');return;}readDraft();$('record-save').disabled=true;try{const r=await api('/api/record',{record:draft,rev:draft.rev});await refresh();if(mode==='add')phoneDraft=null;dirty=false;$('editor').close();draft=null;expanded.add(r.id);render();toast('Phone / record saved.');}catch(error){$('editor-error').textContent=error.message;}finally{$('record-save').disabled=false;}});
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();$('login-error').textContent='';$('login-submit').disabled=true;try{await api($('login-form').dataset.setup==='true'?'/api/setup':'/api/login',{password:$('password').value});$('password').value='';await boot();}catch(error){$('login-error').textContent=error.message;}finally{$('login-submit').disabled=false;}});
 $('editor-content').addEventListener('input',()=>dirty=true);
-$('folder-path').addEventListener('input',()=>{$('folder-select').disabled=true;});
 $('panel-body').addEventListener('input',()=>{if(panelRoute)panelDirty=true;});
 $('panel-body').addEventListener('change',()=>{if(panelRoute)panelDirty=true;});
 $('panel').addEventListener('cancel',e=>{e.preventDefault();closePanel();});
 $('editor').addEventListener('click',e=>{if(outsideDialog(e,$('editor')))closeEditor();});
-$('folder-picker').addEventListener('click',e=>{if(outsideDialog(e,$('folder-picker')))$('folder-picker').close();});
+$('panel').addEventListener('click',e=>{if(!panelRoute&&outsideDialog(e,$('panel')))closePanel();});
+document.addEventListener('keydown',e=>{
+ if(e.key!=='Escape'||e.defaultPrevented)return;
+ if($('editor').open){e.preventDefault();closeEditor();}
+ else if($('panel').open){e.preventDefault();closePanel();}
+});
 $('editor').addEventListener('cancel',e=>{e.preventDefault();closeEditor();});
 $('search').addEventListener('input',render);
 $('collection-table').addEventListener('click',e=>{const th=e.target.closest('[data-sort]');if(!th||Date.now()<ignoreSortUntil||['image','actions'].includes(th.dataset.sort))return;sort={key:th.dataset.sort,dir:sort.key===th.dataset.sort?-sort.dir:1};render();});
