@@ -18,6 +18,8 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Check interface behavior
         run: node tests/ui.test.cjs
+      - name: Check collection workflows
+        run: node tests/ui-workflows.test.cjs
       - name: Build package
         shell: pwsh
         env:

@@ -61,3 +61,10 @@ dialog.settings-page{z-index:15}
 #collection-table .unit-actions button{padding:4px 6px}
 #collection-table [data-column=inv]{text-align:left;font-variant-numeric:tabular-nums}
 #collection-table .unit-table-row td{border-bottom-color:var(--line)}
+
+.catalog-grid{grid-template-columns:minmax(0,1fr);gap:6px}.catalog-grid button{padding:10px 14px;display:flex;align-items:center;justify-content:space-between}.catalog-grid small{margin:0}
+.bulk-toolbar{display:flex;gap:6px;align-items:center;margin:8px 0;flex-wrap:wrap}.bulk-toolbar button{padding:5px 8px}
+#collection-table .unit-open{padding:0;border:0;background:none;text-align:left;white-space:normal;min-width:0}.unit-open img{cursor:pointer}
+#collection-table [data-column=select] input{width:14px;height:14px;margin:0}
+.quick-control{display:flex;flex-wrap:wrap;gap:3px}.quick-control input,.quick-control select{width:100%;padding:4px}.quick-control button{padding:3px;font-size:10px}
+.unit-detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:16px 0}.unit-detail-grid small,.unit-detail-grid strong{display:block}.unit-detail-grid strong{overflow-wrap:anywhere}.detail-note{white-space:pre-wrap}.completeness-summary{margin:10px 0}

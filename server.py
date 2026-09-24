@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.8.1'
+VERSION = '1.9.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -244,6 +244,9 @@ class Store:
             r['reserved']=old.get('reserved',0) if old else number(data.get('reserved'),0,r['quantity'],True) if importing else 0
             if old and r['quantity']!=old['quantity']: raise ValueError('Use Stock movements to change part quantities.')
             valid={x['id'] for x in self.records(c) if x['kind']=='phone'}
+            catalog_item=str(data.get('catalog_item','') or '')
+            if catalog_item and not any(e['id']==catalog_item for e in self.catalog(c)):raise ValueError('Catalog item not found.')
+            r['catalog_item']=catalog_item
             r['compatible']=list(dict.fromkeys(str(x) for x in data.get('compatible',[])))
             if any(x not in valid for x in r['compatible']): raise ValueError('Compatible model not found.')
         rev=old['rev']+1 if old else 1
@@ -251,6 +254,28 @@ class Store:
         self.catalog(c)
         self.log(c,rid,'Izmjena' if old else 'Dodavanje',{'before':old,'after':r})
         return dict(r,rev=rev,deleted=bool((old or {}).get('deleted',False)))
+    def bulk_units(self,data):
+        fields={'color','edition','location','state','condition','box','battery_present','charger_present','manual','headphones','os'}
+        changes=data.get('changes',{});targets=data.get('targets',[])
+        if not isinstance(changes,dict) or not changes or set(changes)-fields:raise ValueError('Choose supported unit fields to change.')
+        if not isinstance(targets,list) or not 1<=len(targets)<=10000:raise ValueError('Select units to update.')
+        if 'state' in changes and changes['state'] not in STATES:raise ValueError('Invalid working condition.')
+        if 'condition' in changes and changes['condition'] not in ('U kolekciji','Wanted'):raise ValueError('Invalid ownership status.')
+        for key in ('box','battery_present','charger_present','manual','headphones'):
+            if key in changes and changes[key] is not None and type(changes[key]) is not bool:raise ValueError('Invalid accessory status.')
+        with self.connect() as c:
+            grouped={};seen=set()
+            for target in targets:
+                rid=target.get('record_id');r=grouped.setdefault(rid,self.get(c,rid))
+                if r['deleted'] or r['kind']!='phone':raise ValueError('Select active phone units.')
+                if target.get('rev')!=r['rev']:raise Conflict('A selected phone changed. Refresh and select it again. No changes were saved.')
+                uid=target.get('unit_id')
+                if uid in seen:raise ValueError('Duplicate unit selection.')
+                seen.add(uid);u=next((u for u in r['instances'] if u['id']==uid),None)
+                if not u:raise ValueError('Selected unit no longer exists.')
+                u.update(changes)
+            result=[self._save(c,r,r['rev']) for r in grouped.values()]
+            return {'updated':len(seen),'records':result}
     @staticmethod
     def release_numbers(record):
         for unit in record.get('instances',[]):
@@ -328,6 +353,11 @@ class Store:
             blocked=self.meta('catalog_deleted',[],c)
             blocked.append([item['category'],item['name'].strip().casefold()])
             self.setmeta(c,'catalog_deleted',blocked)
+            for child in items:
+                if child.get('parent_id')==item['id']:child['parent_id']=item.get('parent_id','');child['rev']+=1
+            for r in self.records(c)+self.records(c,True):
+                if r.get('catalog_item')==item['id']:
+                    r['catalog_item']='';c.execute('UPDATE records SET data=?,rev=rev+1 WHERE id=?',(dump(r),r['id']))
             self.setmeta(c,'catalog',[e for e in items if e['id']!=item['id']])
             self.catalog(c)
             for r in linked:
@@ -347,6 +377,18 @@ class Store:
             specs=data.get('specs',{})
             if not isinstance(specs,dict) or len(specs)>100 or any(not isinstance(v,(str,int,float,bool)) for v in specs.values()):raise ValueError('Specifications must be named values.')
             item={'id':old['id'] if old else ident(),'rev':old['rev']+1 if old else 1,'category':category,'name':name,'description':str(data.get('description',''))[:12000],'specs':{str(k)[:120]:str(v)[:2000] for k,v in specs.items() if str(k).strip()},'source':url(data.get('source',''))}
+            parent_id=str(data.get('parent_id','') or '') if category=='location' else ''
+            by_id={e['id']:e for e in items};visited={item['id']};current=parent_id
+            while current:
+                if current in visited:raise ValueError('Locations cannot contain a circular hierarchy.')
+                visited.add(current);parent=by_id.get(current)
+                if not parent or parent['category']!='location':raise ValueError('Parent location not found.')
+                current=parent.get('parent_id','')
+            item['parent_id']=parent_id
+            compatible=list(dict.fromkeys(data.get('compatible',[])))
+            valid={r['id'] for r in self.records(c) if r['kind']=='phone'}
+            if any(rid not in valid for rid in compatible):raise ValueError('Compatible model not found.')
+            item['compatible']=compatible
             if old:
                 for r in self.records(c)+self.records(c,True):
                     changed=False
@@ -882,6 +924,7 @@ class Handler(BaseHTTPRequestHandler):
                 with self.server.state_lock:self.server.sessions.pop(token,None)
                 return self.send(200,{'ok':True},extra={'Set-Cookie':'mpl_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'})
             if path=='/api/data' and not post:return self.send(200,store.all_data())
+            if path=='/api/bulk-units' and post:return self.send(200,store.bulk_units(d))
             if path=='/api/record' and post:return self.send(200,store.save_record(d.get('record'),d.get('rev')))
             if path in ('/api/trash','/api/untrash') and post:store.trash(d['id'],d['rev'],path.endswith('untrash'));return self.send(200,{'ok':True})
             if path=='/api/purge' and post:store.purge(d['id'],d['rev']);return self.send(200,{'ok':True})
