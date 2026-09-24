@@ -74,7 +74,7 @@ with tempfile.TemporaryDirectory() as folder:
             assert response.status == 200
         adb('shell', 'am', 'start', '-n', 'com.myphonelibrary.app/.MainActivity')
         connect_native()
-        subprocess.run(['node', str(ROOT/'packaging/android_client_smoke.cjs')], check=True,
+        subprocess.run(['node', str(ROOT/'packaging/android_client_smoke.cjs')], check=True, timeout=180,
                        env={**os.environ, 'ANDROID_TEST_CONTROL': f'http://127.0.0.1:{control.server_port}'})
     finally:
         # Keep diagnostics even when attaching to the WebView itself fails.
