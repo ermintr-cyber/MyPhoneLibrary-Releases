@@ -5,7 +5,7 @@ Unicode true
 !include "MUI2.nsh"
 !include "x64.nsh"
 !ifndef VERSION
-!define VERSION "1.10.0"
+!define VERSION "1.10.1"
 !endif
 Name "My Phone Library"
 OutFile "${SOURCE_ROOT}\dist\MyPhoneLibrary_Setup_${VERSION}.exe"

@@ -13,4 +13,12 @@ await page.evaluate(()=>{readDraft();});assert.equal(await page.evaluate(()=>dra
 await page.evaluate(()=>{document.getElementById('editor').close();db.records=[{id:'a',kind:'phone',brand:'Nokia',model:'N73',alias:'N73-1',type:'RM-133',os:'Symbian OS 9.2',photos:['/media/old.jpg'],custom:{},instances:[{id:'u1',inv:'1',photos:[],type:''},{id:'u2',inv:'2',photos:[],type:'RM-ME'}]}];showEditor('a',1);});
 await page.locator('[data-effective=type]').fill('RM-new');await page.locator('#editor-unit-select').selectOption('0');assert.equal(await page.locator('[data-effective=type]').inputValue(),'RM-133');assert.equal(await page.evaluate(()=>draft.instances[1].type),'RM-new');assert.equal(await page.evaluate(()=>draft.photos[0]),'/media/old.jpg');
 await page.evaluate(()=>{dirty=false;closeEditor();sidebarState(true);});assert.equal(await page.locator('main').evaluate(el=>getComputedStyle(el).marginLeft),'0px');
+// A long catalog must scroll inside Settings with aligned compact columns.
+await page.evaluate(()=>{db.catalog.push(...Array.from({length:50},(_,i)=>({id:'brand'+i,category:'brand',name:i%2?'Sony Ericsson '+i:'Nokia '+i,description:i%2?'A description':'',specs:i%2?{Origin:'Test'}:{}})));catalogList('brand');});
+await page.locator('[data-catalog-section=brand] .catalog-item-row').last().scrollIntoViewIfNeeded();
+assert.equal(await page.locator('#panel-body').evaluate(el=>el.scrollTop>0&&el.scrollHeight>el.clientHeight),true);
+const positions=await page.locator('[data-catalog-section=brand] .catalog-item-row').evaluateAll(rows=>rows.slice(0,3).map(r=>({height:r.getBoundingClientRect().height,x:[...r.children].map(c=>c.getBoundingClientRect().x)})));
+assert.deepEqual(positions[0].x,positions[1].x);assert.deepEqual(positions[1].x,positions[2].x);assert.ok(positions.every(r=>r.height<=38));
+await page.locator('[data-action=catalog-toggle][data-category=os]').click();assert.equal(await page.locator('[data-catalog-section=brand]').isVisible(),false);assert.equal(await page.locator('[data-catalog-section=os]').isVisible(),true);
+console.log('Catalog DOM: long list scrolls, columns align, compact rows and single expanded category passed.');
 console.log('DOM: one field per property, search/select/reject, Escape, effective unit switching, retained gallery, collapsed layout passed.');await browser.close();})().catch(e=>{console.error(e);process.exit(1)});
