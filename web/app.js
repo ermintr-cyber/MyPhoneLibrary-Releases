@@ -297,6 +297,7 @@ function tableColumns(visible){
 function render(){renderFilters();
  if($('wanted-toggle')){$('wanted-toggle').hidden=!['all','phone'].includes(currentView);$('wanted-toggle').textContent=showWanted?'Hide wanted list':'Show wanted list';$('wanted-toggle').setAttribute('aria-pressed',String(showWanted));}
  if($('add-wanted'))$('add-wanted').hidden=currentView!=='wish';
+ if($('heading-add-phone'))$('heading-add-phone').hidden=currentView==='wish';
  if($('page-title'))$('page-title').textContent=currentView==='wish'?'Wishlist':currentView==='incomplete'?'What is missing?':'My collection';
  const activeFilters=Object.values(quickFilters).filter(Boolean).length;if($('filter-toggle'))$('filter-toggle').textContent='Filters'+(activeFilters?' ('+activeFilters+')':'');
  if(quickEdit)return;
@@ -690,7 +691,7 @@ document.addEventListener('change',async e=>{const el=e.target;try{
  if(el.matches?.('[data-combo-query]')){const c=el.closest('.catalog-combo');if(syncCombo(c))c.querySelector('input[type="hidden"]').dispatchEvent(new Event('change',{bubbles:true}));}
  if(el.dataset.quickFilter){quickFilters[el.dataset.quickFilter]=el.value;render();return;}
  if(el.id==='editor-unit-select'){readDraft();editorRender(Number(el.value));return;}
- if(el.dataset.selectRecord){const r=record(el.dataset.selectRecord);for(const u of r.instances||[])if(!el.dataset.selectUnit||u.id===el.dataset.selectUnit){if(el.checked)selectedUnits.add(u.id);else selectedUnits.delete(u.id);}render();return;}
+ if(el.dataset.selectRecord){const r=record(el.dataset.selectRecord);for(const u of shownUnits(r))if(!el.dataset.selectUnit||u.id===el.dataset.selectUnit){if(el.checked)selectedUnits.add(u.id);else selectedUnits.delete(u.id);}render();return;}
  if(['imei','imei2'].includes(el.dataset.u))imeiWarnings();
  if(el.matches('[data-r="brand"],[data-r="model"]')){matchModel();refreshBatterySuggestions();refreshModelOptions(draft?.brand);if($('editor-charger-suggestions'))$('editor-charger-suggestions').innerHTML=chargerSuggestionsHTML(draft);}
  if(el.id==='view'){const v=el.value;if(v.startsWith('saved-'))$('search').value=db.settings.views[Number(v.slice(6))]?.query||'';render();}
