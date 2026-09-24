@@ -5,7 +5,7 @@ Unicode true
 !include "MUI2.nsh"
 !include "x64.nsh"
 !ifndef VERSION
-!define VERSION "1.4.1"
+!define VERSION "1.5.0"
 !endif
 Name "My Phone Library"
 OutFile "${SOURCE_ROOT}\dist\MyPhoneLibrary_Setup_${VERSION}.exe"
@@ -63,7 +63,7 @@ Section "Application"
  CreateShortcut "$SMPROGRAMS\My Phone Library\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
  CreateShortcut "$DESKTOP\My Phone Library.lnk" "$INSTDIR\MyPhoneLibrary.exe"
  System::Call 'Kernel32::SetEnvironmentVariable(t "MPL_FIREWALL_PROGRAM", t "$INSTDIR\runtime\pythonw.exe")i.r0'
- nsExec::ExecToStack "powershell.exe -NoProfile -NonInteractive -Command $\"try { $$r=Get-NetFirewallRule -DisplayName 'MyPhoneLibrary - TCP 8091' -ErrorAction Stop; $$p=$$r|Get-NetFirewallApplicationFilter; $$f=$$r|Get-NetFirewallPortFilter; if(($$r.Enabled -contains 'True') -and ($$r.Action -contains 'Allow') -and ($$p.Program -contains $$env:MPL_FIREWALL_PROGRAM) -and ($$f.LocalPort -contains '8091')) { exit 0 }; exit 1 } catch { exit 1 }$\""
+ nsExec::ExecToStack "powershell.exe -NoProfile -NonInteractive -Command $\"try { $$r=Get-NetFirewallRule -DisplayName 'MyPhoneLibrary - TCP 9000' -ErrorAction Stop; $$p=$$r|Get-NetFirewallApplicationFilter; $$f=$$r|Get-NetFirewallPortFilter; if(($$r.Enabled -contains 'True') -and ($$r.Action -contains 'Allow') -and ($$p.Program -contains $$env:MPL_FIREWALL_PROGRAM) -and ($$f.LocalPort -contains '9000')) { exit 0 }; exit 1 } catch { exit 1 }$\""
  Pop $0
  Pop $1
  StrCmp $0 "0" network_ready

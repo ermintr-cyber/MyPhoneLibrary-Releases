@@ -11,7 +11,7 @@ for attempt in range(2):
     assert marker.read_text(encoding='utf-8')=='preserve this collection marker'
 installed=Path(os.environ['LOCALAPPDATA'])/'Programs/MyPhoneLibrary'
 assert (installed/'MyPhoneLibrary.exe').is_file()
-command="$r=Get-NetFirewallRule -DisplayName 'MyPhoneLibrary - TCP 8091' -ErrorAction Stop; if(@($r).Count -ne 1) { exit 1 }; $p=$r|Get-NetFirewallPortFilter; if($p.LocalPort -ne '8091') { exit 2 }"
+command="$r=Get-NetFirewallRule -DisplayName 'MyPhoneLibrary - TCP 9000' -ErrorAction Stop; if(@($r).Count -ne 1) { exit 1 }; $p=$r|Get-NetFirewallPortFilter; if($p.LocalPort -ne '9000') { exit 2 }"
 subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',command],check=True,timeout=15)
 print('Installer ran twice; collection marker preserved; exactly one firewall rule remains.')
 with tempfile.TemporaryDirectory(prefix='mpl-smoke-') as folder:
@@ -58,3 +58,31 @@ with tempfile.TemporaryDirectory(prefix='mpl-smoke-') as folder:
     finally:
         if proc.poll() is None:proc.terminate();proc.wait(timeout=5)
 print('Windows GUI runtime started, authenticated, loaded data and stopped cleanly without a console.')
+
+# Exercise actual migration from the old launch argument, plus busy-port fallback.
+import socket
+for busy in (False,True):
+    blocker=None
+    if busy:
+        blocker=socket.socket();blocker.bind(('0.0.0.0',9000));blocker.listen()
+    with tempfile.TemporaryDirectory(prefix='mpl-port-') as folder:
+        expected=8091 if busy else 9000;base=f'http://127.0.0.1:{expected}'
+        proc=subprocess.Popen([str(installed/'runtime/pythonw.exe'),str(installed/'server.py'),'--port','8091','--host','127.0.0.1','--data',folder,'--no-browser'])
+        opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()));csrf=''
+        try:
+            for attempt in range(100):
+                try:
+                    if request('/api/status')['product']=='MyPhoneLibrary':break
+                except OSError:pass
+                time.sleep(.2)
+            else:raise RuntimeError('Port selection failed')
+            csrf=request('/api/setup',{'password':'port-migration-test-password'})['csrf']
+            assert request('/api/network')['port']==expected
+            folders=request('/api/folders',{'path':folder});assert Path(folders['path'])==Path(folder)
+            if not busy:
+                with urllib.request.urlopen('http://127.0.0.1:8091/api/status') as response:assert json.load(response)['port']==9000
+            request('/api/server-control',{'action':'stop'});proc.wait(timeout=15)
+            print('Windows port selection passed:',expected,'9000 occupied:',busy)
+        finally:
+            if proc.poll() is None:proc.terminate();proc.wait(timeout=5)
+            if blocker:blocker.close()

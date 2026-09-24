@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.4.1'
+VERSION = '1.5.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -179,7 +179,8 @@ class Store:
         normalized=lambda s:' '.join(str(s).casefold().split())
         if r['kind']=='phone' and any(x['id']!=rid and x['kind']=='phone' and normalized(x['brand'])==normalized(r['brand']) and normalized(x['model'])==normalized(r['model']) for x in self.records(c)):
             raise Conflict('This model already exists. Add a unit from its row or reopen Add phone.')
-        for k in ('gsm','wiki'): r[k]=url(r[k])
+        for k in ('gsm','wiki'): r[k]=url(r[k].strip())
+        if not r['currency']:r['currency']='KM'
         r['image']=image_url(data.get('image',''))
         if len(data.get('photos',[]))>100:raise ValueError('Maximum 100 photos per model.')
         r['photos']=[image_url(p) for p in data.get('photos',[])]
@@ -201,11 +202,12 @@ class Store:
             own_ids=set()
             for item in incoming:
                 u={k:str(item.get(k,'') or '')[:4000] for k in ['inv','color','edition','type','product_code','memory','firmware','state','condition','purpose','location','imei','imei2','serial','note','source','purchase_date','currency','lock','originality']}
+                if not u['currency']:u['currency']='KM'
                 u['id']=item.get('id') or ident()
                 if not re.fullmatch(r'[a-f0-9]{32}',u['id']) or u['id'] in own_ids or u['id'] in other_ids: raise ValueError('Duplicate or invalid unit ID.')
                 own_ids.add(u['id'])
                 if u['state'] not in STATES: u['state']='Netestiran'
-                if u['condition'] not in ACTIVE|{'Prodan','Poklonjen','Rastavljen','Rashodovan'}: u['condition']='U kolekciji'
+                if u['condition'] not in ACTIVE|{'Wanted','Prodan','Poklonjen','Rastavljen','Rashodovan'}: u['condition']='U kolekciji'
                 if not u['inv']:
                     seq=self.meta('sequence',0,c)+1
                     while 'MOB-'+str(seq).zfill(5) in used: seq+=1
@@ -396,7 +398,7 @@ class Store:
             if not any(u['id']==d.get('instance_id') for u in r.get('instances',[])): raise ValueError('Select a unit.')
             status=d.get('status','Otvoren')
             if status not in ('Otvoren','U radu','Čeka dijelove','Završen'): raise ValueError('Unknown status.')
-            item={'id':d.get('id') or ident(),'at':stamp(),'record_id':r['id'],'instance_id':d['instance_id'],'status':status,'note':str(d.get('note',''))[:10000],'cost':number(d.get('cost'),0,1000000),'currency':str(d.get('currency','CHF'))[:10]}
+            item={'id':d.get('id') or ident(),'at':stamp(),'record_id':r['id'],'instance_id':d['instance_id'],'status':status,'note':str(d.get('note',''))[:10000],'cost':number(d.get('cost'),0,1000000),'currency':str(d.get('currency','KM'))[:10]}
             if d.get('id'):
                 old=c.execute('SELECT data FROM repairs WHERE id=?',(d['id'],)).fetchone()
                 if not old or json.loads(old[0])['record_id']!=r['id']: raise ValueError('Repair not found.')
@@ -538,24 +540,47 @@ class Store:
             if not commit:c.execute('ROLLBACK TO preview_all');c.execute('RELEASE preview_all')
             return {'rows':valid,'errors':errors,'skipped':skipped,'imported':len(valid) if commit else 0}
 
+def folder_listing(value=''):
+    import string
+    roots=[str(Path(letter+':/')) for letter in string.ascii_uppercase if Path(letter+':/').is_dir()] if os.name=='nt' else ['/']
+    path=Path(str(value).strip()).expanduser() if value else Path.home()
+    path=path.resolve()
+    if not path.is_dir():raise ValueError('Folder not found on the host computer.')
+    try:children=sorted(({'name':x.name,'path':str(x)} for x in path.iterdir() if x.is_dir()),key=lambda x:x['name'].casefold())
+    except OSError:raise ValueError('This folder cannot be opened. Choose another folder.')
+    return {'path':str(path),'parent':str(path.parent),'roots':roots,'folders':children[:1000],'truncated':len(children)>1000}
+
+def gsm_address(address,redirect=False,images=False):
+    address=str(address).strip().replace('\u200b','').replace('\ufeff','')
+    p=urllib.parse.urlsplit(address)
+    allowed={'fdn2.gsmarena.com','fdn.gsmarena.com'} if images else {'www.gsmarena.com','gsmarena.com','m.gsmarena.com'}
+    if p.hostname not in allowed or p.port not in (None,443) or p.username or p.password or p.scheme not in (('https','http') if redirect else ('https',)):
+        raise ValueError('GSMArena redirected to an unsupported address.' if redirect else 'Use an HTTPS model link from www.gsmarena.com.')
+    host=p.hostname
+    if not images and not redirect:host='www.gsmarena.com'
+    return urllib.parse.urlunsplit(('https',host,p.path,p.query,''))
+
 def remote_get(address,images=False):
-    allowed={'fdn2.gsmarena.com','fdn.gsmarena.com'} if images else {'www.gsmarena.com','gsmarena.com'}
+    address=gsm_address(address,images=images)
     def validate(a):
         p=urllib.parse.urlsplit(a)
-        if p.scheme!='https' or p.hostname not in allowed or p.port not in (None,443) or p.username: raise ValueError('Only a valid GSMArena HTTPS link is allowed.')
+        gsm_address(a,images=images)
         for result in socket.getaddrinfo(p.hostname,443,type=socket.SOCK_STREAM):
             if not ipaddress.ip_address(result[4][0]).is_global:raise ValueError('Private addresses are not allowed.')
     class SafeRedirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self,req,fp,code,msg,headers,newurl):validate(newurl);return super().redirect_request(req,fp,code,msg,headers,newurl)
+        def redirect_request(self,req,fp,code,msg,headers,newurl):
+            newurl=gsm_address(newurl,redirect=True,images=images);validate(newurl)
+            return super().redirect_request(req,fp,code,msg,headers,newurl)
     validate(address)
     opener=urllib.request.build_opener(SafeRedirect())
-    req=urllib.request.Request(address,headers={'User-Agent':'MyPhoneLibrary/1.0 (personal catalog; user-requested lookup)'})
+    req=urllib.request.Request(address,headers={'User-Agent':'Mozilla/5.0 (compatible; MyPhoneLibrary/1.5; user-requested lookup)'})
     with opener.open(req,timeout=15) as response:
         data=response.read(10*1024*1024+1)
         if len(data)>10*1024*1024:raise ValueError('Response is too large.')
         return data
 
 def gsm_preview(address):
+    address=gsm_address(address)
     if not re.fullmatch(r'/[a-zA-Z0-9_-]+-\d+\.php',urllib.parse.urlsplit(address).path):raise ValueError('Paste the GSMArena link for a specific model.')
     html=remote_get(address).decode('utf-8','replace')
     def clean(x):return unescape(re.sub('<[^>]+>',' ',x)).strip()
@@ -568,7 +593,14 @@ def gsm_preview(address):
     image=re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',html,re.I)
     return {'name':name,'fields':{'os':specs['os'],'introduced':specs['announced'],'released':specs['status'],'charger':specs['usb'],'gsm':address,'image':unescape(image[1]) if image else ''},'specs':specs,'source':address,'at':stamp()}
 
-class AppServer(ThreadingHTTPServer):
+class HostHTTPServer(ThreadingHTTPServer):
+    def server_bind(self):
+        if os.name=='nt':
+            self.allow_reuse_address=False
+            self.socket.setsockopt(socket.SOL_SOCKET,socket.SO_EXCLUSIVEADDRUSE,1)
+        super().server_bind()
+
+class AppServer(HostHTTPServer):
     daemon_threads=False
     def __init__(self,address,store):
         super().__init__(address,Handler);self.store=store;self.sessions={};self.attempts={};self.state_lock=threading.RLock()
@@ -686,11 +718,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/catalog' and post:return self.send(200,store.save_catalog(d))
             if path=='/api/network-test' and post:return self.send(200,network_info(self.server.server_port,True))
             if path=='/api/network' and not post:return self.send(200,network_info(self.server.server_port))
-            if path=='/api/backup-folder' and post:
-                if os.name!='nt' or not ipaddress.ip_address(self.client_address[0]).is_loopback:raise ValueError('Browse is available on the Windows host. From another device, enter a host folder path.')
-                script="Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description='Choose MyPhoneLibrary backup folder'; if($d.ShowDialog() -eq 'OK') { $d.SelectedPath }"
-                result=subprocess.run(['powershell.exe','-NoProfile','-STA','-Command',script],capture_output=True,text=True,timeout=120,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-                return self.send(200,{'path':result.stdout.strip()})
+            if path=='/api/folders' and post:return self.send(200,folder_listing(d.get('path','')))
             if path=='/api/settings' and post:return self.send(200,store.settings(d))
             if path=='/api/move' and post:return self.send(200,store.move(d))
             if path=='/api/repair' and post:return self.send(200,store.repair(d))
@@ -780,9 +808,48 @@ def backup_worker(server):
             if server.store.meta('auth') and time.time()-server.store.last_backup>days*86400:server.store.backup()
         except Exception as e:print('Backup:',str(e),flush=True)
 
+def bind_server(host,requested,store):
+    ports=[9000,8091] if requested in (None,8091,9000) else [requested]
+    last=None
+    for port in ports:
+        try:return AppServer((host,port),store)
+        except OSError as e:last=e
+    raise last
+
+def start_legacy_redirect(host,port):
+    class LegacyHandler(BaseHTTPRequestHandler):
+        def log_message(self,*args):pass
+        def do_GET(self):
+            if self.path.split('?')[0]=='/api/status':
+                body=dump({'product':PRODUCT,'version':VERSION,'port':port,'authenticated':False}).encode()
+                self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(body)));self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(body);return
+            hostname=urllib.parse.urlsplit('http://'+self.headers.get('Host','localhost')).hostname or 'localhost'
+            if ':' in hostname:hostname='['+hostname+']'
+            self.send_response(302);self.send_header('Location',f'http://{hostname}:{port}/');self.send_header('Cache-Control','no-store');self.end_headers()
+    try:redirect=HostHTTPServer((host,8091),LegacyHandler)
+    except OSError:return None
+    redirect.daemon_threads=True
+    threading.Thread(target=redirect.serve_forever,daemon=True).start()
+    return redirect
+
+def ensure_windows_port(port):
+    # A new port needs one Windows elevation; later launches reuse this exact rule.
+    exe=str(Path(sys.executable).resolve()).replace("'","''")
+    rule='MyPhoneLibrary - TCP '+str(port)
+    check=f"$r=Get-NetFirewallRule -DisplayName '{rule}' -ErrorAction SilentlyContinue; $p=$r|Get-NetFirewallPortFilter; $a=$r|Get-NetFirewallApplicationFilter; if(($r.Enabled -contains 'True') -and ($r.Action -contains 'Allow') -and ($p.LocalPort -contains '{port}') -and ($a.Program -contains '{exe}')) {{exit 0}}; exit 1"
+    flags=getattr(subprocess,'CREATE_NO_WINDOW',0)
+    try:
+        if subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',check],capture_output=True,timeout=20,creationflags=flags).returncode==0:return
+        import base64
+        command=f"Remove-NetFirewallRule -DisplayName '{rule}' -ErrorAction SilentlyContinue; New-NetFirewallRule -DisplayName '{rule}' -Direction Inbound -Action Allow -Program '{exe}' -Protocol TCP -LocalPort {port} -RemoteAddress LocalSubnet,100.64.0.0/10 -Profile Any"
+        encoded=base64.b64encode(command.encode('utf-16le')).decode()
+        elevate="Start-Process powershell.exe -Verb RunAs -WindowStyle Hidden -ArgumentList '-NoProfile -NonInteractive -EncodedCommand "+encoded+"'"
+        subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',elevate],capture_output=True,timeout=60,creationflags=flags)
+    except (OSError,subprocess.TimeoutExpired) as e:print('Network setup: '+str(e),flush=True)
+
 def main():
     parser=argparse.ArgumentParser(description=PRODUCT)
-    parser.add_argument('--port',type=int,default=8091);parser.add_argument('--host',default='0.0.0.0')
+    parser.add_argument('--port',type=int,default=None);parser.add_argument('--host',default='0.0.0.0')
     parser.add_argument('--data',default=str(Path(os.environ.get('LOCALAPPDATA',str(Path.home()/'.local/share')))/PRODUCT))
     parser.add_argument('--no-browser',action='store_true');parser.add_argument('--reset-password',action='store_true')
     args=parser.parse_args();store=Store(args.data)
@@ -800,17 +867,19 @@ def main():
         if len(pw)<8:raise SystemExit('Najmanje 8 znakova.')
         with store.lock,store.connect() as c:store.setmeta(c,'auth',password_hash(pw))
         print('Lozinka je promijenjena. Ponovo pokreni aplikaciju.');return
-    try:server=AppServer((args.host,args.port),store)
-    except OSError as e:
-        try:
-            with urllib.request.urlopen(f'http://127.0.0.1:{args.port}/api/status',timeout=2) as response:
-                running=json.load(response)
-            if running.get('product')==PRODUCT:
-                print('MyPhoneLibrary već radi. Otvaram postojeću aplikaciju.')
-                if not args.no_browser:webbrowser.open(f'http://localhost:{args.port}')
-                return 0
-        except Exception:pass
-        print('Port nije dostupan. Zatvori drugu kopiju ili promijeni --port. '+str(e));return 1
+    # Reopening the launcher must reuse the existing instance, including fallback ports.
+    try:
+        previous=json.loads((store.directory/'server-running.json').read_text(encoding='utf-8'))
+        with urllib.request.urlopen(f"http://127.0.0.1:{int(previous['port'])}/api/status",timeout=1) as response:running=json.load(response)
+        if running.get('product')==PRODUCT:
+            if not args.no_browser:webbrowser.open(f"http://localhost:{int(previous['port'])}")
+            return 0
+    except (OSError,ValueError,KeyError):pass
+    try:server=bind_server(args.host,args.port,store)
+    except OSError as e:print('No available application port: '+str(e),flush=True);return 1
+    args.port=server.server_port
+    legacy=start_legacy_redirect(args.host,args.port) if args.port==9000 else None
+    if os.name=='nt' and args.port in (9000,8091):threading.Thread(target=ensure_windows_port,args=(args.port,),daemon=True).start()
     running_file=store.directory/'server-running.json'
     running_file.write_text(dump({'port':args.port,'pid':os.getpid()}),encoding='utf-8')
     print(f'{PRODUCT} {VERSION}\nLokalno: http://localhost:{args.port}\nLAN/Tailscale: http://<IP-racunara>:{args.port}\nPodaci: {store.directory}\nZaustavi: Ctrl+C',flush=True)
@@ -820,6 +889,7 @@ def main():
     except KeyboardInterrupt:pass
     finally:
         server.stopping=True;server.server_close()
+        if legacy:legacy.shutdown();legacy.server_close()
         with store.lock:pass  # Let an active backup finish before process exit.
         try:
             if json.loads(running_file.read_text()).get('pid')==os.getpid():running_file.unlink()

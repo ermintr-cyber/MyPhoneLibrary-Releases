@@ -8,12 +8,12 @@ Download the Windows **EXE installer** from [Releases](https://github.com/ermint
 - Drag column headers to reorder. Switch between List and Cards.
 - Separate battery, charger and other catalogs with editable properties.
 - Local backups, two configurable destinations, full database/photo restore.
-- Password-protected network access on port 8091.
+- Password-protected network access on port 9000.
 - Background launch without a CMD window. Restart/Stop in Settings > Maintenance.
 - GitHub update checking, SHA-256 verified downloads, backup and staged application update.
 
 The installer configures a named Windows Firewall rule for its stable pythonw.exe path,
-TCP 8091, limited to LocalSubnet and Tailscale IPv4 (100.64.0.0/10). This requires Windows
+TCP 9000, limited to LocalSubnet and Tailscale IPv4 (100.64.0.0/10). This requires Windows
 administrator approval the first time. Later installs reuse a matching rule. No firewall
 notifications are disabled. A custom port requires a corresponding firewall rule.
 

@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const elements=new Map(),handlers={};
-function node(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',hidden:false,classList:{toggle(){},remove(){},add(){}},setAttribute(){},addEventListener(type,fn){handlers[id+':'+type]=fn;},querySelectorAll(){return []},querySelector(){return null},show(){this.open=true;this.modal=false},showModal(){this.open=true;this.modal=true},close(){this.open=false}});return elements.get(id);}
+function node(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',hidden:false,dataset:{},classList:{toggle(){},remove(){},add(){}},setAttribute(){},addEventListener(type,fn){handlers[id+':'+type]=fn;},querySelectorAll(){return []},querySelector(){return null},show(){this.open=true;this.modal=false},showModal(){this.open=true;this.modal=true},close(){this.open=false}});return elements.get(id);}
 const context=vm.createContext({document:{getElementById:node,querySelectorAll(){return []},addEventListener(type,fn){handlers['document:'+type]=fn;},documentElement:{dataset:{}}},window:{addEventListener(){}},location:{hash:''},console,setTimeout,clearTimeout,URLSearchParams,confirm:()=>true});
 let source=fs.readFileSync(require('node:path').join(__dirname,'../web/app.js'),'utf8');source=source.slice(0,source.lastIndexOf('boot().then('));vm.runInContext(source,context);
 vm.runInContext(`db={version:'1.3.0',settings:{layout:'cards',columns:['brand','model','inv'],options:{},views:[]},catalog:[],records:[{id:'a',kind:'phone',brand:'Nokia',model:'N73',battery:'BL-5J',charger:'2mm',instances:[{id:'u1',inv:'1',condition:'U kolekciji',state:'Ispravan',color:'Silver',edition:'Standard',imei:'123456789012345',photos:[]}]}]};`,context);
@@ -30,6 +30,21 @@ handlers['document:click']({target:{closest(){return {dataset:{action:'nav-view'
 assert.equal(node('panel').open,false);assert.equal(vm.runInContext('currentView',context),'phone');
 assert.match(vm.runInContext('unitHTML({product_code:"0590012",photos:[]},0,true)',context),/value="0590012"/);
 console.log('UI: retained draft fields/photos, refreshed catalogs, Clear data, catalog back navigation, unsaved guard and sidebar navigation passed.');
+
+const unitForm=vm.runInContext('unitHTML(blankUnit(),0,true)',context);
+assert.ok(!unitForm.includes('data-u="type"'));assert.ok(!unitForm.includes('Originality'));
+assert.match(unitForm,/Wanted/);assert.match(unitForm,/value="KM"/);assert.ok(!unitForm.includes('value="CHF"'));
+assert.equal(vm.runInContext('opts.condition.length',context),2);
+const imageCell=vm.runInContext("cell(db.records[0],'image')",context);
+assert.match(imageCell,/expand-model/);assert.ok(!vm.runInContext("cell(db.records[0],'model')",context).includes('data-action="expand"'));
+vm.runInContext("catalogList('os')",context);assert.match(node('panel-body').innerHTML,/data-action="catalog-delete" data-id="os1"/);
+const updates=vm.runInContext('updateContents()',context);assert.match(updates,/Check for updates/);assert.ok(!updates.includes('<dialog'));
+vm.runInContext("addPhone();draft.model='Backdrop draft';dirty=true",context);
+const editor=node('editor');editor.getBoundingClientRect=()=>({left:100,right:500,top:100,bottom:500});
+handlers['editor:click']({target:editor,clientX:50,clientY:50});assert.equal(editor.open,false);
+assert.equal(vm.runInContext('phoneDraft.model',context),'Backdrop draft');
+vm.runInContext('addPhone()',context);handlers['editor:click']({target:editor,clientX:150,clientY:150});assert.equal(editor.open,true);
+console.log('UI: KM, two ownership choices, removed duplicate fields, leading expand control, catalog row deletion, inline updates and backdrop draft retention passed.');
 (async()=>{
  const saved=new Map([['mpl-update-target','1.4.1']]);let reloads=0,calls=0;
  context.sessionStorage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
@@ -44,4 +59,10 @@ console.log('UI: retained draft fields/photos, refreshed catalogs, Clear data, c
  assert.equal(reloads,0);assert.match(node('update-result').textContent,/not confirmed as installed/);
  assert.equal(saved.has('mpl-update-complete'),false);
  console.log('UI: restart waits for target version; old version produces persistent failure instead of success.');
+ context.fetch=async()=>({ok:true,json:async()=>({path:'C:\\Backup',parent:'C:\\',roots:['C:\\'],folders:[{name:'Photos',path:'C:\\Backup\\Photos'}]})});
+ await vm.runInContext("openFolderPicker('backup-primary')",context);
+ assert.equal(node('folder-picker').modal,true);assert.match(node('folder-entries').innerHTML,/Photos/);
+ await handlers['document:click']({target:{closest(){return {dataset:{action:'folder-select'}}}}});
+ assert.equal(node('backup-primary').value,'C:\\Backup');assert.equal(node('folder-picker').open,false);
+ console.log('UI: host folder picker opens and selects a backup destination without discarding settings.');
 })().catch(error=>{console.error(error);process.exitCode=1});
