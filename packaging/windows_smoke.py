@@ -48,7 +48,9 @@ with tempfile.TemporaryDirectory(prefix='mpl-smoke-') as folder:
         else:raise RuntimeError('Installed pythonw server did not apply the staged update on restart')
         csrf=request('/api/login',{'password':'temporary-build-test-password'})['csrf']
         assert request('/api/update-state')['pending'] is None
+        child_pid=json.loads((Path(folder)/'server-running.json').read_text())['pid']
         request('/api/server-control',{'action':'stop'})
+        subprocess.run(['powershell.exe','-NoProfile','-Command',f'Wait-Process -Id {child_pid} -Timeout 15 -ErrorAction SilentlyContinue'],timeout=20)
         for attempt in range(100):
             if not (Path(folder)/'server-running.json').exists():break
             time.sleep(.1)
@@ -78,7 +80,7 @@ for busy in (False,True):
             else:raise RuntimeError('Port selection failed')
             csrf=request('/api/setup',{'password':'port-migration-test-password'})['csrf']
             assert request('/api/network')['port']==expected
-            folders=request('/api/folders',{'path':folder});assert Path(folders['path'])==Path(folder)
+            folders=request('/api/folders',{'path':folder});assert Path(folders['path'])==Path(folder).resolve()
             if not busy:
                 with urllib.request.urlopen('http://127.0.0.1:8091/api/status') as response:assert json.load(response)['port']==9000
             request('/api/server-control',{'action':'stop'});proc.wait(timeout=15)

@@ -39,11 +39,16 @@ class RestartTests(unittest.TestCase):
     self.assertEqual(request('/api/data')['records'][0]['instances'][0]['imei'],'123456789012345')
     self.assertIsNone(request('/api/update-state')['pending'])
    finally:
+    child_pid=None
+    try:child_pid=json.loads((data/'server-running.json').read_text())['pid']
+    except (OSError,ValueError):pass
     try:
      csrf=request('/api/login',{'password':'restart-test-password'})['csrf'];request('/api/server-control',{'action':'stop'})
     except OSError:pass
     if proc.poll() is None:proc.terminate()
     proc.wait(timeout=10)
+    if os.name=='nt' and child_pid and child_pid!=proc.pid:
+     subprocess.run(['powershell.exe','-NoProfile','-Command',f'Wait-Process -Id {child_pid} -Timeout 15 -ErrorAction SilentlyContinue'],timeout=20,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     for _ in range(100):
      if not (data/'server-running.json').exists():break
      time.sleep(.1)

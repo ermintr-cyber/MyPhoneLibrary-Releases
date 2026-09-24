@@ -19,7 +19,7 @@ class Version15Tests(unittest.TestCase):
   with self.assertRaises(ValueError):gsm_address('https://outside.test/path',redirect=True)
  def test_folder_picker_lists_only_directories_and_preserves_unicode(self):
   with tempfile.TemporaryDirectory() as tmp:
-   root=Path(tmp);(root/'Čuvanje slika').mkdir();(root/'file.txt').write_text('private')
+   root=Path(tmp).resolve();(root/'Čuvanje slika').mkdir();(root/'file.txt').write_text('private')
    result=folder_listing(tmp)
    self.assertEqual(result['folders'],[{'name':'Čuvanje slika','path':str(root/'Čuvanje slika')}]);self.assertEqual(result['parent'],str(root.parent))
    with self.assertRaises(ValueError):folder_listing(str(root/'missing'))
