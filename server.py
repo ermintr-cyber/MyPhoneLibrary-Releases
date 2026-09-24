@@ -808,15 +808,24 @@ def backup_worker(server):
             if server.store.meta('auth') and time.time()-server.store.last_backup>days*86400:server.store.backup()
         except Exception as e:print('Backup:',str(e),flush=True)
 
+def port_in_use(host,port):
+    target='127.0.0.1' if host in ('0.0.0.0','',None) else host
+    try:
+        with socket.create_connection((target,port),timeout=.3):return True
+    except OSError:return False
+
 def bind_server(host,requested,store):
     ports=[9000,8091] if requested in (None,8091,9000) else [requested]
     last=None
     for port in ports:
+        if port_in_use(host,port):
+            last=OSError('Port '+str(port)+' is already in use.');continue
         try:return AppServer((host,port),store)
         except OSError as e:last=e
     raise last
 
 def start_legacy_redirect(host,port):
+    if port_in_use(host,8091):return None
     class LegacyHandler(BaseHTTPRequestHandler):
         def log_message(self,*args):pass
         def do_GET(self):

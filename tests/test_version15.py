@@ -25,14 +25,17 @@ class Version15Tests(unittest.TestCase):
    with self.assertRaises(ValueError):folder_listing(str(root/'missing'))
  def test_port_prefers_9000_and_falls_back_if_busy(self):
   sentinel=Mock()
-  with patch('server.AppServer',return_value=sentinel) as create:
+  with patch('server.port_in_use',return_value=False),patch('server.AppServer',return_value=sentinel) as create:
    self.assertIs(bind_server('0.0.0.0',8091,None),sentinel);create.assert_called_once_with(('0.0.0.0',9000),None)
-  with patch('server.AppServer',side_effect=[OSError('busy'),sentinel]) as create:
+  with patch('server.port_in_use',return_value=False),patch('server.AppServer',side_effect=[OSError('busy'),sentinel]) as create:
    self.assertIs(bind_server('0.0.0.0',None,None),sentinel);self.assertEqual(create.call_args.args[0],('0.0.0.0',8091))
-  with patch('server.AppServer',return_value=sentinel) as create:
+  with patch('server.port_in_use',return_value=False),patch('server.AppServer',return_value=sentinel) as create:
    bind_server('127.0.0.1',18097,None);create.assert_called_once_with(('127.0.0.1',18097),None)
+ def test_active_listener_is_skipped_before_windows_binding(self):
+  with patch('server.port_in_use',side_effect=[True,False]),patch('server.AppServer') as create:
+   bind_server('0.0.0.0',9000,None);create.assert_called_once_with(('0.0.0.0',8091),None)
  def test_legacy_status_allows_old_updater_to_finish_and_root_redirects(self):
-  with patch('server.HostHTTPServer',side_effect=lambda addr,handler:ThreadingHTTPServer(('127.0.0.1',0),handler)):
+  with patch('server.port_in_use',return_value=False),patch('server.HostHTTPServer',side_effect=lambda addr,handler:ThreadingHTTPServer(('127.0.0.1',0),handler)):
    legacy=start_legacy_redirect('127.0.0.1',9000)
   class NoRedirect(urllib.request.HTTPRedirectHandler):
    def redirect_request(self,*args):return None

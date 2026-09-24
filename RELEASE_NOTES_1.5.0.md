@@ -12,4 +12,4 @@
 - New ownership choices: In collection and Wanted. Wanted units appear in Wishlist and are excluded from owned counts and inventory checks. Previously stored legacy statuses are preserved rather than silently changed.
 - Default new monetary entries to KM, with no other new currency choices. Existing nonzero amounts in another currency retain their original currency; no exchange-rate conversion is performed.
 
-Validation: 42 Python tests; interface behavior tests; Windows installer and background runtime tests; real HTTP update/restart; Windows 9000 migration, occupied-port fallback and host-folder listing.
+Validation: 43 Python tests; interface behavior tests; Windows installer and background runtime tests; real HTTP update/restart; Windows 9000 migration, occupied-port fallback and host-folder listing.
