@@ -1,0 +1,4730 @@
+{
+  "revision": "lpcwiki-nokia-2026-09-24",
+  "source_category": "https://lpcwiki.miraheze.org/wiki/Category:Nokia_batteries",
+  "category_count": 49,
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "entries": [
+    {
+      "name": "BN-01",
+      "manufacturer": "BYD",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1500 mAh",
+        "Dimensions": "69 × 6 × 33 mm"
+      },
+      "description": "The BYD BN-01 is a battery manufactured for Nokia phones It was only ever used in the Nokia X and Nokia X+. The battery was entirely designed and made by BYD, therefore it doesn't feature any Nokia branding.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/BYD_BN-01 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/BYD_BN-01",
+      "source_models": [
+        "Nokia X",
+        "Nokia X+"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "X",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X+",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BN-02",
+      "manufacturer": "BYD",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "2000 mAh",
+        "Dimensions": "72 × 6 × 45 mm"
+      },
+      "description": "The BYD BN-02 is a battery manufactured for Nokia phones It was only ever used in the Nokia XL. The battery was entirely designed and made by BYD, therefore it doesn't feature any Nokia branding.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/BYD_BN-02 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/BYD_BN-02",
+      "source_models": [
+        "Nokia XL"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "XL",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-4B",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "700 mAh",
+        "GND-BSI resistance": "68 kOhm",
+        "Dimensions": "46 × 34 × 4.3 mm",
+        "Weight": "16 G or 0.6 OZ"
+      },
+      "description": "The BL-4B is a small battery manufactured for Nokia phones.\n\nSimilar batteries:\nNokia BL-4CT: • Same shape, but longer\nNokia BL-5BT: • Same shape, but thicker\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-4B (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-4B",
+      "source_models": [
+        "Nokia 2505",
+        "Nokia 2630",
+        "Nokia 2660/2760",
+        "Nokia 5000",
+        "Nokia 6111",
+        "Nokia 7070 Prism",
+        "Nokia 7370",
+        "Nokia 7373",
+        "Nokia 7500 Prism",
+        "Nokia N76"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "2505",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2630",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2660",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2760",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5000",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6111",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7070 Prism",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7370",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7373",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7500 Prism",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N76",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-4C",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "760 mAh, 860 mAh, 890 mAh, 950 mAh",
+        "GND-BSI resistance": "75 kOhm",
+        "Dimensions": "53 mm × 34 mm × 4.5 mm",
+        "Cell dimensions": "423450",
+        "Weight": "24 g"
+      },
+      "description": "The Nokia BL-4C is a battery manufactured for Nokia phones.\n\nIt was first introduced in 2002 with the Nokia 6100. The 950 mAh variant, introduced with the Nokia 108 in 2013, uses a new label with the Nokia Pure font on the back.\n\nSimilar batteries:\nNokia BL-5C • same shape, but thicker\nNokia BL-6C • same shape, but even thicker\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-4C (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: BL-4C/BL-5C/BL-6C share a form factor but differ in thickness. Compatibility is conditional on the phone and battery cover; no unrestricted replacement link is added.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-4C",
+      "source_models": [
+        "Nokia 108",
+        "Nokia 1265",
+        "Nokia 1325",
+        "Nokia 1506",
+        "Nokia 1508",
+        "Nokia 1508i",
+        "Nokia 1661",
+        "Nokia 2228",
+        "Nokia 3806",
+        "Nokia 5100",
+        "Nokia 6100",
+        "Nokia 6101",
+        "Nokia 6102",
+        "Nokia 6102i",
+        "Nokia 6125",
+        "Nokia 6126",
+        "Nokia 6131",
+        "Nokia 6133",
+        "Nokia 6136",
+        "Nokia 6170",
+        "Nokia 6260",
+        "Nokia 6300",
+        "Nokia 6300i",
+        "Nokia 6301",
+        "Nokia 7200",
+        "Nokia 7270",
+        "Nokia 8208",
+        "Nokia C2-05",
+        "Nokia X2-00",
+        "iPhone A1302 • fake"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "BL-4C/BL-5C/BL-6C share a form factor but differ in thickness. Compatibility is conditional on the phone and battery cover; no unrestricted replacement link is added."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "108",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1265",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1325",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1506",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1508",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1508i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1661",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2228",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3806",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5100",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6100",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6101",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6102",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6102i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6125",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6126",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6131",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6133",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6136",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6170",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6260",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6300",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6300i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6301",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7200",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7270",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8208",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C2-05",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X2-00",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "iPhone",
+          "model": "A1302",
+          "note": "fake",
+          "warning": "Source lists a special variant or non-original device; see source note."
+        }
+      ]
+    },
+    {
+      "name": "BL-4CT",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium polymer",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "860 mAh",
+        "GND-BSI resistance": "75 kOhm",
+        "Dimensions": "54 × 34 × 4 mm",
+        "Weight": "?"
+      },
+      "description": "The BL-4CT is a battery manufactured for Nokia phones.\n\nAs the model's name suggests, it is a variant of the Nokia BL-4C battery, but with blade socket contacts and different pinouts, thus this battery is not compatible with phones using BL-4C and vice versa.\n\nSimilar batteries:\nNokia BL-4B • same shape and contact type, but shorter\nNokia BL-4C • same shape and capacity, but uses shrapnel type contacts\nNokia BL-5CT • same shape and contact type, but thicker\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-4CT (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-4CT",
+      "source_models": [
+        "Nokia 2720 fold",
+        "Nokia 5310 XpressMusic",
+        "Nokia 5630 XpressMusic",
+        "Nokia 6600 fold",
+        "Nokia 6700 slide",
+        "Nokia 7210 Supernova",
+        "Nokia 7230",
+        "Nokia 7310 Supernova",
+        "Nokia X3-00"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "2720 fold",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5310 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5630 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6600 fold",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6700 slide",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7210 Supernova",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7230",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7310 Supernova",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X3-00",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-4D",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1200 mAh",
+        "GND-BSI resistance": "100 kOhm",
+        "Dimensions": "60 mm × 44 mm × 4 mm",
+        "Weight": "24 g"
+      },
+      "description": "The BL-4D and BV-4D are batteries manufactured for Nokia phones. They are fully compatible with each other, with the only differences are the capacity and voltage. The BV-4D has two further capacity variations: 1320 and 1400 mAh.\n\nPhone list notes:\nBL-4D\nBV-4D\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-4D (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-4D",
+      "source_models": [
+        "Nokia 702T",
+        "Nokia E5",
+        "Nokia E7",
+        "Nokia N8",
+        "Nokia N950",
+        "Nokia N97 mini",
+        "Nokia T7"
+      ],
+      "compatible_names": [
+        "BV-4D"
+      ],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "702T",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E5",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E7",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N8",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N950",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N97 mini",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "T7",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-4J",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1200 mAh • gray version\n1300 mAh • black version (Lumia)",
+        "GND-BSI resistance": "100 kOhm",
+        "Dimensions": "59 × 37.5 × 4 mm",
+        "Weight": "?"
+      },
+      "description": "The BL-4J is a battery manufactured for Nokia phones. It comes in two different designs depending on the phone.\n\nSimilar batteries:\nNokia BL-5J • fully compatible, but with a higher capacity\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-4J (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-4J",
+      "source_models": [
+        "Nokia 600",
+        "Nokia C6-00",
+        "Nokia Lumia 620"
+      ],
+      "compatible_names": [
+        "BL-5J"
+      ],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "600",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C6-00",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 620",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-4S",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "860 mAh"
+      },
+      "description": "The BL-4S is a battery made for Nokia phones.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-4S (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-4S",
+      "source_models": [
+        "Nokia 2680 slide",
+        "Nokia 3600 slide",
+        "Nokia 3710 fold",
+        "Nokia 6208c",
+        "Nokia 7020",
+        "Nokia 7100 Supernova",
+        "Nokia 7610 Supernova",
+        "Nokia X3-02"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "2680 slide",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3600 slide",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3710 fold",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6208c",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7020",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7100 Supernova",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7610 Supernova",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X3-02",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-4U",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1000/1110/1200 mAh",
+        "GND-BSI resistance": "82 kOhm",
+        "Dimensions": "61 × 38 × 4 mm",
+        "Weight": "?"
+      },
+      "description": "The BL-4U is a battery manufactured for Nokia phones.\n\nThree capacity variants are known to exist: 1000, 1110, and 1200 mAh. The 1110 mAh variant was introduced in late 2011 with the Nokia Asha 300. The 1200 mAh variant was introduced in mid-2013 with the Nokia 301, and has a revised label with the Nokia Pure font.\n\nSimilar batteries:\nNokia BL-4UL: Nearly the same dimensions, but different pinout and pin style, thus the BL-4UL cannot be used on a phone that uses a BL-4U, and vice versa.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-4U (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: Asha 500 appears on both BL-4U and BL-4UL lists, although these batteries have incompatible contacts. Verify the exact phone variant; do not treat the batteries as alternatives.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-4U",
+      "source_models": [
+        "Nokia 206",
+        "Nokia 301",
+        "Nokia 3120 classic",
+        "Nokia 500",
+        "Nokia 515",
+        "Nokia 5250",
+        "Nokia 5330 Mobile TV Edition",
+        "Nokia 5530 XpressMusic",
+        "Nokia 5730 XpressMusic",
+        "Nokia 6600 slide",
+        "Nokia 6600i slide",
+        "Nokia 8800 Arte",
+        "Nokia C5-03",
+        "Nokia C5-04",
+        "Nokia C5-05",
+        "Nokia C5-06",
+        "Nokia E66",
+        "Nokia E75",
+        "Nokia Asha 210",
+        "Nokia Asha 300",
+        "Nokia Asha 305",
+        "Nokia Asha 306",
+        "Nokia Asha 308",
+        "Nokia Asha 309",
+        "Nokia Asha 310",
+        "Nokia Asha 311",
+        "Nokia Asha 500",
+        "Nokia Asha 501",
+        "Nokia Asha 503"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "Asha 500 appears on both BL-4U and BL-4UL lists, although these batteries have incompatible contacts. Verify the exact phone variant; do not treat the batteries as alternatives."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "206",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "301",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3120 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "500",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "515",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5250",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5330 Mobile TV Edition",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5530 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5730 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6600 slide",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6600i slide",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8800 Arte",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C5-03",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C5-04",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C5-05",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C5-06",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E66",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E75",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 210",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 300",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 305",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 306",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 308",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 309",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 310",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 311",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 500",
+          "note": "",
+          "warning": "Conflicting battery lists; check the original battery and exact phone variant."
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 501",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 503",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-4UL",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1200 mAh",
+        "GND-BSI resistance": "?",
+        "Dimensions": "60.5 × 38 × 4.4 mm",
+        "Weight": "?"
+      },
+      "description": "The BL-4UL is a battery manufactured for Nokia phones. The BL-4WL is a compatible but slightly lower-capacity version of this battery.\n\nSimilar batteries:\nNokia BL-4U • similar dimensions, but with blade socket contacts and a different pinout\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-4UL (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: Asha 500 appears on both BL-4U and BL-4UL lists, although these batteries have incompatible contacts. Verify the exact phone variant; do not treat the batteries as alternatives.\n\nWARNING: Nokia 225 appears on both BL-5C and BL-4UL lists. Verify the exact model/year and original battery before choosing.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-4UL",
+      "source_models": [
+        "Microsoft RM-1181",
+        "Nokia 220 4G",
+        "Nokia 225",
+        "Nokia 230",
+        "Nokia 3310 (2017)",
+        "Nokia 3310 3G",
+        "Nokia 3310 4G",
+        "Nokia 5310 (2020)",
+        "Nokia Asha 500",
+        "Nokia Asha 502"
+      ],
+      "compatible_names": [
+        "BL-4WL"
+      ],
+      "warnings": [
+        "Asha 500 appears on both BL-4U and BL-4UL lists, although these batteries have incompatible contacts. Verify the exact phone variant; do not treat the batteries as alternatives.",
+        "Nokia 225 appears on both BL-5C and BL-4UL lists. Verify the exact model/year and original battery before choosing."
+      ],
+      "supported_models": [
+        {
+          "brand": "Microsoft",
+          "model": "RM-1181",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "220 4G",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "225",
+          "note": "",
+          "warning": "Conflicting battery lists; check the original battery and exact phone variant."
+        },
+        {
+          "brand": "Nokia",
+          "model": "230",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3310 (2017)",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3310 3G",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3310 4G",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5310 (2020)",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 500",
+          "note": "",
+          "warning": "Conflicting battery lists; check the original battery and exact phone variant."
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 502",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-5002C",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1100 mAh"
+      },
+      "description": "The Nokia BL-5002C is a battery designed for use with the Nokia 6215i and the Pantech PN-315.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5002C (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5002C",
+      "source_models": [
+        "Nokia 6215i",
+        "Pantech PN-315"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "6215i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Pantech",
+          "model": "PN-315",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-5B",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "790, 820, or 890 mAh",
+        "GND-BSI resistance": "75 kOhm",
+        "Dimensions": "45 mm × 34 mm × 5 mm",
+        "Weight": "24 g"
+      },
+      "description": "The BL-5B is a battery manufactured for Nokia phones.\n\nSimilar batteries:\nNokia BL-5C • Same shape, but taller\nNokia BL-5BT • Same shape and size, different terminal type\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5B (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5B",
+      "source_models": [
+        "Nokia 2135",
+        "Nokia 3220",
+        "Nokia 3230",
+        "Nokia 5070",
+        "Nokia 5140",
+        "Nokia 5140i",
+        "Nokia 5200",
+        "Nokia 5300 XpressMusic",
+        "Nokia 5320 XpressMusic",
+        "Nokia 5500 Sport",
+        "Nokia 6020",
+        "Nokia 6021",
+        "Nokia 6060",
+        "Nokia 6070",
+        "Nokia 6080",
+        "Nokia 6120 classic",
+        "Nokia 6121 classic",
+        "Nokia 6124 classic",
+        "Nokia 7260",
+        "Nokia 7360",
+        "Nokia N80",
+        "Nokia N90"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "2135",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3220",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3230",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5070",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5140",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5140i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5200",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5300 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5320 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5500 Sport",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6020",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6021",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6060",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6070",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6080",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6120 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6121 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6124 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7260",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7360",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N80",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N90",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-5BT",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "870 mAh",
+        "Weight": "18.0 g"
+      },
+      "description": "The BL-5BT is a battery manufactured for Nokia phones.\n\nSimilar batteries:\nNokia BL-4B • Same shape, but thinner\nNokia BL-5B • Same shape and size, different contact type\nNokia BL-5CT • Same shape, but longer\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5BT (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5BT",
+      "source_models": [
+        "Nokia 2600 classic",
+        "Nokia 7510 Supernova",
+        "Nokia N75"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "2600 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7510 Supernova",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N75",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-5C",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "850, 900, 970, 1020, 1050?, 1090, 1100 mAh\n• 1020 mAh version is labelled as such on the back of the battery\n• 1090 mAh version is black with Nokia Sans font on the label\n• 1100 mAh version was sold by Microsoft Mobile; looks similar to the 1090 mAh one, but with Nokia Pure font",
+        "GND-BSI resistance": "82 kOhm",
+        "Dimensions": "53 × 34 × 6 mm",
+        "Cell dimensions": "503450",
+        "Weight": "23 g"
+      },
+      "description": "The BL-5C is a battery manufactured for Nokia phones. It was one of the most common Nokia batteries, produced from the debut of the 3650 in 2003 to 2022, when it was replaced with a pair of 1000 mAh batteries called the BL-L5E and BL-L5J.\n\nVariants of this battery also existed, including:\n\nBR-5C (970 mAh, produced ca. 2003-06) • rare nowadays, distinguishable by an inverted color scheme, included with the Nokia 2600\nBL-5CA (700 mAh, ca. 2006-10) • included with certain low-end phones\nBL-5CB (800 mAh, ca. 2010-22) • for certain low-end phones\nBL-5CV (1050 mAh, ca. 2010) • for Vertu-branded phones\nBL-L5G (800 mAh, 2022-date).\n\nThe BL-5C form factor was so popular that it was used as something of a de facto standard by unlicensed third parties for various other devices such as wireless keyboards, portable game consoles, small to medium form transistor radios and even Bluetooth speakers, likely due to its wide availability. Thanks to this, even following the end of the BL-5C's production run and long after the peak of BL-5C powered phones, brand new aftermarket replacements are still widely available for purchase.\n\nSimilar batteries:\nNokia BL-4C • same shape, but thinner, compatible\nNokia BL-5B • same shape, but shorter\nNokia BL-6C • same shape, but thicker, compatible\n\nRecall:\nOn August 14th, 2007, Nokia has recalled 46 million BL-5C batteries worldwide due to batteries manufactured by Matsushita between December 2005 and November 2006 which could explode by a short circuit while charging. Nokia initiated a replacement program for the affected batteries.[2]\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5C (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: BL-4C/BL-5C/BL-6C share a form factor but differ in thickness. Compatibility is conditional on the phone and battery cover; no unrestricted replacement link is added.\n\nWARNING: Source lists the same 53 × 34 × 6 mm dimensions for BL-5C and BL-6C while describing BL-6C as thicker. Dimensions need verification.\n\nWARNING: BL-5CB and BL-5C can have charging incompatibility because their BSI resistances differ (30 kOhm versus 82 kOhm).\n\nWARNING: Nokia 225 appears on both BL-5C and BL-4UL lists. Verify the exact model/year and original battery before choosing.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5C",
+      "source_models": [
+        "Nokia 100",
+        "Nokia 101",
+        "Nokia 105",
+        "Nokia 1100",
+        "Nokia 1101",
+        "Nokia 1108",
+        "Nokia 110",
+        "Nokia 1110",
+        "Nokia 1110i",
+        "Nokia 1112",
+        "Nokia 112",
+        "Nokia 114",
+        "Nokia 1200",
+        "Nokia 1202",
+        "Nokia 1208",
+        "Nokia 1209",
+        "Nokia 1255",
+        "Nokia 1315",
+        "Nokia 1600",
+        "Nokia 1650",
+        "Nokia 1680 classic",
+        "Nokia 207",
+        "Nokia 208",
+        "Nokia 2112 (CDMA)",
+        "Nokia 2118 (CDMA)",
+        "Nokia 220",
+        "Nokia 222",
+        "Nokia 225",
+        "Nokia 2255",
+        "Nokia 2272",
+        "Nokia 2275",
+        "Nokia 2280",
+        "Nokia 2285",
+        "Nokia 2300",
+        "Nokia 2310",
+        "Nokia 2323 classic • also charges BL-5CA battery",
+        "Nokia 2330 classic • also charges BL-5CA battery",
+        "Nokia 2355",
+        "Nokia 2600 • BR-5C",
+        "Nokia 2610",
+        "Nokia 2626",
+        "Nokia 2700 classic",
+        "Nokia 2710 Navigation Edition",
+        "Nokia 2730 classic",
+        "Nokia 3100",
+        "Nokia 3109 classic",
+        "Nokia 3110 classic",
+        "Nokia 3110 Evolve",
+        "Nokia 3120",
+        "Nokia 3125",
+        "Nokia 3208c",
+        "Nokia 3555",
+        "Nokia 3610 fold",
+        "Nokia 3650",
+        "Nokia 3660",
+        "Nokia 5030 XpressRadio",
+        "Nokia 5130 XpressMusic",
+        "Nokia 5132 XpressMusic",
+        "Nokia 6030",
+        "Nokia 6085",
+        "Nokia 6086",
+        "Nokia 6102i • designed for BL-4C, but the BL-5C works and charges in this phone",
+        "Nokia 6108",
+        "Nokia 6175i",
+        "Nokia 6178i",
+        "Nokia 6230",
+        "Nokia 6230i",
+        "Nokia 6263",
+        "Nokia 6267",
+        "Nokia 6270",
+        "Nokia 6555",
+        "Nokia 6600",
+        "Nokia 6620",
+        "Nokia 6630",
+        "Nokia 6670",
+        "Nokia 6680",
+        "Nokia 6681",
+        "Nokia 6682",
+        "Nokia 6820",
+        "Nokia 6822",
+        "Nokia 7600",
+        "Nokia 7610",
+        "Nokia Asha 202",
+        "Nokia Asha 203",
+        "Nokia Asha 205",
+        "Nokia C1-00",
+        "Nokia C1-01",
+        "Nokia C1-02",
+        "Nokia C2-00",
+        "Nokia C2-01",
+        "Nokia C2-02",
+        "Nokia C2-03",
+        "Nokia C2-06",
+        "Nokia E50",
+        "Nokia E60",
+        "Nokia E70 • designed for BL-6C, but the BL-5C works and charges in this phone",
+        "Nokia N70",
+        "Nokia N71",
+        "Nokia N72",
+        "Nokia N91",
+        "Nokia N-Gage",
+        "Nokia X2-01",
+        "Nokia X2-02",
+        "Nokia X2-05",
+        "Vertu Ascent 2010 • BL-5CV",
+        "Vertu Ascent Ti • BL-5CV",
+        "Vertu Signature S Design • BL-5CV",
+        "Cherry Mobile C5i • CM-5C",
+        "Cherry Mobile C5li • CM-5C",
+        "itel it2163",
+        "itel it2165",
+        "itel it5026",
+        "KFone C series",
+        "OPPO Q808 \"ipod Water\" (bootleg) • fake version"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "BL-4C/BL-5C/BL-6C share a form factor but differ in thickness. Compatibility is conditional on the phone and battery cover; no unrestricted replacement link is added.",
+        "Source lists the same 53 × 34 × 6 mm dimensions for BL-5C and BL-6C while describing BL-6C as thicker. Dimensions need verification.",
+        "BL-5CB and BL-5C can have charging incompatibility because their BSI resistances differ (30 kOhm versus 82 kOhm).",
+        "Nokia 225 appears on both BL-5C and BL-4UL lists. Verify the exact model/year and original battery before choosing."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "100",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "101",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "105",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1100",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1101",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1108",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "110",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1110",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1110i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1112",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "112",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "114",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1200",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1202",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1208",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1209",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1255",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1315",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1600",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1650",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1680 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "207",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "208",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2112 (CDMA)",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2118 (CDMA)",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "220",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "222",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "225",
+          "note": "",
+          "warning": "Conflicting battery lists; check the original battery and exact phone variant."
+        },
+        {
+          "brand": "Nokia",
+          "model": "2255",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2272",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2275",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2280",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2285",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2300",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2310",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2323 classic",
+          "note": "also charges BL-5CA battery",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2330 classic",
+          "note": "also charges BL-5CA battery",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2355",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2600",
+          "note": "BR-5C",
+          "warning": "Source lists a special variant or non-original device; see source note."
+        },
+        {
+          "brand": "Nokia",
+          "model": "2610",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2626",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2700 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2710 Navigation Edition",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2730 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3100",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3109 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3110 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3110 Evolve",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3120",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3125",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3208c",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3555",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3610 fold",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3650",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3660",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5030 XpressRadio",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5130 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5132 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6030",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6085",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6086",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6102i",
+          "note": "designed for BL-4C, but the BL-5C works and charges in this phone",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6108",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6175i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6178i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6230",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6230i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6263",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6267",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6270",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6555",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6600",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6620",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6630",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6670",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6680",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6681",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6682",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6820",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6822",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7600",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7610",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 202",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 203",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 205",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C1-00",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C1-01",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C1-02",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C2-00",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C2-01",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C2-02",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C2-03",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C2-06",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E50",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E60",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E70",
+          "note": "designed for BL-6C, but the BL-5C works and charges in this phone",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N70",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N71",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N72",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N91",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N-Gage",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X2-01",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X2-02",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X2-05",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Vertu",
+          "model": "Ascent 2010",
+          "note": "BL-5CV",
+          "warning": "Source lists a special variant or non-original device; see source note."
+        },
+        {
+          "brand": "Vertu",
+          "model": "Ascent Ti",
+          "note": "BL-5CV",
+          "warning": "Source lists a special variant or non-original device; see source note."
+        },
+        {
+          "brand": "Vertu",
+          "model": "Signature S Design",
+          "note": "BL-5CV",
+          "warning": "Source lists a special variant or non-original device; see source note."
+        },
+        {
+          "brand": "Cherry Mobile",
+          "model": "C5i",
+          "note": "CM-5C",
+          "warning": "Source lists a special variant or non-original device; see source note."
+        },
+        {
+          "brand": "Cherry Mobile",
+          "model": "C5li",
+          "note": "CM-5C",
+          "warning": "Source lists a special variant or non-original device; see source note."
+        },
+        {
+          "brand": "itel",
+          "model": "it2163",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "itel",
+          "model": "it2165",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "itel",
+          "model": "it5026",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "KFone",
+          "model": "C series",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "OPPO",
+          "model": "Q808 \"ipod Water\" (bootleg)",
+          "note": "fake version",
+          "warning": "Source lists a special variant or non-original device; see source note."
+        }
+      ]
+    },
+    {
+      "name": "BL-5CB",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "800 mAh",
+        "GND-BSI resistance": "30 kOhm",
+        "Dimensions": "53 × 34 × 5.8 mm",
+        "Weight": "21 g"
+      },
+      "description": "The BL-5CB is a battery manufactured for entry-level Nokia phones, produced from 2010 to 2022. It is a lower capacity variant of the BL-5C.\n\nSome phones that use the BL-5CB may not charge BL-5C batteries and vice versa, due to the different BSI (battery size indicator) resistance values.\n\nSimilar batteries:\nNokia BL-5C • original, higher capacity version\nNokia BL-5CA • even lower capacity version used on certain other low-end phones\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5CB (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: BL-5CB and BL-5C can have charging incompatibility because their BSI resistances differ (30 kOhm versus 82 kOhm).",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5CB",
+      "source_models": [
+        "Nokia 100/101",
+        "Nokia 103",
+        "Nokia 105",
+        "Nokia 105 (2015)",
+        "Nokia 106",
+        "Nokia 109/111/113",
+        "Nokia 1280",
+        "Nokia 1616/1800",
+        "Nokia C1-01",
+        "Nokia C1-02",
+        "Nokia X2-05"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "BL-5CB and BL-5C can have charging incompatibility because their BSI resistances differ (30 kOhm versus 82 kOhm)."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "100",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "101",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "103",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "105",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "105 (2015)",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "106",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "109",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "111",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "113",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1280",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1616",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "1800",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C1-01",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C1-02",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X2-05",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-5CT",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1050 mAh",
+        "GND-BSI resistance": "82 kOhm",
+        "Dimensions": "54 × 34 × 5 mm",
+        "Weight": "?"
+      },
+      "description": "The BL-5CT is a battery manufactured for Nokia phones. As the model's name suggests, it is a variant of the Nokia BL-5C battery, but with blade socket contacts and different pinouts, thus this battery is not compatible with phones using BL-5C and vice versa.\n\nSimilar batteries:\nNokia BL-4CT • same shape and contact type, but thinner\nNokia BL-5BT • same shape and contact type, but shorter\nNokia BL-5C • same shape, but uses shrapnel type contacts\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5CT (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5CT",
+      "source_models": [
+        "Nokia 3720 classic",
+        "Nokia 5220 XpressMusic",
+        "Nokia 6303 classic",
+        "Nokia 6303i classic",
+        "Nokia 6730 classic",
+        "Nokia C3-01",
+        "Nokia C3-01.5",
+        "Nokia C5-00",
+        "Nokia C5-00.2",
+        "Nokia C6-01"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "3720 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5220 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6303 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6303i classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6730 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C3-01",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C3-01.5",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C5-00",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C5-00.2",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C6-01",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-5F",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "950 mAh"
+      },
+      "description": "The BL-5F is a battery manufactured for Nokia phones. It was mostly used in slider phones from the late 2000s.\n\nSimilar batteries:\nNokia BL-6F • Slightly thicker and higher capacity\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5F (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5F",
+      "source_models": [
+        "Nokia 6210 Navigator",
+        "Nokia 6260 slide",
+        "Nokia 6290",
+        "Nokia 6710 Navigator",
+        "Nokia E65",
+        "Nokia N93i",
+        "Nokia N95 (not 8GB)",
+        "Nokia N96",
+        "Nokia X5-01"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "6210 Navigator",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6260 slide",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6290",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6710 Navigator",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E65",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N93i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N95",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N96",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X5-01",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-5H",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1830 mAh"
+      },
+      "description": "The BL-5H is a battery manufactured for Nokia phones.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5H (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5H",
+      "source_models": [
+        "Nokia Lumia 630"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "Lumia 630",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-5J",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1320 mAh",
+        "GND-BSI resistance": "100 kOhm",
+        "Dimensions": "60 × 38 × 5.5 mm",
+        "Weight": "22 g"
+      },
+      "description": "The BL-5J is a battery manufactured for Nokia phones. It was introduced in 2008 with the Nokia 5800 XpressMusic and was mostly used in touchscreen phones.\n\nSimilar batteries:\nNokia BL-4J • fully compatible, but with a lower capacity\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5J (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5J",
+      "source_models": [
+        "Nokia 5228",
+        "Nokia 5230",
+        "Nokia 5233",
+        "Nokia 5800 XpressMusic",
+        "Nokia 600 • officially uses a BL-4J",
+        "Nokia Asha 200",
+        "Nokia Asha 201",
+        "Nokia Asha 302",
+        "Nokia C3-00",
+        "Nokia C6-00 • officially uses a BL-4J",
+        "Nokia Lumia 520",
+        "Nokia Lumia 620 • officially uses a BL-4J",
+        "Nokia N900",
+        "Nokia X1-00",
+        "Nokia X1-01",
+        "Nokia X6-00"
+      ],
+      "compatible_names": [
+        "BL-4J"
+      ],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "5228",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5230",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5233",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5800 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "600",
+          "note": "officially uses a BL-4J",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 200",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 201",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 302",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C3-00",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C6-00",
+          "note": "officially uses a BL-4J",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 520",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 620",
+          "note": "officially uses a BL-4J",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N900",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X1-00",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X1-01",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X6-00",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-5K",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1200 mAh",
+        "Dimensions": "46 x 44 x 5 mm",
+        "Weight": "24.0 g"
+      },
+      "description": "The Nokia BL-5K is a battery manufactured for Nokia phones.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5K (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5K",
+      "source_models": [
+        "Nokia 701",
+        "Nokia C7-00",
+        "Nokia N85",
+        "Nokia N86 8MP",
+        "Nokia X7-00"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "701",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "C7-00",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N85",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N86 8MP",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "X7-00",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-5X",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "600 mAh"
+      },
+      "description": "The Nokia BL-5X is a battery made for Nokia phones.\n\nIt notably uses only two pins instead of usual three, negative and positive respectively. So far, it was used only in Nokia 8800, 8801 and 8800 Sirocco.\n\nVariants:\nBP-6X: Lithium polymer variant with a slightly bigger capacity (700 mAh).\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5X (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5X",
+      "source_models": [
+        "Nokia 8800",
+        "Nokia 8801",
+        "Nokia 8800 Sirocco"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "8800",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8801",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8800 Sirocco",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-6C",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1070 or 1150 mAh",
+        "GND-BSI resistance": "82 kOhm",
+        "Dimensions": "53 × 34 × 6 mm",
+        "Weight": "?"
+      },
+      "description": "The BL-6C is a battery manufactured for Nokia phones. It is a thicker and less common variant of the BL-5C, mainly used in CDMA phones.\n\nThe BL-6C can fit in some phones that take a BL-5C, but there may be issues with closing the battery cover. Use mismatched batteries at your own risk.\n\nSimilar batteries:\nNokia BL-5C • same shape, but thinner, compatible\nNokia BL-4C • same shape, but even thinner,compatible\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-6C (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: BL-4C/BL-5C/BL-6C share a form factor but differ in thickness. Compatibility is conditional on the phone and battery cover; no unrestricted replacement link is added.\n\nWARNING: Source lists the same 53 × 34 × 6 mm dimensions for BL-5C and BL-6C while describing BL-6C as thicker. Dimensions need verification.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-6C",
+      "source_models": [
+        "Nokia 112",
+        "Nokia 2115",
+        "Nokia 2115i",
+        "Nokia 2116",
+        "Nokia 2116i",
+        "Nokia 2125",
+        "Nokia 2125i",
+        "Nokia 2126i",
+        "Nokia 2855",
+        "Nokia 3152",
+        "Nokia 3155",
+        "Nokia 3155i",
+        "Nokia 6012",
+        "Nokia 6015",
+        "Nokia 6015i",
+        "Nokia 6016i",
+        "Nokia 6019i",
+        "Nokia 6103",
+        "Nokia 6155",
+        "Nokia 6155i",
+        "Nokia 6165",
+        "Nokia 6235",
+        "Nokia 6235i",
+        "Nokia 6236i",
+        "Nokia 6255",
+        "Nokia 6255i",
+        "Nokia 6256i",
+        "Nokia 6265",
+        "Nokia E50",
+        "Nokia E70",
+        "Nokia N-Gage QD"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "BL-4C/BL-5C/BL-6C share a form factor but differ in thickness. Compatibility is conditional on the phone and battery cover; no unrestricted replacement link is added.",
+        "Source lists the same 53 × 34 × 6 mm dimensions for BL-5C and BL-6C while describing BL-6C as thicker. Dimensions need verification."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "112",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2115",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2115i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2116",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2116i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2125",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2125i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2126i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "2855",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3152",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3155",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3155i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6012",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6015",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6015i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6016i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6019i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6103",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6155",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6155i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6165",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6235",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6235i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6236i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6255",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6255i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6256i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6265",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E50",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E70",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N-Gage QD",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-6F",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1200 mAh"
+      },
+      "description": "The BL-6F is a battery manufactured for Nokia phones. It was used in some phones from the late 2000s.\n\nSimilar batteries:\nNokia BL-5F • Slightly thinner and lower capacity\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-6F (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-6F",
+      "source_models": [
+        "Nokia 6788",
+        "Nokia N78",
+        "Nokia N79",
+        "Nokia N95 (ONLY 8GB)"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "6788",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N78",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N79",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N95 8GB",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-6P",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "830 mAh"
+      },
+      "description": "The BL-6P is a battery manufactured for Nokia phones.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-6P (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-6P",
+      "source_models": [
+        "Nokia 6500 classic",
+        "Nokia 7900 Prism"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "6500 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7900 Prism",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-6Q",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium polimer (Li-Po)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "970 mAh / 3.6Wh",
+        "GND-BSI resistance": "?",
+        "Dimensions": "40 x 38 x 6.5 mm",
+        "Weight": "?",
+        "Removable": "Yes"
+      },
+      "description": "The BL-6Q is a battery manufactured for Nokia phones.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-6Q (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: BP-6MT page reports BL-6Q working in N82 and E51. This is a directional, tested alternative; the reverse substitution is not established.\n\nDirectional N82/E51 replacement source: https://lpcwiki.miraheze.org/wiki/Nokia_BP-6MT",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-6Q",
+      "source_models": [
+        "Nokia 6700 classic"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "BP-6MT page reports BL-6Q working in N82 and E51. This is a directional, tested alternative; the reverse substitution is not established."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "6700 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N82",
+          "note": "Reported tested alternative to BP-6MT on the BP-6MT source page.",
+          "warning": "Directional replacement only; confirm physical fit."
+        },
+        {
+          "brand": "Nokia",
+          "model": "E51",
+          "note": "Reported tested alternative to BP-6MT on the BP-6MT source page.",
+          "warning": "Directional replacement only; confirm physical fit."
+        }
+      ]
+    },
+    {
+      "name": "BLB-2",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.6 V",
+        "Nominal Capacity": "650-830 mAh",
+        "GND-BSI resistance": "46 kOhm",
+        "Dimensions": "53 × 33 × 7 mm",
+        "Weight": "?"
+      },
+      "description": "The BLB-2 is a battery manufactured for Nokia phones.\n\nRelated batteries:\nNokia BLD-3: Same shape, but slimmer.\n\nPhone list notes:\nPhones using the BLD-3 should also be compatible, but in many cases, the back cover won't close properly.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BLB-2 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: BLB-2 is thicker; the source warns the rear cover may not close on BLD-3 phones. No unrestricted compatibility link is added.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BLB-2",
+      "source_models": [
+        "Nokia 3610",
+        "Nokia 5210",
+        "Nokia 6510 and its variants",
+        "Nokia 7650",
+        "Nokia 8210 and its variants",
+        "Nokia 8310/8390",
+        "Nokia 8850/8890",
+        "Nokia 8910/8910i"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "BLB-2 is thicker; the source warns the rear cover may not close on BLD-3 phones. No unrestricted compatibility link is added."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "3610",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5210",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6510",
+          "note": "Unspecified variants require verification.",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7650",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8210",
+          "note": "Unspecified variants require verification.",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8310",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8390",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8850",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8890",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8910",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8910i",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BLC-2",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.6 V",
+        "Nominal Capacity": "900 or 1000mAh",
+        "GND-BSI resistance": "74.1-75 kOhm",
+        "Dimensions": "53 × 38 × 7 mm",
+        "Weight": "?"
+      },
+      "description": "The BLC-2 is a battery manufactured for Nokia phones.\n\nRelated batteries:\nNokia BLC-1: Compatible but lower capacity.\nNokia BMC-3: Older and thicker NiMH version, not supported on newer phones like the 3510.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BLC-2 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BLC-2",
+      "source_models": [
+        "Nokia 3310",
+        "Nokia 3315",
+        "Nokia 3320",
+        "Nokia 3321",
+        "Nokia 3330",
+        "Nokia 3350",
+        "Nokia 3360",
+        "Nokia 3361",
+        "Nokia 3390",
+        "Nokia 3391",
+        "Nokia 3395",
+        "Nokia 3410",
+        "Nokia 3510",
+        "Nokia 3510i",
+        "Nokia 3530",
+        "Nokia 3595",
+        "Nokia 5510",
+        "Nokia 6010",
+        "Nokia 6650 (2003)",
+        "Nokia 6800",
+        "Nokia 6810"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "3310",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3315",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3320",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3321",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3330",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3350",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3360",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3361",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3390",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3391",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3395",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3410",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3510",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3510i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3530",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3595",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5510",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6010",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6650 (2003)",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6800",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6810",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BLD-3",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "780 mAh",
+        "GND-BSI resistance": "44 kOhm",
+        "Dimensions": "53 × 33 × 5.5 mm",
+        "Weight": "?"
+      },
+      "description": "The BLD-3 is a battery manufactured for Nokia phones.\n\nRelated batteries:\nNokia BLB-2: Same shape and compatible, but thicker.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BLD-3 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: BLB-2 is thicker; the source warns the rear cover may not close on BLD-3 phones. No unrestricted compatibility link is added.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BLD-3",
+      "source_models": [
+        "Nokia 2100",
+        "Nokia 3200",
+        "Nokia 3300",
+        "Nokia 6220 (2003)",
+        "Nokia 6610",
+        "Nokia 6610i",
+        "Nokia 6560",
+        "Nokia 6585",
+        "Nokia 7210",
+        "Nokia 7250",
+        "Nokia 7250i"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "BLB-2 is thicker; the source warns the rear cover may not close on BLD-3 phones. No unrestricted compatibility link is added."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "2100",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3200",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3300",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6220 (2003)",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6610",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6610i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6560",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6585",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7210",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7250",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7250i",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BLK-4S",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "7.2 V",
+        "Nominal Capacity": "750 mAh"
+      },
+      "description": "The BLK-4S is a battery manufactured for Nokia phones.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BLK-4S (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BLK-4S",
+      "source_models": [
+        "Nokia 9000 Communicator"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "9000 Communicator",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BLL-3",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-Ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1300 mAh"
+      },
+      "description": "The BLL-3 is a battery designed for the Nokia 9210 Communicator series. It is comprised of 2 cells (marked FCSP3102850). These batteries are difficult to find, especially in working condition.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BLL-3 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BLL-3",
+      "source_models": [
+        "Nokia 9210 Communicator",
+        "Nokia 9210i Communicator",
+        "Nokia 9210c Communicator",
+        "Nokia 9290 Communicator"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "9210 Communicator",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "9210i Communicator",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "9210c Communicator",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "9290 Communicator",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BLN-3",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.6 V",
+        "Nominal Capacity": "1100 mAh",
+        "Dimensions": "57 × 55 × 10.7 mm"
+      },
+      "description": "The BLN-3 is a battery manufactured for the Nokia 9110 Communicator.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BLN-3 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BLN-3",
+      "source_models": [
+        "Nokia 9110 Communicator"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "9110 Communicator",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BLS-2N",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.6 V",
+        "Nominal Capacity": "900 mAh, 1050 mAh",
+        "GND-BSI resistance": "39 kOhm",
+        "Dimensions": "114 mm × 45 mm × 8 mm",
+        "Weight": "35 g"
+      },
+      "description": "The Nokia BLS-2N is a battery manufactured for Nokia phones.\n\nSimilar batteries:\nNokia BMS-2S • 900 mAh NiMH battery\nNokia BMS-2V • 900 mAh NiMH vibra battery\nNokia BLS-4 • 1500 mAh Li-ion extended battery\nNokia BPS-2 • 1100 mAh LiPo slim battery\nNokia BPS-1 • 600 mAh LiPo ultra slim battery\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BLS-2N (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BLS-2N",
+      "source_models": [
+        "Nokia 650",
+        "Nokia 5110",
+        "Nokia 5165",
+        "Nokia 6110",
+        "Nokia 6150",
+        "Nokia 6210",
+        "Nokia 6310",
+        "Nokia 7110"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "650",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5110",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5165",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6110",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6150",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6210",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6310",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7110",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BMC-3",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "NiMH",
+        "Voltage": "3.6 V",
+        "Nominal Capacity": "1100 mAh",
+        "GND-BSI resistance": "?",
+        "Dimensions": "53 × 38 × 9 mm",
+        "Weight": "?"
+      },
+      "description": "The BMC-3 is a battery manufactured for Nokia phones from the early 2000s, most notably the Nokia 3310.\n\nRelated batteries:\nNokia BLC-1, BLC-2: Updated slimmer lithium ion versions.\n\nPhone list notes:\nThis list may also include phones that used the BLC-1 or BLC-2.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BMC-3 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: The source explicitly says the phone list may include BLC-1/BLC-2 models. BLC-2 says newer phones such as 3510 do not support BMC-3. All BMC-3 phone suggestions require verification.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BMC-3",
+      "source_models": [
+        "Nokia 1220",
+        "Nokia 1221",
+        "Nokia 1260",
+        "Nokia 1261",
+        "Nokia 2260",
+        "Nokia 3310",
+        "Nokia 3315",
+        "Nokia 3320",
+        "Nokia 3330",
+        "Nokia 3350",
+        "Nokia 3360",
+        "Nokia 3385",
+        "Nokia 3390",
+        "Nokia 3395",
+        "Nokia 3410",
+        "Nokia 3510",
+        "Nokia 3510i",
+        "Nokia 3520",
+        "Nokia 3530",
+        "Nokia 3560",
+        "Nokia 3570",
+        "Nokia 3585",
+        "Nokia 3585i",
+        "Nokia 3586",
+        "Nokia 3586i",
+        "Nokia 3587i",
+        "Nokia 3588i",
+        "Nokia 3589i",
+        "Nokia 3590",
+        "Nokia 3595",
+        "Nokia 5510",
+        "Nokia 6010",
+        "Nokia 6650",
+        "Nokia 6651",
+        "Nokia 6800",
+        "Nokia 6810"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "The source explicitly says the phone list may include BLC-1/BLC-2 models. BLC-2 says newer phones such as 3510 do not support BMC-3. All BMC-3 phone suggestions require verification."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "1220",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "1221",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "1260",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "1261",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "2260",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3310",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3315",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3320",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3330",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3350",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3360",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3385",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3390",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3395",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3410",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3510",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3510i",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3520",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3530",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3560",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3570",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3585",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3585i",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3586",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3586i",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3587i",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3588i",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3589i",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3590",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "3595",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "5510",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "6010",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "6650",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "6651",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "6800",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "6810",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        }
+      ]
+    },
+    {
+      "name": "BML-3",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "NiMH",
+        "Voltage": "2.4 V",
+        "Nominal Capacity": "?",
+        "Dimensions": "74 × 34 × 7 mm",
+        "Weight": "?"
+      },
+      "description": "The BML-3 is a battery manufactured for Nokia phones. It was only used on the Nokia 3210.\n\nRecelling:\nAs the BML-3 is comprised of two 1.2V \"gumstick\" shaped batteries connected in series with no BMS, it is relatively easy to recell. These gumstick batteries remain in production as they were popularly used in several Sony Walkman and Discman players.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BML-3 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BML-3",
+      "source_models": [
+        "Nokia 3210"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "3210",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BP-3L",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1300 mAh"
+      },
+      "description": "The BP-3L is a battery manufactured for Nokia phones.\n\nIt is the only Nokia battery to have a variant that makes use of the Myriad font for its label, rather than Nokia Sans.\n\nSimilar batteries:\nNokia BP-4L • same shape, but thicker\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BP-3L (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BP-3L",
+      "source_models": [
+        "Nokia 603",
+        "Nokia Asha 303",
+        "Nokia Lumia 510",
+        "Nokia Lumia 610",
+        "Nokia Lumia 710"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "603",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Asha 303",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 510",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 610",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 710",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BP-4GW",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium polymer",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "2000 mAh",
+        "GND-BSI resistance": "?",
+        "Dimensions": "63 mm × 59 mm × 4 mm",
+        "Weight": "?"
+      },
+      "description": "The BP-4GW is a battery manufactured for Nokia phones. It is non-replaceable.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BP-4GW (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BP-4GW",
+      "source_models": [
+        "Nokia Lumia 720",
+        "Nokia Lumia 920"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "Lumia 720",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 920",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BP-4L",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium polymer (Li-Po)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1500 mAh"
+      },
+      "description": "The BP-4L is a battery for Nokia phones. It was used on mid to late 2000s high-end Nokia smartphones, as well as the Nokia N810 Internet Tablet.\n\nSimilar batteries:\nNokia BP-3L • Same shape, but thinner. The BP-3L cannot be charged in a phone that takes a BP-4L.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BP-4L (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BP-4L",
+      "source_models": [
+        "Nokia 6650 fold",
+        "Nokia 6760 slide",
+        "Nokia E6",
+        "Nokia E52",
+        "Nokia E55",
+        "Nokia E61i",
+        "Nokia E63",
+        "Nokia E71",
+        "Nokia E72",
+        "Nokia E90",
+        "Nokia N810 Internet Tablet",
+        "Nokia N97",
+        "Vertu Constellation Quest • BP-4LV"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "6650 fold",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6760 slide",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E6",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E52",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E55",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E61i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E63",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E71",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E72",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E90",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N810 Internet Tablet",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N97",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Vertu",
+          "model": "Constellation Quest",
+          "note": "BP-4LV",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BP-5H",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Li-polymer",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "Proto 1, 3, and 4: 1300 mAh\nProto V9: 1400 mAh",
+        "GND-BSI resistance": "?",
+        "Dimensions": "76 mm × 30 mm × 5 mm",
+        "Weight": "?"
+      },
+      "description": "The BP-5H is a battery manufactured for Nokia phones. Most versions of this battery are blue, but Proto 1 has a green label.\n\nPhone list notes:\nThis battery was only used on prototype phones produced around mid-late 2011. Despite not being used on any retail phones, aftermarket replacements of the BP-5H can be bought online.\nSome sites claim that this battery was used on the Nokia 701, Lumia 620 and 630, but this isn't true.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BP-5H (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BP-5H",
+      "source_models": [
+        "Nokia RM-746 (prototype)"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "RM-746 (prototype)",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BP-5L",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium polymer (Li-po)",
+        "Voltage": "3.7V",
+        "Nominal Capacity": "1300 or 1500 mAh",
+        "GND-BSI resistance": "?",
+        "Dimensions": "66 mm × 43 mm × 5 mm",
+        "Weight": "?"
+      },
+      "description": "The BP-5L is a battery manufactured for Nokia devices.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BP-5L (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BP-5L",
+      "source_models": [
+        "Nokia 770",
+        "Nokia 7700",
+        "Nokia 7710",
+        "Nokia 9500 Communicator",
+        "Nokia E61",
+        "Nokia E62",
+        "Nokia N800",
+        "Nokia N92"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "770",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7700",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7710",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "9500 Communicator",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E61",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E62",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N800",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N92",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BP-5M",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium polymer",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "900 mAh",
+        "GND-BSI resistance": "75 kOhm",
+        "Dimensions": "41 mm x 40 mm x 5 mm",
+        "Weight": "?"
+      },
+      "description": "The BP-5M is a battery manufactured for Nokia phones.\n\nSimilar batteries:\nNokia BP-6MT • Slightly thicker and higher capacity\nNokia BP-6M • Similar size and design, but has incompatible pins\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BP-5M (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: BP-5M/BP-6MT are described as mostly interchangeable, not universally compatible; check thickness and fit. BP-6M has incompatible contacts.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BP-5M",
+      "source_models": [
+        "Nokia 5610 XpressMusic",
+        "Nokia 5700 XpressMusic",
+        "Nokia 6110 Navigator",
+        "Nokia 6220 classic",
+        "Nokia 6500 slide",
+        "Nokia 7390",
+        "Nokia 8600 Luna"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "BP-5M/BP-6MT are described as mostly interchangeable, not universally compatible; check thickness and fit. BP-6M has incompatible contacts."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "5610 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5700 XpressMusic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6110 Navigator",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6220 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6500 slide",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7390",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8600 Luna",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BP-5Z",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1080 mAh"
+      },
+      "description": "The BP-5Z is a battery manufactured for Nokia phones. It was only ever used in the Nokia 700.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BP-5Z (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BP-5Z",
+      "source_models": [
+        "Nokia 700"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "700",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BP-6M",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion) or lithium polymer",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1070 or 1100 mAh",
+        "GND-BSI resistance": "91.5 kOhm",
+        "Dimensions": "40 × 41 × 6 mm",
+        "Weight": "?"
+      },
+      "description": "The BP-6M is a battery used by some Nokia phones from the mid-2000s. It was introduced in 2004 with the Nokia 9300.\n\nIt came in two different revisions, as well as two different capacities (1070 mAh Li-ion / 1100 mAh Li-Po).\n\nSimilar batteries:\nNokia BP-6MT • Similar design, but incompatible due to different pinout\nNokia BP-5M • Same as BP-6MT, but slightly thinner\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BP-6M (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BP-6M",
+      "source_models": [
+        "Nokia 3250",
+        "Nokia 6151",
+        "Nokia 6233",
+        "Nokia 6234",
+        "Nokia 6280",
+        "Nokia 6288",
+        "Nokia 9300",
+        "Nokia 9300i",
+        "Nokia N73",
+        "Nokia N77",
+        "Nokia N93"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "3250",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6151",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6233",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6234",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6280",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6288",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "9300",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "9300i",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N73",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N77",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N93",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BP-6MT",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1050 mAh",
+        "Dimensions": "41 x 40 x 6 mm"
+      },
+      "description": "The BP-6MT is a battery manufactured for Nokia phones. It is a variant of the BP-6M with blade socket contacts, thus the two batteries are not cross compatible with each other.\n\nSimilar batteries:\nNokia BP-5M: Same size, slightly thinner, mostly interchangeable\nNokia BP-6M: Same shape and size, different pin style and pinout\nNokia BL-6Q: Same height and thickness, but narrower. A BL-6Q can be used with phones that use the BP-6MT (tested on the N82 and E51).\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BP-6MT (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: BP-5M/BP-6MT are described as mostly interchangeable, not universally compatible; check thickness and fit. BP-6M has incompatible contacts.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BP-6MT",
+      "source_models": [
+        "Nokia 6350",
+        "Nokia 6720 classic",
+        "Nokia 6750 Mural",
+        "Nokia E51",
+        "Nokia N81",
+        "Nokia N82"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "BP-5M/BP-6MT are described as mostly interchangeable, not universally compatible; check thickness and fit. BP-6M has incompatible contacts."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "6350",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6720 classic",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6750 Mural",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "E51",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N81",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "N82",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BP-6X",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium polymer (Li-Po)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "700 mAh"
+      },
+      "description": "700 mAh lithium polymer variant described on Nokia BL-5X. The category link is a double redirect via BP-5X; specifications taken from the BL-5X variant description.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-5X (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: The category entry redirects through BP-5X to BL-5X. Variant specifications are from the BL-5X page; confirm the printed code before use.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-5X",
+      "source_models": [
+        "Nokia 8800",
+        "Nokia 8801",
+        "Nokia 8800 Sirocco"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "The category entry redirects through BP-5X to BL-5X. Variant specifications are from the BL-5X page; confirm the printed code before use."
+      ],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "8800",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8801",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "8800 Sirocco",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BPS-2",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium polymer (LiPo)",
+        "Voltage": "3.6 V",
+        "Nominal Capacity": "1100 mAh",
+        "GND-BSI resistance": "39 kOhm",
+        "Dimensions": "114 mm × 45 mm × 8 mm",
+        "Weight": "35 g"
+      },
+      "description": "The Nokia BPS-2 is a battery manufactured for Nokia phones.\n\nSimilar batteries:\nNokia BMS-2S • 900 mAh NiMH battery\nNokia BMS-2V • NiMH vibra battery\nNokia BLS-2N • 1050 mAh Li-ion slim battery\nNokia BLS-4 • 1500 mAh Li-ion extended battery\nNokia BPS-1 • 600 mAh LiPo ultra slim battery\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BPS-2 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BPS-2",
+      "source_models": [
+        "Nokia 650",
+        "Nokia 3285",
+        "Nokia 5110",
+        "Nokia 5165",
+        "Nokia 6110",
+        "Nokia 6150",
+        "Nokia 6210",
+        "Nokia 6310",
+        "Nokia 7110"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "650",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "3285",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5110",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "5165",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6110",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6150",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6210",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6310",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "7110",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BV-5S",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.8 V",
+        "Nominal Capacity": "1800 mAh"
+      },
+      "description": "The BV-5S is a battery manufactured for Nokia phones.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BV-5S (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BV-5S",
+      "source_models": [
+        "Nokia X2 (2014)"
+      ],
+      "compatible_names": [],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "X2 (2014)",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BV-L4A",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.8 V",
+        "Nominal Capacity": "2200 mAh"
+      },
+      "description": "The BL-L4A is a battery manufactured for Microsoft and Nokia phones.\n\nVariants:\nMicrosoft BL-L4A: 1905 mAh version\nNokia BV-L4A: 2200 mAh version\n\nBV-L4A redirects to Microsoft BL-L4A; separate specifications for both variants.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BV-L4A (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: Source combines Microsoft and Nokia variants with different voltages and capacities; the shared phone list does not assign each phone to a variant.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BV-L4A",
+      "source_models": [
+        "Microsoft Lumia 535",
+        "Microsoft Lumia 540",
+        "Nokia Lumia 830"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "Source combines Microsoft and Nokia variants with different voltages and capacities; the shared phone list does not assign each phone to a variant."
+      ],
+      "supported_models": [
+        {
+          "brand": "Microsoft",
+          "model": "Lumia 535",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Microsoft",
+          "model": "Lumia 540",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 830",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        }
+      ]
+    },
+    {
+      "name": "BV-T5A",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.8 V",
+        "Nominal Capacity": "2220 mAh"
+      },
+      "description": "The BL-T5A is a battery manufactured for Microsoft and Nokia phones.\n\nVariants:\nMicrosoft BL-T5A: 2100 mAh version\nNokia BV-T5A: 2220 mAh version\n\nBV-T5A redirects to Microsoft BL-T5A; separate specifications for both variants.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BV-T5A (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: Source combines Microsoft and Nokia variants with different voltages and capacities; the shared phone list does not assign each phone to a variant.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BV-T5A",
+      "source_models": [
+        "Microsoft Lumia 550",
+        "Nokia Lumia 730"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "Source combines Microsoft and Nokia variants with different voltages and capacities; the shared phone list does not assign each phone to a variant."
+      ],
+      "supported_models": [
+        {
+          "brand": "Microsoft",
+          "model": "Lumia 550",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 730",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        }
+      ]
+    },
+    {
+      "name": "LRW-1",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Voltage": "3.6 V",
+        "Nominal Capacity": "900 mAh",
+        "Dimensions": "114 mm × 45 mm × 8 mm",
+        "Item type": "Bluetooth battery holder"
+      },
+      "description": "The Nokia LRW-1 is a battery holder for a Nokia BLB-3 battery with a built-in Bluetooth module. It requires a Nokia 6210 phone with firmware 5.02 or a later version[1]. The Nokia LRW-1 is part of the Nokia Connectivity Pack, which was announced on 5 December 2000[2] additionally includes a Nokia DTL-1 CompactFlash Bluetooth card and a Nokia FLA-15 CompactFlash to PCMCIA adapter and a software CD-ROM containing drivers and a Bluetooth-enabled version of the Nokia PC Suite. It supports at least the Dial-up Networking profile[3].\n\nSimilar batteries:\nNokia BMS-2S • 900 mAh NiMH battery\nNokia BMS-2V • 900 mAh NiMH vibra battery\nNokia BLS-2N • 1050 mAh Li-ion battery\nNokia BLS-4 • 1500 mAh Li-ion extended battery\nNokia BPS-2 • 1100 mAh LiPo slim battery\nNokia BPS-1 • 600 mAh LiPo ultra slim battery\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_LRW-1 (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: This is a Bluetooth battery holder for BLB-3, not a standalone battery. Nokia 6210 requires firmware 5.02 or later. Excluded from battery suggestions.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_LRW-1",
+      "source_models": [
+        "Nokia 6210"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "This is a Bluetooth battery holder for BLB-3, not a standalone battery. Nokia 6210 requires firmware 5.02 or later. Excluded from battery suggestions."
+      ],
+      "suggestion_excluded": true,
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "6210",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BV-4D",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.8 V",
+        "Nominal Capacity": "1320 / 1400 mAh",
+        "GND-BSI resistance": "100 kOhm",
+        "Dimensions": "60 mm × 44 mm × 4 mm",
+        "Weight": "24 g"
+      },
+      "description": "The BL-4D and BV-4D are batteries manufactured for Nokia phones. They are fully compatible with each other, with the only differences are the capacity and voltage. The BV-4D has two further capacity variations: 1320 and 1400 mAh.\n\nPhone list notes:\nBL-4D\nBV-4D\n\nSeparate variant described on the source page for BL-4D.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-4D (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-4D",
+      "source_models": [
+        "Nokia N950",
+        "Nokia 808 PureView"
+      ],
+      "compatible_names": [
+        "BL-4D"
+      ],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "N950",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "808 PureView",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-4WL",
+      "manufacturer": "Nokia",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1150 mAh",
+        "GND-BSI resistance": "?",
+        "Dimensions": "60.5 × 38 × 4.4 mm",
+        "Weight": "?"
+      },
+      "description": "The BL-4UL is a battery manufactured for Nokia phones. The BL-4WL is a compatible but slightly lower-capacity version of this battery.\n\nSimilar batteries:\nNokia BL-4U • similar dimensions, but with blade socket contacts and a different pinout\n\nSeparate variant described on the source page for BL-4UL.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BL-4UL (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BL-4UL",
+      "source_models": [
+        "Nokia 225 4G",
+        "Nokia 6310 (2021)"
+      ],
+      "compatible_names": [
+        "BL-4UL"
+      ],
+      "warnings": [],
+      "supported_models": [
+        {
+          "brand": "Nokia",
+          "model": "225 4G",
+          "note": "",
+          "warning": ""
+        },
+        {
+          "brand": "Nokia",
+          "model": "6310 (2021)",
+          "note": "",
+          "warning": ""
+        }
+      ]
+    },
+    {
+      "name": "BL-L4A",
+      "manufacturer": "Microsoft",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "1905 mAh"
+      },
+      "description": "The BL-L4A is a battery manufactured for Microsoft and Nokia phones.\n\nVariants:\nMicrosoft BL-L4A: 1905 mAh version\nNokia BV-L4A: 2200 mAh version\n\nBV-L4A redirects to Microsoft BL-L4A; separate specifications for both variants.\n\nSeparate variant described on the source page for BV-L4A.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BV-L4A (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: Source combines Microsoft and Nokia variants with different voltages and capacities; the shared phone list does not assign each phone to a variant.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BV-L4A",
+      "source_models": [
+        "Microsoft Lumia 535",
+        "Microsoft Lumia 540",
+        "Nokia Lumia 830"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "Source combines Microsoft and Nokia variants with different voltages and capacities; the shared phone list does not assign each phone to a variant."
+      ],
+      "supported_models": [
+        {
+          "brand": "Microsoft",
+          "model": "Lumia 535",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Microsoft",
+          "model": "Lumia 540",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 830",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        }
+      ]
+    },
+    {
+      "name": "BL-T5A",
+      "manufacturer": "Microsoft",
+      "specs": {
+        "Chemistry": "Lithium ion (Li-ion)",
+        "Voltage": "3.7 V",
+        "Nominal Capacity": "2100 mAh"
+      },
+      "description": "The BL-T5A is a battery manufactured for Microsoft and Nokia phones.\n\nVariants:\nMicrosoft BL-T5A: 2100 mAh version\nNokia BV-T5A: 2220 mAh version\n\nBV-T5A redirects to Microsoft BL-T5A; separate specifications for both variants.\n\nSeparate variant described on the source page for BV-T5A.\n\nSource: Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Nokia_BV-T5A (accessed 2026-09-24). CC BY-SA 4.0. Imported, structured and annotated; unknown values remain unknown.\n\nWARNING: Source combines Microsoft and Nokia variants with different voltages and capacities; the shared phone list does not assign each phone to a variant.",
+      "source": "https://lpcwiki.miraheze.org/wiki/Nokia_BV-T5A",
+      "source_models": [
+        "Microsoft Lumia 550",
+        "Nokia Lumia 730"
+      ],
+      "compatible_names": [],
+      "warnings": [
+        "Source combines Microsoft and Nokia variants with different voltages and capacities; the shared phone list does not assign each phone to a variant."
+      ],
+      "supported_models": [
+        {
+          "brand": "Microsoft",
+          "model": "Lumia 550",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        },
+        {
+          "brand": "Nokia",
+          "model": "Lumia 730",
+          "note": "",
+          "warning": "Phone/variant assignment needs verification; see battery notes."
+        }
+      ]
+    }
+  ]
+}

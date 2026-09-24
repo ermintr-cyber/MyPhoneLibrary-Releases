@@ -87,4 +87,16 @@ assert.equal(await page.locator('#panel-body').evaluate(el=>el.scrollTop),0);
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 await page.screenshot({path:'mobile-settings-115.png',fullPage:true});
 console.log('Mobile Settings: single-column themes, reachable Save above bottom navigation and scrolling back to top passed.');
+// New phone suggestions select a real catalog value without losing the draft.
+await page.evaluate(entries=>{ $('panel').close();$('editor').close();db.catalog=[{id:'nokia',category:'brand',name:'Nokia',specs:{}},...entries.map(e=>({...e,id:e.name,category:'battery',compatible_batteries:e.compatible_names}))];phoneDraft=null;addPhone();draft.brand='Nokia';draft.model='N95 8GB';editorRender();},JSON.parse(fs.readFileSync('data/nokia-batteries.json','utf8')).entries);
+await page.locator('[data-action="choose-battery-suggestion"][data-value="BL-6F"]').click();
+assert.equal(await page.locator('[data-r="battery"]').inputValue(),'BL-6F');
+await page.locator('[data-r="model"]').fill('N95');
+assert.equal(await page.locator('[data-action="choose-battery-suggestion"][data-value="BL-5F"]').count(),1);
+assert.equal(await page.locator('[data-action="choose-battery-suggestion"][data-value="BL-6F"]').count(),0);
+assert.equal(await page.locator('[data-r="battery"]').inputValue(),'BL-6F'); // suggestions never overwrite the user's selection
+await page.evaluate(()=>{$('editor').close();catalogEditor('battery','BL-4U');});
+assert.match(await page.locator('#catalog-description').inputValue(),/Asha 500/);
+assert.equal(await page.locator('#catalog-source').inputValue(),'https://lpcwiki.miraheze.org/wiki/Nokia_BL-4U');
+console.log('DOM: battery suggestions, variant changes, explicit selection and source notes passed.');
 console.log('DOM: one field per property, search/select/reject, Escape, effective unit switching, retained gallery, collapsed layout passed.');await browser.close();})().catch(e=>{console.error(e);process.exit(1)});

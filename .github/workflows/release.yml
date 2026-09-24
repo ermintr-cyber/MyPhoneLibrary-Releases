@@ -19,7 +19,9 @@ jobs:
       - name: Test collection and updater
         run: python -m unittest discover -s tests -v
       - name: Check interface behavior
-        run: node tests/ui.test.cjs
+        run: |
+          node tests/ui.test.cjs
+          node tests/ui-battery-suggestions.test.cjs
       - name: Check collection workflows
         run: node tests/ui-workflows.test.cjs
       - name: Check Android update isolation

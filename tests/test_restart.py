@@ -9,7 +9,8 @@ class RestartTests(unittest.TestCase):
  def test_http_stage_restart_reports_new_version_and_keeps_data(self):
   with tempfile.TemporaryDirectory() as tmp:
    root=Path(tmp)/'program';root.mkdir();data=Path(tmp)/'custom collection';data.mkdir()
-   for name in ['server.py','updater.py']:shutil.copy2(ROOT/name,root/name)
+   for name in ['server.py','updater.py','battery_catalog.py']:shutil.copy2(ROOT/name,root/name)
+   shutil.copytree(ROOT/'data',root/'data')
    with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
    proc=subprocess.Popen([sys.executable,str(root/'server.py'),'--port',str(port),'--host','127.0.0.1','--data',str(data),'--no-browser'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
    opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()));csrf=''

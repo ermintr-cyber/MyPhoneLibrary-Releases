@@ -395,6 +395,13 @@ class Store:
             specs=data.get('specs',{})
             if not isinstance(specs,dict) or len(specs)>100 or any(not isinstance(v,(str,int,float,bool)) for v in specs.values()):raise ValueError('Specifications must be named values.')
             item={'id':old['id'] if old else ident(),'rev':old['rev']+1 if old else 1,'category':category,'name':name,'description':str(data.get('description',''))[:12000],'specs':{str(k)[:120]:str(v)[:2000] for k,v in specs.items() if str(k).strip()},'source':url(data.get('source',''))}
+            if category=='battery':
+                models=data.get('supported_models',(old or {}).get('supported_models',[]))
+                if not isinstance(models,list) or len(models)>1000 or any(not isinstance(m,dict) or not isinstance(m.get('brand'),str) or not isinstance(m.get('model'),str) for m in models):
+                    raise ValueError('Supported phone models must contain brand and model names.')
+                item['supported_models']=[{k:str(m.get(k,''))[:1000] for k in ('brand','model','note','warning')} for m in models]
+                for k in ('source_models','manufacturer','suggestion_excluded','source_revision','source_warnings'):
+                    if old and k in old:item[k]=old[k]
             parent_id=str(data.get('parent_id','') or '') if category=='location' else ''
             by_id={e['id']:e for e in items};visited={item['id']};current=parent_id
             while current:
@@ -1137,6 +1144,8 @@ def main():
     args=parser.parse_args()
     from updater import resolve_data_directory
     store=Store(resolve_data_directory(args.data))
+    from battery_catalog import apply_battery_catalog
+    apply_battery_catalog(store)
     if sys.stdout is None or sys.stderr is None:
         logfile=store.directory/'server.log'
         if logfile.exists() and logfile.stat().st_size>2*1024*1024:

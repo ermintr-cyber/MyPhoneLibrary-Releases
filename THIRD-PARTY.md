@@ -23,3 +23,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 The word 'QR Code' is a registered trademark of DENSO WAVE INCORPORATED.
+
+## Nokia battery reference catalog
+
+`data/nokia-batteries.json` is adapted from Legacy Portable Computing Wiki contributors, https://lpcwiki.miraheze.org/wiki/Category:Nokia_batteries and the per-entry source URLs, accessed 2026-09-24. Licensed under Creative Commons Attribution-ShareAlike 4.0 International: https://creativecommons.org/licenses/by-sa/4.0/. Changes: structured specifications and model associations, separate variants, conflict annotations and conservative compatibility links. This dataset remains CC BY-SA 4.0; application code has its own license.

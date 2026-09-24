@@ -14,7 +14,7 @@ if args.repo:
     sys.path.insert(0,str(root));from updater import repository
     repo=repository(args.repo)
     p=root/'server.py';s=p.read_text(encoding='utf-8');s=re.sub(r"'update_repo':'[^']*'", "'update_repo':"+repr(repo),s);p.write_text(s,encoding='utf-8')
-files=['server.py','updater.py','Pokreni-MyPhoneLibrary.cmd','PROCITAJ-ME.md']
+files=['battery_catalog.py','data/nokia-batteries.json','server.py','updater.py','Pokreni-MyPhoneLibrary.cmd','PROCITAJ-ME.md']
 files += [p.relative_to(root).as_posix() for p in sorted((root/'web').iterdir()) if p.is_file()]
 manifest={'product':'MyPhoneLibrary','version':version,'schema':1,'files':{n:hashlib.sha256((root/n).read_bytes()).hexdigest() for n in files}}
 (root/'app-manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
