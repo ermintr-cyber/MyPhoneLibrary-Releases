@@ -3,7 +3,7 @@ import argparse,hashlib,json,os,re,urllib.request,zipfile
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser();parser.add_argument('--runtime',action='store_true');parser.add_argument('--repo',default='');args=parser.parse_args()
-version=re.search(r"VERSION = '([^']+)'",(root/'server.py').read_text()).group(1)
+version=re.search(r"VERSION = '([^']+)'",(root/'server.py').read_text(encoding='utf-8')).group(1)
 if args.runtime and not (root/'runtime/python.exe').exists():
     payload=urllib.request.urlopen('https://www.python.org/ftp/python/3.13.15/python-3.13.15-embed-amd64.zip',timeout=90).read()
     if hashlib.sha256(payload).hexdigest()!='d1f04d990aee1253d8569e8e5104e30fa9f5fa830899f14843448872d936a2cf':raise ValueError('Runtime checksum mismatch')
@@ -13,7 +13,7 @@ if args.repo:
     import sys
     sys.path.insert(0,str(root));from updater import repository
     repo=repository(args.repo)
-    p=root/'server.py';s=p.read_text();s=re.sub(r"'update_repo':'[^']*'", "'update_repo':"+repr(repo),s);p.write_text(s)
+    p=root/'server.py';s=p.read_text(encoding='utf-8');s=re.sub(r"'update_repo':'[^']*'", "'update_repo':"+repr(repo),s);p.write_text(s,encoding='utf-8')
 files=['server.py','updater.py','Pokreni-MyPhoneLibrary.cmd','PROCITAJ-ME.md']
 files += [p.relative_to(root).as_posix() for p in sorted((root/'web').iterdir()) if p.is_file()]
 manifest={'product':'MyPhoneLibrary','version':version,'schema':1,'files':{n:hashlib.sha256((root/n).read_bytes()).hexdigest() for n in files}}
