@@ -22,6 +22,7 @@ jobs:
         run: |
           node tests/ui.test.cjs
           node tests/ui-battery-suggestions.test.cjs
+          node tests/ui-wishlist.test.cjs
       - name: Check collection workflows
         run: node tests/ui-workflows.test.cjs
       - name: Check Android update isolation
@@ -37,6 +38,8 @@ jobs:
             mobile-collection-113.png
             desktop-collection-114.png
             mobile-settings-115.png
+            mobile-wishlist-118.png
+            mobile-missing-118.png
       - name: Build package
         shell: pwsh
         env:

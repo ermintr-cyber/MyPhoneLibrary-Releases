@@ -152,3 +152,9 @@ dialog.settings-page .dialog-header{padding:20px 26px 4px;border:0;background:tr
  .settings-page .settings-tool-row{flex-wrap:wrap;gap:12px}
  .settings-page .actions{flex-wrap:wrap}
 }
+
+/* Wanted phones and missing accessories work in both desktop and mobile views. */
+.wanted-tag{color:var(--accent);font-weight:600}
+[data-action="acquire-wanted"]{white-space:normal;overflow-wrap:anywhere;max-width:100%}
+.missing-accessory{border-top:1px solid var(--border);padding:8px 0}
+#editor-charger-suggestions button{margin:4px}
