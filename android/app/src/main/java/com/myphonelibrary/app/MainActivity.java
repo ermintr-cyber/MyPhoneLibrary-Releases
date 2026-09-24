@@ -48,7 +48,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.gms.tasks.Task;
 import com.google.mlkit.vision.barcode.common.Barcode;
@@ -88,7 +87,6 @@ public class MainActivity extends Activity {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Runnable scheduledConnectionCheck = this::recheckConnection;
     private WebView webView;
-    private SwipeRefreshLayout swipeRefresh;
     private LinearLayout connectionPanel;
     private TextView connectionTitle;
     private TextView connectionMessage;
@@ -168,14 +166,8 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         webView.setBackgroundColor(BG);
 
-        swipeRefresh = new SwipeRefreshLayout(this);
-        swipeRefresh.setColorSchemeColors(GOLD);
-        swipeRefresh.setProgressBackgroundColorSchemeColor(PANEL);
-        // Nested HTML settings/dialogs scroll independently of WebView.scrollY.
-        // Native swipe interception would reload and discard form input.
-        swipeRefresh.setEnabled(false);
-        swipeRefresh.addView(webView, new SwipeRefreshLayout.LayoutParams(-1, -1));
-        root.addView(swipeRefresh, new FrameLayout.LayoutParams(-1, -1));
+        // The page owns scrolling, including nested settings and form panels.
+        root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
 
         connectionPanel = new LinearLayout(this);
         connectionPanel.setOrientation(LinearLayout.VERTICAL);
@@ -274,7 +266,6 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 CookieManager.getInstance().flush();
-                swipeRefresh.setRefreshing(false);
                 if (pageLoadFailed || !url.equals(view.getUrl())) return;
                 connectionPanel.setVisibility(View.GONE);
                 view.evaluateJavascript("document.documentElement.classList.add('android-webview')", null);
@@ -291,7 +282,6 @@ public class MainActivity extends Activity {
                 if (!request.getUrl().toString().equals(webView.getUrl())) return;
                 pageLoadFailed = true;
                 CookieManager.getInstance().flush();
-                swipeRefresh.setRefreshing(false);
                 tryFallbackOrShowError();
             }
         });

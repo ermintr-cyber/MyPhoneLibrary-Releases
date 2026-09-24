@@ -57,7 +57,7 @@ class CookieFixture(BaseHTTPRequestHandler):
    page_loads+=1
    if restarting and cookie:restored.set()
    body=(b'<html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="background:#101010;color:white"><div id="scroller" style="position:fixed;inset:30px 10px;overflow:auto;overscroll-behavior:contain"><div style="height:2500px;background:linear-gradient(#333,#999)">Remembered login verified</div></div><script>scroller.onscroll=()=>fetch("/scroll?top="+Math.round(scroller.scrollTop))</script></body></html>' if restarting else b'<html><meta name="viewport" content="width=device-width,initial-scale=1"><body>Cookie persistence test<script>fetch("/session",{method:"POST"}).then(()=>{MyPhoneLibraryAndroid.sessionChanged();return fetch("/confirmed")})</script></body></html>');kind='text/html'
-  self.send_response(200);self.send_header('Content-Type',kind);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+  self.send_response(200);self.send_header('Cache-Control','no-store');self.send_header('Content-Type',kind);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
  def do_POST(self):
   self.send_response(200);self.send_header('Set-Cookie','mpl_session=android-persistent-test; Path=/; HttpOnly; SameSite=Strict; Max-Age=2592000');self.send_header('Content-Length','2');self.end_headers();self.wfile.write(b'{}')
 fixture=ThreadingHTTPServer(('0.0.0.0',9000),CookieFixture);threading.Thread(target=fixture.serve_forever,daemon=True).start()
@@ -79,7 +79,11 @@ size=list(map(int,re.findall(r'\d+',adb('shell','wm','size'))))[-2:];w,h=size
 adb('shell','input','swipe',str(w//2),str(int(h*.72)),str(w//2),str(int(h*.3)),'800');time.sleep(2)
 assert scroll_positions and scroll_positions[-1]>0,'Nested panel did not scroll down'
 before=scroll_positions[-1]
-adb('shell','input','swipe',str(w//2),str(int(h*.3)),str(w//2),str(int(h*.72)),'800');time.sleep(2)
+print('Nested panel down:',before,'screen:',size,flush=True)
+for attempt in range(3):
+ adb('shell','input','swipe',str(w//2),str(int(h*.3)),str(w//2),str(int(h*.72)),'1200');time.sleep(2)
+ print('Nested panel up:',scroll_positions[-10:],flush=True)
+ if scroll_positions[-1]<before:break
 assert scroll_positions[-1]<before,'Nested panel could not scroll back up'
 assert page_loads==initial_loads,'Scrolling settings triggered an unwanted page reload'
 print('Android nested panel scrolls both directions without refreshing.',flush=True)
