@@ -375,3 +375,19 @@ if __name__=='__main__':
                 raise ValueError('Close the running MyPhoneLibrary server, then start again.')
         apply(root,directory)
     except Exception as e:print('Update was not applied: '+str(e));sys.exit(1)
+
+
+def latest_android(current):
+    """The signed Phone APK has its own channel, hosted with the Android signing CI."""
+    import base64
+    version(current)
+    repo='ermintr-cyber/MyMediaLibrary-Releases'
+    envelope=json.loads(github_bytes('https://api.github.com/repos/'+repo+'/contents/update-phone-android.json',65536))
+    manifest=json.loads(base64.b64decode(envelope['content'],validate=False))
+    if manifest.get('platform')!='android':raise ValueError('Invalid Android channel.')
+    new=manifest['version'];version(new)
+    asset=manifest['android'];size=asset['size'];checksum=asset['sha256']
+    expected='https://github.com/'+repo+'/releases/download/phone-android-v'+new+'/MyPhoneLibrary_Android_'+new+'.apk'
+    if asset.get('url')!=expected:raise ValueError('Invalid Android download URL.')
+    if not re.fullmatch(r'[a-f0-9]{64}',checksum) or not isinstance(size,int) or not 0<size<=150*1024*1024:raise ValueError('Invalid Android download metadata.')
+    return {'platform':'android','available':version(new)>version(current),'version':new,'url':expected,'size':size,'sha256':checksum}

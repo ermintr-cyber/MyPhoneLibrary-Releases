@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.15.0'
+VERSION = '1.16.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -1013,6 +1013,10 @@ class Handler(BaseHTTPRequestHandler):
                 from updater import read_update_status
                 return self.send(200,{'job':read_update_status(store.directory),'installed':VERSION,'pending':target,'error':error.read_text(encoding='utf-8') if error.exists() else ''})
             if path=='/api/update-check' and post:
+                if d.get('platform')=='android':
+                    from updater import latest_android
+                    return self.send(200,latest_android(d.get('current_version','')))
+                if d.get('platform','windows')!='windows':raise ValueError('Unknown update platform.')
                 from updater import latest_installer
                 info=latest_installer(store.meta('settings',DEFAULTS).get('update_repo'),VERSION)
                 return self.send(200,{k:v for k,v in info.items() if k in ('available','version','size')})

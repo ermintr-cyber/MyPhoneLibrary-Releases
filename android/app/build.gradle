@@ -19,8 +19,8 @@ android {
         applicationId "com.myphonelibrary.app"
         minSdk 26
         targetSdk 36
-        versionCode 11500
-        versionName "1.15.0"
+        versionCode rootProject.file("VERSION_CODE").text.trim().toInteger()
+        versionName rootProject.file("VERSION").text.trim()
     }
 
     signingConfigs {
@@ -53,6 +53,27 @@ android {
 dependencies {
     implementation platform("org.jetbrains.kotlin:kotlin-bom:1.8.22")
     implementation "androidx.core:core:1.15.0"
-    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
     implementation "com.google.android.gms:play-services-code-scanner:16.1.0"
 }
+
+// APK UI is immutable until the user installs a new Android version.
+def bundledUi = layout.buildDirectory.dir("generated/bundledUi")
+tasks.register("bundleUi", Sync) {
+    inputs.file(rootProject.file("VERSION"))
+    from(file("../../web"))
+    into(bundledUi.map { it.dir("ui") })
+    doFirst {
+        if (!file("../../web/index.html").isFile()) {
+            throw new GradleException("Build the frontend before building the Android APK.")
+        }
+    }
+    doLast {
+        def ui = bundledUi.get().dir("ui").asFile
+        def script = new File(ui, "app.js")
+        script.text = script.text.replaceFirst(/const UI_VERSION='[^']+';/, "const UI_VERSION='${android.defaultConfig.versionName}';")
+        def paths = fileTree(ui).files.collect { ui.toPath().relativize(it.toPath()).toString().replace('\\', '/') }.sort()
+        new File(bundledUi.get().asFile, "ui-files.txt").text = paths.join("\n") + "\n"
+    }
+}
+android.sourceSets.main.assets.srcDir(bundledUi)
+tasks.named("preBuild").configure { dependsOn("bundleUi") }
