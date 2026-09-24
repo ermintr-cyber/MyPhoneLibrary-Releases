@@ -15,7 +15,7 @@ class Version18Tests(unittest.TestCase):
    with self.assertRaises(ValueError):store.save_record(phone,phone['rev'])
  def test_migration_preserves_collection_photos_backups_and_sessions(self):
   with tempfile.TemporaryDirectory() as tmp:
-   source,target=Path(tmp)/'legacy',Path(tmp)/'ProgramData'
+   source,target=Path(tmp).resolve()/'legacy',Path(tmp).resolve()/'ProgramData'
    store=Store(source);store.save_record({'kind':'phone','brand':'Nokia','model':'N73','instances':[{'color':'Silver'}]})
    photo=store.media/('a'*32+'.jpg');photo.write_bytes(b'photo contents')
    settings=store.meta('settings');settings['backup_primary']=str(source/'backups');store.settings(settings)
@@ -29,12 +29,12 @@ class Version18Tests(unittest.TestCase):
    dest.save_record({'kind':'phone','brand':'Nokia','model':'N95','instances':[{}]});migrate_data(source,target);self.assertEqual(len(dest.records()),2)
    with patch('updater.data_locations',return_value=(source,target)):
     self.assertEqual(resolve_data_directory(source),target)
-    self.assertEqual(resolve_data_directory(Path(tmp)/'custom'),Path(tmp)/'custom')
+    self.assertEqual(resolve_data_directory(Path(tmp).resolve()/'custom'),Path(tmp).resolve()/'custom')
    (source/'updates').mkdir();(source/'updates/status.json').write_text(json.dumps({'status':'completed','version':'1.8.0'}))
    self.assertEqual(read_update_status(target)['status'],'completed')
  def test_migration_refuses_conflicts_and_leaves_source(self):
   with tempfile.TemporaryDirectory() as tmp:
-   source,target=Path(tmp)/'legacy',Path(tmp)/'new';Store(source);target.mkdir();(target/'existing.txt').write_text('keep')
+   source,target=Path(tmp).resolve()/'legacy',Path(tmp).resolve()/'new';Store(source);target.mkdir();(target/'existing.txt').write_text('keep')
    with self.assertRaises(ValueError):migrate_data(source,target)
    self.assertEqual((target/'existing.txt').read_text(),'keep');self.assertTrue((source/'library.sqlite3').exists())
  def test_remember_token_excluded_from_backup_and_revoked_on_restore(self):
@@ -68,7 +68,7 @@ class WindowsMigrationTests(unittest.TestCase):
  def test_old_updater_launches_new_server_into_programdata(self):
   import os,sys,subprocess,socket
   with tempfile.TemporaryDirectory() as tmp:
-   root=Path(tmp);legacy=root/'LocalAppData'/'MyPhoneLibrary';target=root/'ProgramData'/'MyPhoneLibrary'
+   root=Path(tmp).resolve();legacy=root/'LocalAppData'/'MyPhoneLibrary';target=root/'ProgramData'/'MyPhoneLibrary'
    store=Store(legacy);store.save_record({'kind':'phone','brand':'Nokia','model':'6500 Slide','instances':[{'color':'Silver'}]})
    store.remember('migration-cookie',time.time()+120)
    (legacy/'updates').mkdir();(legacy/'updates/status.json').write_text(json.dumps({'status':'verifying','version':'1.8.0'}))
