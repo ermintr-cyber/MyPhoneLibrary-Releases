@@ -86,7 +86,7 @@ assert.match(node('editor-content').innerHTML,/data-action="field-catalog" data-
  await vm.runInContext('checkConnection()',context);assert.equal(reloads,0);assert.match(node('connection-message').textContent,/unsaved draft/);
  context.fetch=async()=>{throw Error('offline')};await vm.runInContext('checkConnection()',context);
  assert.match(node('connection').textContent,/Offline/);
- context.fetch=async()=>({ok:true,json:async()=>({version:'1.7.0',instance:'new'})});
+ context.fetch=async()=>({ok:true,json:async()=>({version:'1.7.1',instance:'new'})});
  await vm.runInContext('checkConnection()',context);assert.equal(node('connection-banner').hidden,true);
  console.log('UI: stale pages reload, unsaved drafts block reload, and connection loss/recovery is visible.');
 

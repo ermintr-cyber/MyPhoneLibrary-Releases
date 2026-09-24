@@ -1,5 +1,5 @@
 'use strict';
-const UI_VERSION='1.7.0';
+const UI_VERSION='1.7.1';
 let serverInstance=null,versionMismatch=false,connectionCheckBusy=false,catalogReturn=null;
 let settingsTab='appearance',currentView='all',dragColumn=null,ignoreSortUntil=0;
 const $=id=>document.getElementById(id), clone=x=>JSON.parse(JSON.stringify(x));

@@ -73,12 +73,26 @@ class Version16Tests(unittest.TestCase):
                 user.EnumWindows(inspect,0)
                 if found or process.poll() is not None:break
                 time.sleep(.1)
-            if found:user.PostMessageW(found[0],0x10,0,0)
+            modern=[]
+            if found:
+                user.EnumChildWindows.argtypes=[w.HWND,callback_type,w.LPARAM]
+                user.GetClassNameW.argtypes=[w.HWND,w.LPWSTR,ctypes.c_int]
+                @callback_type
+                def inspect_child(hwnd,param):
+                    name=ctypes.create_unicode_buffer(256);user.GetClassNameW(hwnd,name,256)
+                    if name.value in ('DirectUIHWND','DUIViewWndClassName'):modern.append(name.value)
+                    return True
+                for _ in range(30):
+                    user.EnumChildWindows(found[0],inspect_child,0)
+                    if modern:break
+                    time.sleep(.1)
+                user.PostMessageW(found[0],0x10,0,0)
             else:
                 process.kill()
             out,err=process.communicate(timeout=10)
             self.assertTrue(found,err.decode(errors='replace'))
             self.assertEqual(process.returncode,0,err.decode(errors='replace'))
             self.assertIn(b'CANCELLED',out)
+            self.assertTrue(modern,'Expected the modern Explorer folder picker, not the legacy folder tree.')
         finally:
             if process.poll() is None:process.kill();process.communicate()

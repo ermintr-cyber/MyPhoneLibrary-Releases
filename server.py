@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.7.0'
+VERSION = '1.7.1'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -552,39 +552,54 @@ def cancel_folder_picker():
             process.terminate()
 
 def native_folder_dialog(initial=''):
-    """Native Windows shell picker in a separate background Python process."""
+    """Explorer-style IFileOpenDialog; folder mode with address bar and search."""
     import ctypes
     from ctypes import wintypes as w
-    shell=ctypes.WinDLL('shell32');user=ctypes.WinDLL('user32');ole=ctypes.WinDLL('ole32')
-    callback_type=ctypes.WINFUNCTYPE(ctypes.c_int,w.HWND,w.UINT,w.LPARAM,w.LPARAM)
-    class BrowseInfo(ctypes.Structure):
-        _fields_=[('owner',w.HWND),('root',ctypes.c_void_p),('display',w.LPWSTR),('title',w.LPCWSTR),('flags',w.UINT),('callback',callback_type),('param',w.LPARAM),('image',ctypes.c_int)]
-    user.SendMessageW.argtypes=[w.HWND,w.UINT,w.WPARAM,w.LPARAM];user.SendMessageW.restype=w.LPARAM
-    user.SetWindowPos.argtypes=[w.HWND,w.HWND,ctypes.c_int,ctypes.c_int,ctypes.c_int,ctypes.c_int,w.UINT]
-    user.SetForegroundWindow.argtypes=[w.HWND]
-    initial_buffer=ctypes.create_unicode_buffer(initial)
-    @callback_type
-    def on_event(hwnd,message,param,data):
-        if message==1:
-            if initial:user.SendMessageW(hwnd,0x467,1,ctypes.addressof(initial_buffer))
-            user.SetWindowPos(hwnd,ctypes.c_void_p(-1),0,0,0,0,0x43)
-            user.SetForegroundWindow(hwnd)
-        return 0
-    shell.SHBrowseForFolderW.argtypes=[ctypes.POINTER(BrowseInfo)];shell.SHBrowseForFolderW.restype=ctypes.c_void_p
-    shell.SHGetPathFromIDListW.argtypes=[ctypes.c_void_p,w.LPWSTR];shell.SHGetPathFromIDListW.restype=w.BOOL
+    class GUID(ctypes.Structure):
+        _fields_=[('data1',w.DWORD),('data2',w.WORD),('data3',w.WORD),('data4',ctypes.c_ubyte*8)]
+        @classmethod
+        def parse(cls,value):return cls.from_buffer_copy(uuid.UUID(value).bytes_le)
+    ole=ctypes.WinDLL('ole32');shell=ctypes.WinDLL('shell32');user=ctypes.WinDLL('user32')
+    ole.CoInitializeEx.argtypes=[ctypes.c_void_p,w.DWORD];ole.CoInitializeEx.restype=ctypes.c_long
+    ole.CoCreateInstance.argtypes=[ctypes.POINTER(GUID),ctypes.c_void_p,w.DWORD,ctypes.POINTER(GUID),ctypes.POINTER(ctypes.c_void_p)]
+    ole.CoCreateInstance.restype=ctypes.c_long
     ole.CoTaskMemFree.argtypes=[ctypes.c_void_p]
-    ole.OleInitialize(None)
+    shell.SHCreateItemFromParsingName.argtypes=[w.LPCWSTR,ctypes.c_void_p,ctypes.POINTER(GUID),ctypes.POINTER(ctypes.c_void_p)]
+    shell.SHCreateItemFromParsingName.restype=ctypes.c_long
+    user.GetForegroundWindow.restype=w.HWND
+    def method(obj,index,types,*args):
+        table=ctypes.cast(obj,ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
+        return ctypes.WINFUNCTYPE(ctypes.c_long,ctypes.c_void_p,*types)(table[index])(obj,*args)
+    def check(hr):
+        if hr<0:raise OSError('Windows folder dialog failed (0x%08X).'%(hr&0xffffffff))
+    check(ole.CoInitializeEx(None,2))
+    dialog=ctypes.c_void_p();item=ctypes.c_void_p();start=ctypes.c_void_p()
     try:
-        display=ctypes.create_unicode_buffer(260)
-        info=BrowseInfo(None,None,ctypes.cast(display,w.LPWSTR),'Select backup folder',0x51,on_event,0,0)
-        pidl=shell.SHBrowseForFolderW(ctypes.byref(info))
-        if not pidl:return None
-        try:
-            path=ctypes.create_unicode_buffer(260)
-            if not shell.SHGetPathFromIDListW(pidl,path):raise ValueError('The selected location is not a filesystem folder.')
-            return path.value
-        finally:ole.CoTaskMemFree(pidl)
-    finally:ole.OleUninitialize()
+        clsid=GUID.parse('DC1C5A9C-E88A-4DDE-A5A1-60F82A20AEF7')
+        iid=GUID.parse('D57C7288-D4AD-4768-BE02-9D969532D960')
+        shell_iid=GUID.parse('43826D1E-E718-42EE-BC55-A1E261C37BFE')
+        check(ole.CoCreateInstance(ctypes.byref(clsid),None,1,ctypes.byref(iid),ctypes.byref(dialog)))
+        options=w.DWORD()
+        check(method(dialog,10,[ctypes.POINTER(w.DWORD)],ctypes.byref(options)))
+        # FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST
+        check(method(dialog,9,[w.DWORD],options.value|0x20|0x40|0x800))
+        check(method(dialog,17,[w.LPCWSTR],'Choose automatic backup folder'))
+        check(method(dialog,18,[w.LPCWSTR],'Select Folder'))
+        if initial and Path(initial).is_dir():
+            hr=shell.SHCreateItemFromParsingName(str(Path(initial)),None,ctypes.byref(shell_iid),ctypes.byref(start))
+            if hr>=0:check(method(dialog,12,[ctypes.c_void_p],start))
+        hr=method(dialog,3,[w.HWND],user.GetForegroundWindow())
+        if hr&0xffffffff==0x800704c7:return None
+        check(hr)
+        check(method(dialog,20,[ctypes.POINTER(ctypes.c_void_p)],ctypes.byref(item)))
+        path=ctypes.c_void_p()
+        check(method(item,5,[w.DWORD,ctypes.POINTER(ctypes.c_void_p)],0x80058000,ctypes.byref(path)))
+        try:return ctypes.wstring_at(path)
+        finally:ole.CoTaskMemFree(path)
+    finally:
+        for obj in (item,start,dialog):
+            if obj.value:method(obj,2,[])
+        ole.CoUninitialize()
 
 def choose_backup_folder(value=''):
     global _folder_picker_process
