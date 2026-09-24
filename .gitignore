@@ -1,0 +1,12 @@
+runtime/
+dist/
+__pycache__/
+*.pyc
+*.sqlite3
+*.sqlite3-*
+media/
+backups/
+*.exe
+*.zip
+*.log
+server-running.json

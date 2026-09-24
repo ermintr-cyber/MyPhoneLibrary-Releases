@@ -1,0 +1,59 @@
+name: Windows release
+on:
+  workflow_dispatch:
+  push:
+    branches: ['main']
+    paths: ['server.py', 'web/**', 'updater.py', 'packaging/**', 'tests/**', '.github/workflows/release.yml']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test collection and updater
+        run: python -m unittest discover -s tests -v
+      - name: Check interface behavior
+        run: node tests/ui.test.cjs
+      - name: Build package
+        shell: pwsh
+        env:
+          RELEASE_REPO: ${{ github.repository }}
+        run: |
+          python packaging/build_release.py --runtime --repo $env:RELEASE_REPO
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $version = (Get-Content -Raw app-manifest.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag and application version differ' }
+          "APP_VERSION=$version" | Out-File -Append $env:GITHUB_ENV
+      - name: Build EXE launcher and installer
+        shell: pwsh
+        run: |
+          choco install nsis --no-progress -y
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $compiler = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          & $compiler packaging/ConfigureNetwork.nsi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $compiler packaging/Launcher.nsi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $compiler "/DVERSION=$env:APP_VERSION" packaging/MyPhoneLibrary.nsi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python packaging/build_release.py
+      - name: Verify Windows background runtime
+        run: python packaging/windows_smoke.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyPhoneLibrary-Windows
+          path: |
+            dist/*.zip
+            dist/*.exe
+      - name: Publish release for a version tag
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$env:APP_VERSION" dist/*.zip dist/*.exe --title "MyPhoneLibrary $env:APP_VERSION" --generate-notes --target "$env:GITHUB_SHA"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
