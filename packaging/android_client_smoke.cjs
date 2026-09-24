@@ -5,7 +5,7 @@ const { readFileSync } = require('node:fs');
 const path = require('node:path');
 
 (async () => {
-  const [device] = await _android.devices();
+  let [device] = await _android.devices();
   assert(device, 'No Android emulator connected');
   device.setDefaultTimeout(30000);
   let page;
@@ -23,7 +23,7 @@ const path = require('node:path');
       throw new Error('Collection data did not load');
     };
     // Fresh API 35 emulators can relaunch the Activity when system packages
-    // finish initial configuration. Recover only that pre-login WebView loss;
+    // finish initial configuration. Recover only that initial-sign-in WebView loss;
     // a changed app PID (process crash) or any later test failure remains fatal.
     const appPid = (await device.shell('pidof com.myphonelibrary.app')).toString().trim();
     assert(appPid, 'App must be running before attaching');
@@ -32,17 +32,27 @@ const path = require('node:path');
       console.log('Attached to Android WebView');
       page.setDefaultTimeout(30000);
       try {
-        await page.locator('#password').fill('Android-test-password');
-        await page.locator('#remember-me').check();
-        await page.locator('#login-submit').click();
+        await page.locator('#password:visible, #application:visible').first().waitFor();
+        // A previous attempt may have completed login before Activity recreation.
+        if (attempt === 0 || !await page.locator('#application').isVisible()) {
+          await page.locator('#password').fill('Android-test-password');
+          await page.locator('#remember-me').check();
+          await page.locator('#login-submit').click();
+        }
         await page.locator('#application').waitFor({ state: 'visible' });
         break;
       } catch (error) {
         const currentPid = (await device.shell('pidof com.myphonelibrary.app')).toString().trim();
         if (!page.isClosed() || currentPid !== appPid || attempt >= 2) throw error;
         console.log('Activity recreated during emulator setup; reattaching to the same app process');
-        // Allow Android device discovery to retire the old WebView socket.
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        // Playwright caches view.page() by the process socket, which survives
+        // Activity recreation. Reconnect the test driver to discard that closed
+        // Page without restarting the app or changing its persisted state.
+        await device.close();
+        [device] = await _android.devices();
+        assert(device, 'Emulator disconnected during Activity recreation');
+        device.setDefaultTimeout(30000);
+        assert.equal((await device.shell('pidof com.myphonelibrary.app')).toString().trim(), appPid);
       }
     }
     await waitForData();
