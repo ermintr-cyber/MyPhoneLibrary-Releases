@@ -159,7 +159,7 @@ for(const width of [1500,393,320]){
 }
 await page.setViewportSize({width:1500,height:950});
 await page.evaluate(()=>{setCollectionLayout('grouped');});
-await page.locator('#alternative-layout [data-action=edit-unit]').first().click();assert.equal(await page.locator('#editor').evaluate(e=>e.open),true);
+await page.locator('#alternative-layout .layout-unit .row-menu-toggle').first().click();await page.locator('#alternative-layout [data-action=edit-unit]').first().click();assert.equal(await page.locator('#editor').evaluate(e=>e.open),true);
 await page.evaluate(()=>{dirty=false;$('editor').close();currentView='incomplete';render();});assert.equal(await page.locator('#alternative-layout').isVisible(),false);assert.equal(await page.locator('#completion-report').isVisible(),true);
 await page.evaluate(()=>{currentView='all';setCollectionLayout('list');});assert.equal(await page.locator('#table-wrap').isVisible(),true);
 await page.evaluate(()=>{settingsTab='appearance';panelDirty=false;settingsPanel();});
