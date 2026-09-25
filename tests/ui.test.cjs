@@ -113,3 +113,20 @@ console.log('UI: aligned unit columns, individual overrides, inherited values, c
  assert.equal(reloads,0);assert.match(node('startup-detail').textContent,/checksum/);
  console.log('UI: independent update survives server outage, reloads only after verified completion and retains installer failure details.');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
+vm.runInContext(`window.summaryFixture={id:'summary',kind:'phone',brand:'Nokia',model:'6500 Slide',alias:'6500s-1',type:'RM-240',os:'S40',instances:[{id:'s1',condition:'U kolekciji',color:'Silver',edition:'Standard',alias:'',os:'',product_code:'A',photos:[]},{id:'s2',condition:'U kolekciji',color:'Black',edition:'Music Edition',alias:'variant B',os:'S60',product_code:'B',photos:[]},{id:'s3',condition:'U kolekciji',color:'White',edition:'Standard',photos:[]}]};`,context);
+const summaryBefore=vm.runInContext('JSON.stringify(window.summaryFixture)',context);
+for(const key of ['colors','editions','alias','os','product_code'])assert.match(vm.runInContext(`cell(window.summaryFixture,'${key}')`,context),/>Multiple<\/button>/);
+assert.equal(vm.runInContext("cell(window.summaryFixture,'type')",context),'RM-240');
+assert.equal(vm.runInContext("cell(window.summaryFixture,'qty').includes('>3</button>')",context),true);
+assert.ok(!vm.runInContext("unitCell(window.summaryFixture,window.summaryFixture.instances[0],0,'colors')",context).includes('Multiple'));
+assert.equal(vm.runInContext("value(window.summaryFixture,'colors')",context),'Silver, Black, White');
+assert.equal(vm.runInContext('JSON.stringify(window.summaryFixture)',context),summaryBefore);
+vm.runInContext("window.summaryFixture.instances.forEach(u=>{u.color=' silver ';u.edition='Standard';});window.summaryFixture.instances[0].color='Silver';",context);
+assert.equal(vm.runInContext("modelValues(window.summaryFixture,'colors').length",context),1);
+assert.equal(vm.runInContext("cell(window.summaryFixture,'editions')",context),'Standard');
+vm.runInContext("window.summaryFixture.instances.forEach(u=>u.color='');",context);assert.equal(vm.runInContext("cell(window.summaryFixture,'colors')",context),'—');
+vm.runInContext("window.summaryFixture.instances[0].color='Black, Silver';window.summaryFixture.instances[1].color='White';",context);
+assert.equal(vm.runInContext("modelValues(window.summaryFixture,'colors').length",context),2);
+assert.match(vm.runInContext("cell({...window.summaryFixture,instances:[]},'os')",context),/S40/);
+console.log('Model summaries: distinct/same/empty values, inherited variants, individual phones, counts and full export values passed.');

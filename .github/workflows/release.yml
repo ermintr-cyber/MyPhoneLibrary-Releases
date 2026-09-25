@@ -46,6 +46,7 @@ jobs:
             field-checks-121.png
             check-focus-121.png
             compact-collection-122.png
+            model-summary-123.png
       - name: Build package
         shell: pwsh
         env:
