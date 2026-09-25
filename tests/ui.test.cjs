@@ -137,3 +137,16 @@ assert.equal(vm.runInContext("parsePurchaseDate('29.02.2024')",context),'2024-02
 for(const bad of ['29.02.2025','31.04.2026','00.09.2026','25.13.2026','09/25/2026','2026-09-25','25.09.0000'])assert.equal(vm.runInContext(`parsePurchaseDate('${bad}')`,context),null,bad);
 assert.equal(vm.runInContext("parsePurchaseDate('')",context),'');
 console.log('Purchase dates: fixed day.month.year display, ISO storage, leap years, invalid dates and clearing passed.');
+
+// Comparison must cover entered, imported and custom details without hiding false or zero.
+const compared=JSON.parse(vm.runInContext(`JSON.stringify(comparisonRows([
+ {r:{brand:'Nokia',model:'N97 Mini',os:'Symbian',specs:{Memory:'8 GB',Camera:'5 MP',Empty:' '},custom:{country:'Finland',flag:false}},u:{memory:'8 GB',firmware:'V 30',imei:'123',matching_box:false,price:0,purchase_date:'2026-09-25',note:'<script>x</script>'}},
+ {r:{brand:'Nokia',model:'6500 Slide',os:'S40',specs:{Camera:'3.2 MP'},custom:{}},u:{os:'Override',price:null,note:' '}}
+]))`,context));
+const comparison=new Map(compared.map(r=>[r.label,r.values]));
+assert.deepEqual(comparison.get('Memory'),['8 GB','']);assert.deepEqual(comparison.get('Operating system'),['Symbian','Override']);
+assert.deepEqual(comparison.get('Matching box IMEI'),['No','']);assert.deepEqual(comparison.get('Purchase price'),['0 KM','']);
+assert.deepEqual(comparison.get('Purchased'),['25.09.2026','']);assert.deepEqual(comparison.get('Custom: flag'),['No','']);
+assert.deepEqual(comparison.get('Specification: Memory'),['8 GB','']);assert.ok(!comparison.has('Specification: Empty'));assert.ok(!comparison.has('Serial number'));assert.ok(!comparison.has('Battery included'));
+assert.ok(comparison.has('Firmware'));assert.ok(comparison.has('IMEI'));
+console.log('Comparison: complete unit/model/import/custom details, inheritance, empty rows, false/zero and date formatting passed.');
