@@ -218,6 +218,37 @@ await page.setViewportSize({width:393,height:950});assert.equal(await page.locat
 await page.evaluate(()=>{$('panel').close();db.settings.custom_fields=[];selectedUnits.clear();setCollectionLayout('grouped');});
 console.log('DOM: all field markers incl. OS/custom fields, save/reopen/clear, mobile form, focus toggle immutability and cross-model comparison passed.');
 
+// Compact actions, hover notes, lightweight inputs, and unit-specific trash requests.
+await page.setViewportSize({width:1500,height:950});
+await page.evaluate(()=>{dirty=false;$('editor').close();$('panel').close();currentView='all';collectionLayout='list';db.settings.columns=['image','brand','model','alias','editions','gsm','wiki','note','actions'];const r=db.records.find(x=>x.kind==='phone');r.note='Model note';r.gsm='https://example.com';r.instances[0].note='Small scratch on back';r.instances[0].edition='Music Edition';expanded.add(r.id);window.compactId=r.id;render();});
+const firstUnit=page.locator('#collection-table .unit-table-row').first();
+assert.equal(await firstUnit.locator('.row-menu-toggle').count(),1);
+await firstUnit.locator('.row-menu-toggle').click();
+assert.equal(await firstUnit.locator('.row-menu').evaluate(el=>el.matches(':popover-open')),true);
+assert.match(await firstUnit.locator('.row-menu').textContent(),/Edit.*Copy.*Move this phone to trash/s);
+await page.keyboard.press('Escape');assert.equal(await firstUnit.locator('.row-menu').evaluate(el=>el.matches(':popover-open')),false);
+await firstUnit.locator('.note-icon').hover();assert.equal(await page.locator('#note-tooltip').textContent(),'Small scratch on back');assert.equal(await page.locator('#note-tooltip').evaluate(el=>el.matches(':popover-open')),true);
+await page.locator('#search').hover();assert.equal(await page.locator('#note-tooltip').evaluate(el=>el.matches(':popover-open')),false);
+assert.equal(await firstUnit.locator('[data-column=note]').textContent(),'▤');
+assert.equal(await firstUnit.locator('[data-column=editions] .quick-edit').evaluate(el=>getComputedStyle(el).whiteSpace),'normal');
+assert.ok(!(await page.locator('#collection-table [data-column=gsm]').first().textContent()).includes('↗'));
+await page.screenshot({path:'compact-collection-122.png',fullPage:true});
+await page.evaluate(()=>{showEditor(window.compactId,0);});
+assert.equal(await page.locator('#editor [data-action=delete-unit]').count(),1);assert.equal(await page.locator('#editor [data-action=delete-record]').count(),0);
+assert.equal(await page.locator('[data-u=imei2],[data-u=serial],[data-r=declared_qty]').count(),0);
+assert.equal(await page.locator('[data-effective=alias]').getAttribute('placeholder'),'e.g. 6500s-1');
+await page.evaluate(()=>{window.originalConfirm=window.confirm;window.confirm=()=>true;window.originalApi=api;window.originalRefresh=refresh;window.trashCall=null;api=async(path,body)=>{window.trashCall={path,body};return {ok:true};};refresh=async()=>{};});
+await page.locator('#editor [data-action=delete-unit]').click();
+assert.equal(await page.evaluate(()=>window.trashCall.path),'/api/trash-unit');assert.equal(await page.evaluate(()=>window.trashCall.body.unit),await page.evaluate(()=>record(window.compactId).instances[0].id));
+await page.evaluate(()=>{api=window.originalApi;refresh=window.originalRefresh;window.confirm=window.originalConfirm;});
+await page.setViewportSize({width:393,height:851});await page.evaluate(()=>render());
+await page.locator('#mobile-list .mobile-unit .note-icon').first().click();assert.equal(await page.locator('#note-tooltip').evaluate(el=>el.matches(':popover-open')),true);
+await page.locator('#search').click();assert.equal(await page.locator('#note-tooltip').evaluate(el=>el.matches(':popover-open')),false);
+await page.locator('#mobile-list .mobile-unit .row-menu-toggle').first().click();assert.equal(await page.locator('#mobile-list .mobile-unit .row-menu').first().evaluate(el=>el.matches(':popover-open')),true);
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await page.keyboard.press('Escape');
+await page.evaluate(()=>setCollectionLayout('grouped'));
+console.log('DOM: compact menu, notes hover/tap, wrapping, placeholders, removed fields and unit-specific delete passed.');
+
 // Local storage survives a page reload; a separate browser context stays Classic.
 await page.reload();
 await page.setContent(fs.readFileSync('web/index.html','utf8').replace(/<script[^>]*><\/script>/g,'').replace(/<link[^>]*>/g,''));await page.addScriptTag({content:source});
