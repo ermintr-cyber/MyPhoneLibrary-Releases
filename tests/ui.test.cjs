@@ -130,3 +130,10 @@ vm.runInContext("window.summaryFixture.instances[0].color='Black, Silver';window
 assert.equal(vm.runInContext("modelValues(window.summaryFixture,'colors').length",context),2);
 assert.match(vm.runInContext("cell({...window.summaryFixture,instances:[]},'os')",context),/S40/);
 console.log('Model summaries: distinct/same/empty values, inherited variants, individual phones, counts and full export values passed.');
+
+assert.equal(vm.runInContext("displayPurchaseDate('2026-09-25')",context),'25.09.2026');
+assert.equal(vm.runInContext("parsePurchaseDate('25.09.2026')",context),'2026-09-25');
+assert.equal(vm.runInContext("parsePurchaseDate('29.02.2024')",context),'2024-02-29');
+for(const bad of ['29.02.2025','31.04.2026','00.09.2026','25.13.2026','09/25/2026','2026-09-25','25.09.0000'])assert.equal(vm.runInContext(`parsePurchaseDate('${bad}')`,context),null,bad);
+assert.equal(vm.runInContext("parsePurchaseDate('')",context),'');
+console.log('Purchase dates: fixed day.month.year display, ISO storage, leap years, invalid dates and clearing passed.');
