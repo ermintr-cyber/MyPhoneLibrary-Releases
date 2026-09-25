@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const nodes=new Map(),handlers={};
-function node(id){if(!nodes.has(id))nodes.set(id,{value:'',innerHTML:'',dataset:{},style:{},hidden:false,classList:{add(){},remove(){},toggle(){}},setAttribute(){},querySelector(){return null},querySelectorAll(){return []},addEventListener(k,f){handlers[id+':'+k]=f;},showModal(){this.open=true},close(){this.open=false}});return nodes.get(id);}
+function node(id){if(!nodes.has(id))nodes.set(id,{value:'',innerHTML:'',dataset:{},style:{},hidden:false,classList:{add(){},remove(){},toggle(){}},setAttribute(){},querySelector(){return null},querySelectorAll(){return []},addEventListener(k,f){handlers[id+':'+k]=f;},show(){this.open=true},showModal(){this.open=true},close(){this.open=false}});return nodes.get(id);}
 const ctx=vm.createContext({console,URLSearchParams,location:{hash:''},confirm:()=>true,setTimeout:()=>0,clearTimeout(){},window:{addEventListener(){}},document:{getElementById:node,documentElement:{dataset:{}},querySelectorAll(){return []},addEventListener(k,f){handlers[k]=f;}}});
 const source=fs.readFileSync(__dirname+'/../web/app.js','utf8');vm.runInContext(source.slice(0,source.lastIndexOf('boot().then(')),ctx);
 const run=s=>vm.runInContext(s,ctx);
@@ -21,3 +21,14 @@ assert.equal(run("accessoryStock(record('wanted'),'battery_present')[0].quantity
 assert.equal(run("chargerSuggestions(record('wanted'))[0].name"),'2mm');
 run("refreshModelOptions('Nokia')");assert.match(node('model-suggestions').innerHTML,/N95 8GB/);
 console.log('Wishlist visibility/counts, model-only entry, cancel/acquire, legacy conversion, missing items and linked stock passed.');
+run(`currentView='all';quickFilters={battery_present:'false'};record('owned').instances[0].battery_present=false;record('owned').instances.push({id:'unknown',inv:'3',condition:'U kolekciji',battery_present:null});`);
+assert.equal(run("matchesFilters(record('owned'),record('owned').instances[0])"),true);
+assert.equal(run("matchesFilters(record('owned'),record('owned').instances[1])"),false);
+run(`db.settings.views=[{name:'Missing battery',filter:'phone',query:'N73',quickFilters:{battery_present:'false'},showWanted:false,sort:{key:'model',dir:-1}}];applySavedFilter(0);`);
+assert.equal(run('currentView'),'phone');assert.equal(node('search').value,'N73');assert.equal(run('quickFilters.battery_present'),'false');assert.equal(run('sort.dir'),-1);
+run(`selectedUnits=new Set(['u','unknown']);compareUnits()`);assert.match(node('panel-body').innerHTML,/comparison-different/);assert.match(node('panel-body').innerHTML,/Not checked/);
+run(`selectedUnits=new Set(['u']);`);assert.throws(()=>run('compareUnits()'),/2 to 4/);
+run(`db.catalog.push({id:'drawer',category:'location',name:'Drawer'});locationsPanel();`);assert.match(node('panel-body').innerHTML,/3 parts/);
+run(`currentView='wish';quickFilters={};$('search').value='';record('wanted').wish_priority='High';record('wanted').wish_price=125;record('wanted').wish_note='<wanted & boxed>';renderWishlistOverview();showEditor('wanted');`);
+assert.match(node('wishlist-overview').innerHTML,/High/);assert.match(node('wishlist-overview').innerHTML,/125/);assert.match(node('wishlist-overview').innerHTML,/&lt;wanted &amp; boxed&gt;/);assert.match(node('editor-content').innerHTML,/data-r="wish_priority"/);
+console.log('Saved filter restoration, missing-battery tri-state, comparison guard/differences, location quantities and wishlist planning passed.');

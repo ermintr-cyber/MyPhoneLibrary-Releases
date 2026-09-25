@@ -35,14 +35,14 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.19.0'
+VERSION = '1.20.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
 MAX_BODY = 100 * 1024 * 1024
 ACTIVE = {'U kolekciji', 'Posuđen'}
 STATES = ['Netestiran', 'Ispravan', 'Djelimično ispravan', 'Neispravan']
-TEXT_FIELDS = ['brand','model','alias','type','battery','charger','os','introduced','released','note','gsm','wiki','color','location','source','purchase_date','currency','condition','purpose','declared_qty','declared_parts','part_category']
+TEXT_FIELDS = ['brand','model','alias','type','battery','charger','os','introduced','released','note','gsm','wiki','color','location','source','purchase_date','currency','condition','purpose','declared_qty','declared_parts','part_category','wish_note']
 DEFAULTS = {'columns':['image','inv','brand','model','alias','type','product_code','colors','editions','battery','charger','rating','owned','box','os','released','introduced','qty','parts','gsm','wiki','note','actions'], 'options':{'brand':['Nokia','Sony Ericsson','Ericsson','Motorola','Samsung','Siemens','Apple','LG','HTC','BlackBerry','Alcatel','Huawei'], 'color':['Crna','Bijela','Srebrna','Crvena','Plava','Zlatna'], 'location':[], 'battery':['BL-5J','BL-4D','BL-4U','BL-6F','BP-4L','BP-5M'], 'charger':['2mm','3.5mm Nokia','microUSB 2.0','miniUSB','USB-C','Lightning','Vlasnički'], 'os':['Series 40','Symbian','Maemo 5','Android','iOS','Windows Mobile','Windows Phone'], 'part_category':['Baterija','Punjač','Ekran','Kućište','Tipkovnica','Poklopac','Kutija','Kabl','Ostalo']}, 'custom_fields':[], 'views':[], 'backup_days':1, 'backup_copies':14, 'backup_directory':'', 'backup_primary':'', 'network_local':'', 'network_remote':'', 'theme':'dark', 'default_page':'all', 'density':'compact', 'layout':'list', 'update_repo':'ermintr-cyber/MyPhoneLibrary-Releases'}
 
 def stamp(): return dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')
@@ -209,6 +209,9 @@ class Store:
         if len(data.get('photos',[]))>100:raise ValueError('Maximum 100 photos per model.')
         r['photos']=[image_url(p) for p in data.get('photos',[])]
         r['favorite']=bool(data.get('favorite'));r['wishlist']=bool(data.get('wishlist'))
+        r['wish_priority']=str(data.get('wish_priority',''))
+        if r['wish_priority'] not in ('','High','Medium','Low'): raise ValueError('Unknown wishlist priority.')
+        r['wish_price']=None if data.get('wish_price') in (None,'') else number(data.get('wish_price'),0,100000000)
         r['rating']=number(data.get('rating'),0,5,True)
         r['custom']=data.get('custom',{}) if isinstance(data.get('custom',{}),dict) else {}
         r['specs']=data.get('specs',{}) if isinstance(data.get('specs',{}),dict) else {}

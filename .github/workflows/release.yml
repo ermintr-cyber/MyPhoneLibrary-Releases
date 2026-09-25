@@ -42,6 +42,7 @@ jobs:
             mobile-missing-118.png
             layout-settings-119.png
             layout-grouped-119.png
+            collection-toolbar-120.png
       - name: Build package
         shell: pwsh
         env:
