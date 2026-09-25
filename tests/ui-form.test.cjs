@@ -249,6 +249,23 @@ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=inner
 await page.evaluate(()=>setCollectionLayout('grouped'));
 console.log('DOM: compact menu, notes hover/tap, wrapping, placeholders, removed fields and unit-specific delete passed.');
 
+// Mixed model summaries use hover/focus on desktop and tap on mobile.
+await page.setViewportSize({width:1500,height:950});
+await page.evaluate(()=>{dirty=false;$('editor').close();$('panel').close();currentView='all';quickFilters={};showWanted=false;collectionLayout='list';db.settings.columns=['image','brand','model','alias','type','colors','editions','os','qty','actions'];db.records=[{id:'multiple-fixture',kind:'phone',brand:'Nokia',model:'6500 Slide',alias:'6500s-1',type:'RM-240',os:'S40 5th Edition',battery:'BP-5M',charger:'2mm',instances:['Black','Silver','White'].map((color,i)=>({id:'multi-'+i,inv:String(i+1),condition:'U kolekciji',state:'Netestiran',color,edition:i?'Music Edition':'Standard',alias:i===2?'6500s-2':'',os:i===2?'S40 revised':'',photos:[]}))}];expanded.add('multiple-fixture');window.summaryBefore=JSON.stringify(db.records);render();});
+const modelColor=page.locator('#collection-table > tbody > tr').first().locator('[data-column=colors] .multiple-value');
+assert.equal(await modelColor.textContent(),'Multiple');await modelColor.hover();assert.match(await page.locator('#note-tooltip').textContent(),/Black\nSilver\nWhite/);
+await page.locator('#search').hover();assert.equal(await page.locator('#note-tooltip').evaluate(el=>el.matches(':popover-open')),false);
+await modelColor.focus();assert.equal(await page.locator('#note-tooltip').evaluate(el=>el.matches(':popover-open')),true);await page.keyboard.press('Escape');
+assert.equal(await page.locator('#collection-table .unit-table-row [data-column=colors] .multiple-value').count(),0);
+assert.equal(await page.locator('#collection-table > tbody > tr').first().locator('[data-column=editions] .multiple-value').count(),1);
+assert.equal(await page.locator('#collection-table > tbody > tr').first().locator('[data-column=type]').textContent(),'RM-240');
+await page.screenshot({path:'model-summary-123.png',fullPage:true});
+await page.setViewportSize({width:393,height:851});await page.locator('#mobile-list .mobile-model-meta .multiple-value').first().click();assert.match(await page.locator('#note-tooltip').textContent(),/Black\nSilver\nWhite/);await page.locator('#search').click();assert.equal(await page.locator('#note-tooltip').evaluate(el=>el.matches(':popover-open')),false);
+for(const width of [1500,393,320]){await page.setViewportSize({width,height:950});for(const choice of ['grouped','split','model-cards','compact','gallery','cards']){await page.evaluate(key=>setCollectionLayout(key),choice);const root=choice==='cards'?'#card-grid':'#alternative-layout';assert.ok(await page.locator(root+' .multiple-value').count()>=2);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,choice+' '+width);}}
+assert.equal(await page.evaluate(()=>JSON.stringify(db.records)===window.summaryBefore),true);
+await page.evaluate(()=>setCollectionLayout('grouped'));
+console.log('DOM: Multiple summaries, desktop hover/focus/Escape, mobile tap, individual values and seven layouts passed.');
+
 // Local storage survives a page reload; a separate browser context stays Classic.
 await page.reload();
 await page.setContent(fs.readFileSync('web/index.html','utf8').replace(/<script[^>]*><\/script>/g,'').replace(/<link[^>]*>/g,''));await page.addScriptTag({content:source});

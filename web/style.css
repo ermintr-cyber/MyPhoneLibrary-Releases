@@ -215,3 +215,6 @@ dialog.settings-page .dialog-header{padding:20px 26px 4px;border:0;background:tr
 #collection-table .unit-details-table [data-column=editions] .quick-edit{max-width:90px;white-space:normal;overflow-wrap:normal;text-align:left}
 #collection-table [data-column=actions]{width:52px;text-align:center}
 #editor input::placeholder,#editor textarea::placeholder{color:var(--muted);opacity:.55}
+
+.multiple-value{font:inherit;color:var(--accent);border:0;border-bottom:1px dotted currentColor;border-radius:0;background:transparent;padding:0 1px;white-space:nowrap;min-width:0;cursor:help}
+.multiple-value:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
