@@ -35,13 +35,18 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.20.0'
+VERSION = '1.21.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
 MAX_BODY = 100 * 1024 * 1024
 ACTIVE = {'U kolekciji', 'Posuđen'}
 STATES = ['Netestiran', 'Ispravan', 'Djelimično ispravan', 'Neispravan']
+def check_fields(value):
+    if not isinstance(value,list) or len(value)>150: raise ValueError('Invalid To check fields.')
+    if any(not isinstance(k,str) or not k or len(k)>150 or any(ord(c)<32 for c in k) for k in value): raise ValueError('Invalid To check field.')
+    return list(dict.fromkeys(value))
+
 TEXT_FIELDS = ['brand','model','alias','type','battery','charger','os','introduced','released','note','gsm','wiki','color','location','source','purchase_date','currency','condition','purpose','declared_qty','declared_parts','part_category','wish_note']
 DEFAULTS = {'columns':['image','inv','brand','model','alias','type','product_code','colors','editions','battery','charger','rating','owned','box','os','released','introduced','qty','parts','gsm','wiki','note','actions'], 'options':{'brand':['Nokia','Sony Ericsson','Ericsson','Motorola','Samsung','Siemens','Apple','LG','HTC','BlackBerry','Alcatel','Huawei'], 'color':['Crna','Bijela','Srebrna','Crvena','Plava','Zlatna'], 'location':[], 'battery':['BL-5J','BL-4D','BL-4U','BL-6F','BP-4L','BP-5M'], 'charger':['2mm','3.5mm Nokia','microUSB 2.0','miniUSB','USB-C','Lightning','Vlasnički'], 'os':['Series 40','Symbian','Maemo 5','Android','iOS','Windows Mobile','Windows Phone'], 'part_category':['Baterija','Punjač','Ekran','Kućište','Tipkovnica','Poklopac','Kutija','Kabl','Ostalo']}, 'custom_fields':[], 'views':[], 'backup_days':1, 'backup_copies':14, 'backup_directory':'', 'backup_primary':'', 'network_local':'', 'network_remote':'', 'theme':'dark', 'default_page':'all', 'density':'compact', 'layout':'list', 'update_repo':'ermintr-cyber/MyPhoneLibrary-Releases'}
 
@@ -213,6 +218,7 @@ class Store:
         if r['wish_priority'] not in ('','High','Medium','Low'): raise ValueError('Unknown wishlist priority.')
         r['wish_price']=None if data.get('wish_price') in (None,'') else number(data.get('wish_price'),0,100000000)
         r['rating']=number(data.get('rating'),0,5,True)
+        r['to_check']=check_fields(data.get('to_check',(old or {}).get('to_check',[])))
         r['custom']=data.get('custom',{}) if isinstance(data.get('custom',{}),dict) else {}
         r['specs']=data.get('specs',{}) if isinstance(data.get('specs',{}),dict) else {}
         r['provenance']=old.get('provenance',{}) if old else {}
@@ -237,6 +243,7 @@ class Store:
                 u['id']=item.get('id') or ident()
                 if not re.fullmatch(r'[a-f0-9]{32}',u['id']) or u['id'] in own_ids or u['id'] in other_ids: raise ValueError('Duplicate or invalid unit ID.')
                 own_ids.add(u['id'])
+                u['to_check']=check_fields(item.get('to_check',existing.get(u['id'],{}).get('to_check',[])))
                 if u['state'] not in STATES: u['state']='Netestiran'
                 if u['condition'] not in ACTIVE|{'Wanted','Prodan','Poklonjen','Rastavljen','Rashodovan'}: u['condition']='U kolekciji'
                 if not u['inv']:
@@ -272,10 +279,11 @@ class Store:
         self.log(c,rid,'Izmjena' if old else 'Dodavanje',{'before':old,'after':r})
         return dict(r,rev=rev,deleted=bool((old or {}).get('deleted',False)))
     def bulk_units(self,data,strict_catalog=False):
-        fields={'color','edition','location','state','condition','box','battery_present','charger_present','manual','headphones','os'}
+        fields={'color','edition','location','state','condition','box','battery_present','charger_present','manual','headphones','os','to_check'}
         changes=data.get('changes',{});targets=data.get('targets',[])
         if not isinstance(changes,dict) or not changes or set(changes)-fields:raise ValueError('Choose supported unit fields to change.')
         if not isinstance(targets,list) or not 1<=len(targets)<=10000:raise ValueError('Select units to update.')
+        if 'to_check' in changes:changes['to_check']=check_fields(changes['to_check'])
         if 'state' in changes and changes['state'] not in STATES:raise ValueError('Invalid working condition.')
         if 'condition' in changes and changes['condition'] not in ('U kolekciji','Wanted'):raise ValueError('Invalid ownership status.')
         for key in ('box','battery_present','charger_present','manual','headphones'):
