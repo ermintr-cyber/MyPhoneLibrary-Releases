@@ -171,6 +171,28 @@ await page.locator('.layout-choices [data-layout=list]').click();assert.equal(aw
 await page.screenshot({path:'layout-settings-119.png',fullPage:true});
 await page.evaluate(()=>{$('panel').close();setCollectionLayout('grouped');});
 await page.screenshot({path:'layout-grouped-119.png',fullPage:true});
+// Collection planning and compact toolbar interactions.
+await page.evaluate(()=>{currentView='all';quickFilters={};$('search').value='';selectedUnits.clear();setCollectionLayout('list');});
+for(const width of [1500,393,320]){await page.setViewportSize({width,height:950});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'toolbar '+width);}
+await page.setViewportSize({width:1500,height:950});
+await page.locator('.collection-controls [data-action=saved-filters]').click();
+await page.locator('#saved-filter-name').fill('Missing battery');
+await page.evaluate(()=>{quickFilters={battery_present:'false'};const previousAPI=api;api=async(path,data)=>{if(path==='/api/settings'){Object.assign(db.settings,data);return db.settings;}return previousAPI(path,data);};});
+await page.locator('[data-action=save-view]').click();
+assert.equal(await page.evaluate(()=>db.settings.views.at(-1).quickFilters.battery_present),'false');
+await page.evaluate(()=>{quickFilters={};});
+await page.locator('[data-action=apply-saved-filter]').last().click();assert.equal(await page.evaluate(()=>quickFilters.battery_present),'false');
+await page.evaluate(()=>{quickFilters={};render();});
+await page.locator('.collection-controls [data-action=locations]').click();assert.equal(await page.locator('#panel-title').textContent(),'Locations');
+await page.evaluate(()=>{$('panel').close();panelDirty=false;const r=db.records.find(r=>r.kind==='phone'&&live(r).length);const u=clone(live(r)[0]);u.id='compare-test';u.inv='C2';u.battery_present=false;u.note='Different condition';r.instances.push(u);selectedUnits=new Set([r.instances[0].id,u.id]);render();});
+await page.locator('.collection-controls [data-action=compare-units]').click();assert.ok(await page.locator('.comparison-different').count()>0);
+await page.evaluate(()=>{$('panel').close();selectedUnits.clear();addWanted();draft.brand='Nokia';draft.model='Wishlist plan';editorRender();});
+await page.locator('[data-r=wish_priority]').selectOption('High');await page.locator('[data-r=wish_price]').fill('150');await page.locator('[data-r=wish_note]').fill('Original box and silver housing');
+await page.evaluate(()=>{readDraft();window.savedPlan=clone(draft);});assert.equal(await page.evaluate(()=>window.savedPlan.wish_priority),'High');assert.equal(await page.evaluate(()=>window.savedPlan.wish_note),'Original box and silver housing');
+await page.evaluate(()=>{dirty=false;$('editor').close();setCollectionLayout('grouped');});
+await page.screenshot({path:'collection-toolbar-120.png',fullPage:true});
+console.log('DOM: compact toolbar widths, saved filter save/apply, locations, comparison and wishlist fields passed.');
+
 // Local storage survives a page reload; a separate browser context stays Classic.
 await page.reload();
 await page.setContent(fs.readFileSync('web/index.html','utf8').replace(/<script[^>]*><\/script>/g,'').replace(/<link[^>]*>/g,''));await page.addScriptTag({content:source});
