@@ -3,6 +3,17 @@ import unittest
 from server import Store
 
 class CollectionPlanningTests(unittest.TestCase):
+    def test_comparison_preferences_survive_reopen_and_old_clients(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory)
+            store.settings({'comparison_hidden':['Memory','custom:country','Memory']})
+            self.assertEqual(Store(directory).meta('settings')['comparison_hidden'],['Memory','custom:country'])
+            store.settings({'density':'compact'})
+            self.assertEqual(store.meta('settings')['comparison_hidden'],['Memory','custom:country'])
+            with self.assertRaises(ValueError): store.settings({'comparison_hidden':'Memory'})
+            store.settings({'comparison_hidden':[]})
+            self.assertEqual(Store(directory).meta('settings')['comparison_hidden'],[])
+
     def test_wishlist_fields_survive_reopen_and_acquisition(self):
         with tempfile.TemporaryDirectory() as directory:
             store=Store(directory)
