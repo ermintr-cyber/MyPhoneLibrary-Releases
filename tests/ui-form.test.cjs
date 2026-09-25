@@ -193,6 +193,31 @@ await page.evaluate(()=>{dirty=false;$('editor').close();setCollectionLayout('gr
 await page.screenshot({path:'collection-toolbar-120.png',fullPage:true});
 console.log('DOM: compact toolbar widths, saved filter save/apply, locations, comparison and wishlist fields passed.');
 
+// Every editable record/unit field has its own persistent verification marker.
+await page.evaluate(()=>{phoneDraft=null;addPhone();draft.to_check=['note'];draft.instances[0].to_check=['note'];editorRender();});
+assert.equal(await page.locator('[data-check-field=note][data-check-index=model]').count(),1);assert.equal(await page.locator('[data-check-field=note][data-check-index="0"]').count(),1);await page.evaluate(()=>{dirty=false;$('editor').close();});
+await page.evaluate(()=>{phoneDraft=null;catalogReturn=null;panelDirty=false;$('panel').close();addPhone();draft.brand='Nokia';draft.model='Review fields';db.settings.custom_fields=[{id:'test-extra',label:'Extra field',type:'text'}];editorRender();});
+assert.equal(await page.locator('[data-check-field=os]').count(),1);
+assert.equal(await page.locator('[data-check-field="custom:test-extra"]').count(),1);
+const coverage=await page.evaluate(()=>[...$('editor-content').querySelectorAll('[data-r],[data-u],[data-effective],[data-custom]')].every(el=>!!el.closest('.checkable-field')?.querySelector('[data-check-field]')));assert.equal(coverage,true);
+await page.locator('[data-check-field=os]').check();await page.locator('[data-check-field=imei]').check();await page.locator('[data-check-field="custom:test-extra"]').check();
+await page.evaluate(()=>{readDraft();window.checkDraft=clone(draft);});assert.equal(await page.evaluate(()=>window.checkDraft.to_check.includes('os')),true);assert.equal(await page.evaluate(()=>window.checkDraft.instances[0].to_check.includes('imei')),true);
+await page.locator('#record-save').click();assert.equal(await page.locator('#editor').evaluate(e=>e.open),false);
+await page.evaluate(()=>{window.reviewRecord=db.records.find(r=>r.model==='Review fields');showEditor(window.reviewRecord.id,0);});
+assert.equal(await page.locator('[data-check-field=os]').isChecked(),true);assert.equal(await page.locator('[data-check-field=imei]').isChecked(),true);
+for(const width of [1500,393,320]){await page.setViewportSize({width,height:950});assert.equal(await page.evaluate(()=>$('editor').scrollWidth<=$('editor').clientWidth+1),true,'review editor at '+width);}
+await page.setViewportSize({width:1500,height:950});await page.screenshot({path:'field-checks-121.png',fullPage:true});
+await page.locator('[data-check-field=imei]').uncheck();await page.locator('#record-save').click();assert.equal(await page.evaluate(()=>db.records.find(r=>r.model==='Review fields').instances[0].to_check.includes('imei')),false);
+await page.evaluate(()=>{currentView='all';quickFilters={};$('search').value='';setCollectionLayout('list');window.beforeFocus=JSON.stringify(db.records);});
+await page.locator('#check-toggle').click();assert.equal(await page.locator('html').getAttribute('data-check-focus'),'true');assert.equal(await page.evaluate(()=>JSON.stringify(db.records)),await page.evaluate(()=>window.beforeFocus));
+await page.screenshot({path:'check-focus-121.png',fullPage:true});
+await page.locator('#check-toggle').click();assert.equal(await page.locator('html').getAttribute('data-check-focus'),'false');assert.equal(await page.evaluate(()=>JSON.stringify(db.records)),await page.evaluate(()=>window.beforeFocus));
+await page.evaluate(()=>{const source=db.records.find(r=>r.model==='Review fields');db.records.push(...Array.from({length:5},(_,i)=>({...clone(source),id:'cross'+i,model:'Model '+i,os:'OS '+i,instances:[{...clone(source.instances[0]),id:'cross-unit'+i,inv:'X'+i}]})));selectedUnits=new Set(db.records.filter(r=>r.kind==='phone').flatMap(r=>r.instances.map(u=>u.id)));compareUnits();});
+assert.ok(await page.locator('.comparison-table thead th').count()>5);assert.ok((await page.locator('.comparison-table').textContent()).includes('OS 4'));
+await page.setViewportSize({width:393,height:950});assert.equal(await page.locator('.comparison-scroll').evaluate(el=>el.scrollWidth>el.clientWidth),true);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+await page.evaluate(()=>{$('panel').close();db.settings.custom_fields=[];selectedUnits.clear();setCollectionLayout('grouped');});
+console.log('DOM: all field markers incl. OS/custom fields, save/reopen/clear, mobile form, focus toggle immutability and cross-model comparison passed.');
+
 // Local storage survives a page reload; a separate browser context stays Classic.
 await page.reload();
 await page.setContent(fs.readFileSync('web/index.html','utf8').replace(/<script[^>]*><\/script>/g,'').replace(/<link[^>]*>/g,''));await page.addScriptTag({content:source});
