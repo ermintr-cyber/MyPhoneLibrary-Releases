@@ -1,6 +1,6 @@
 const {chromium}=require('playwright');
 const fs=require('fs'),assert=require('node:assert/strict');
-(async()=>{const browser=await chromium.launch({headless:true,...(process.env.MPL_TEST_BROWSER?{executablePath:process.env.MPL_TEST_BROWSER}:{channel:'msedge'})});const page=await browser.newPage({viewport:{width:1500,height:1000}});await page.route('**/*',r=>r.abort());
+(async()=>{const browser=await chromium.launch({headless:true,...(process.env.MPL_TEST_BROWSER?{executablePath:process.env.MPL_TEST_BROWSER}:{channel:'msedge'})});const page=await browser.newPage({viewport:{width:1500,height:1000}});await page.route('**/*',r=>r.abort());await page.route('https://collection.test/**',r=>r.fulfill({contentType:'text/html',body:'<html></html>'}));await page.goto('https://collection.test/');
 await page.setContent(fs.readFileSync('web/index.html','utf8').replace(/<script[^>]*><\/script>/g,'').replace(/<link[^>]*>/g,''));
 await page.addStyleTag({content:fs.readFileSync('web/style.css','utf8')});
 let source=fs.readFileSync('web/app.js','utf8');source=source.slice(0,source.lastIndexOf('restoreSidebar();'));
@@ -143,4 +143,39 @@ assert.match(await page.locator('#completion-report').textContent(),/Missing: Ba
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 await page.screenshot({path:'mobile-missing-118.png',fullPage:true});
 console.log('DOM: wishlist create/show/hide, mobile acquisition/cancel/conflict, known model prefill, duplicate IMEI and missing stock passed.');
+// Each layout presents the same records without changing shared settings/data.
+await page.evaluate(()=>{currentView='all';quickFilters={};showWanted=false;expanded.add(db.records[0].id);window.layoutBefore=JSON.stringify(db.records);window.serverLayoutBefore=db.settings.layout;});
+for(const width of [1500,393,320]){
+ await page.setViewportSize({width,height:950});
+ for(const choice of ['grouped','split','model-cards','compact','gallery']){
+  await page.evaluate(key=>setCollectionLayout(key),choice);
+  assert.equal(await page.locator('#alternative-layout').isVisible(),true,choice);
+  assert.equal(await page.locator('#table-wrap').isVisible(),false,choice);
+  assert.equal(await page.locator('#mobile-list').isVisible(),false,choice);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,choice+' at '+width);
+  assert.equal(await page.evaluate(()=>JSON.stringify(db.records)===window.layoutBefore),true);
+  assert.equal(await page.evaluate(()=>db.settings.layout===window.serverLayoutBefore),true);
+ }
+}
+await page.setViewportSize({width:1500,height:950});
+await page.evaluate(()=>{setCollectionLayout('grouped');});
+await page.locator('#alternative-layout [data-action=edit-unit]').first().click();assert.equal(await page.locator('#editor').evaluate(e=>e.open),true);
+await page.evaluate(()=>{dirty=false;$('editor').close();currentView='incomplete';render();});assert.equal(await page.locator('#alternative-layout').isVisible(),false);assert.equal(await page.locator('#completion-report').isVisible(),true);
+await page.evaluate(()=>{currentView='all';setCollectionLayout('list');});assert.equal(await page.locator('#table-wrap').isVisible(),true);
+await page.evaluate(()=>{settingsTab='appearance';panelDirty=false;settingsPanel();});
+assert.equal(await page.locator('#default-layout option').count(),7);
+await page.locator('#default-layout').selectOption('compact');
+assert.equal(await page.evaluate(()=>collectionLayout),'compact');assert.equal(await page.evaluate(()=>localStorage.getItem('mpl-collection-layout')),'compact');
+assert.equal(await page.evaluate(()=>panelDirty),false);
+await page.locator('.layout-choices [data-layout=list]').click();assert.equal(await page.locator('#default-layout').inputValue(),'list');
+await page.screenshot({path:'layout-settings-119.png',fullPage:true});
+await page.evaluate(()=>{$('panel').close();setCollectionLayout('grouped');});
+await page.screenshot({path:'layout-grouped-119.png',fullPage:true});
+// Local storage survives a page reload; a separate browser context stays Classic.
+await page.reload();
+await page.setContent(fs.readFileSync('web/index.html','utf8').replace(/<script[^>]*><\/script>/g,'').replace(/<link[^>]*>/g,''));await page.addScriptTag({content:source});
+assert.equal(await page.evaluate(()=>collectionLayout),'grouped');
+const isolated=await browser.newPage();await isolated.route('**/*',route=>route.fulfill({contentType:'text/html',body:'<html></html>'}));await isolated.goto('https://collection.test/');
+await isolated.setContent(fs.readFileSync('web/index.html','utf8').replace(/<script[^>]*><\/script>/g,'').replace(/<link[^>]*>/g,''));await isolated.addScriptTag({content:source});assert.equal(await isolated.evaluate(()=>collectionLayout),'list');await isolated.close();
+console.log('DOM: seven layouts, responsive widths, editing, missing view, local persistence and device isolation passed.');
 console.log('DOM: one field per property, search/select/reject, Escape, effective unit switching, retained gallery, collapsed layout passed.');await browser.close();})().catch(e=>{console.error(e);process.exit(1)});

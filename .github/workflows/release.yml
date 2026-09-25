@@ -40,6 +40,8 @@ jobs:
             mobile-settings-115.png
             mobile-wishlist-118.png
             mobile-missing-118.png
+            layout-settings-119.png
+            layout-grouped-119.png
       - name: Build package
         shell: pwsh
         env:
