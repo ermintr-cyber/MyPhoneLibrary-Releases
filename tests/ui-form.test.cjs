@@ -266,6 +266,18 @@ assert.equal(await page.evaluate(()=>JSON.stringify(db.records)===window.summary
 await page.evaluate(()=>setCollectionLayout('grouped'));
 console.log('DOM: Multiple summaries, desktop hover/focus/Escape, mobile tap, individual values and seven layouts passed.');
 
+// Purchase date uses a fixed day.month.year input regardless of device locale.
+await page.setViewportSize({width:1500,height:950});
+await page.evaluate(()=>{dirty=false;$('panel').close();db.records[0].instances[0].purchase_date='2026-09-25';showEditor(db.records[0].id,0);});
+const purchaseDate=page.locator('#editor [data-u=purchase_date]');assert.equal(await purchaseDate.getAttribute('type'),'text');assert.equal(await purchaseDate.inputValue(),'25.09.2026');assert.equal(await purchaseDate.getAttribute('placeholder'),'dd.mm.yyyy');
+await purchaseDate.fill('31.02.2026');assert.equal(await purchaseDate.evaluate(el=>el.checkValidity()),false);
+await purchaseDate.fill('29.02.2024');assert.equal(await purchaseDate.evaluate(el=>el.checkValidity()),true);await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purchase_date),'2024-02-29');
+await page.evaluate(()=>{window.datePayload=clone(draft);db.records[0]=clone(draft);dirty=false;$('editor').close();showEditor(db.records[0].id,0);});assert.equal(await purchaseDate.inputValue(),'29.02.2024');
+await page.setViewportSize({width:393,height:851});assert.equal(await purchaseDate.inputValue(),'29.02.2024');await purchaseDate.fill('01.12.2025');await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purchase_date),'2025-12-01');
+await purchaseDate.fill('');await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purchase_date),'');
+await page.evaluate(()=>{dirty=false;$('editor').close();setCollectionLayout('grouped');});
+console.log('DOM: purchase date dmy input/reopen/mobile, leap-day validation, canonical data and clearing passed.');
+
 // Local storage survives a page reload; a separate browser context stays Classic.
 await page.reload();
 await page.setContent(fs.readFileSync('web/index.html','utf8').replace(/<script[^>]*><\/script>/g,'').replace(/<link[^>]*>/g,''));await page.addScriptTag({content:source});
