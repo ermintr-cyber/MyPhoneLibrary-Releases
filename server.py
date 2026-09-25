@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.21.0'
+VERSION = '1.22.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -313,6 +313,8 @@ class Store:
             r=self.get(c,rid)
             if r['rev']!=rev:raise Conflict('Record changed. Refresh Trash.')
             if not r['deleted']:raise ValueError('Move the record to Trash first.')
+            if any(x.get('_unit_parent')==rid for x in self.records(c,True)):
+                raise ValueError('Restore or permanently delete the individual phones in Trash before deleting their model.')
             # Historical repairs, stock movements and inventory snapshots remain audit records.
             for other in self.records(c)+self.records(c,True):
                 if rid in other.get('compatible',[]):
@@ -320,11 +322,44 @@ class Store:
                     c.execute('UPDATE records SET data=?,rev=rev+1 WHERE id=?',(dump(other),other['id']))
             c.execute('DELETE FROM records WHERE id=?',(rid,))
             self.log(c,rid,'Permanently deleted',{'name':r.get('model','')})
+    def trash_unit(self,rid,uid,rev):
+        with self.lock,self.connect() as c:
+            old=self.get(c,rid)
+            if old['rev']!=rev:raise Conflict('Record changed. Refresh the table.')
+            if old['deleted'] or old['kind']!='phone':raise ValueError('Open an active phone model.')
+            unit=next((u for u in old['instances'] if u['id']==uid),None)
+            if unit is None:raise ValueError('Phone not found in this model.')
+            removed=copy.deepcopy(old);removed['id']=ident();removed['instances']=[copy.deepcopy(unit)]
+            removed['_unit_parent']=rid;removed['deleted']=True;removed['rev']=1
+            self.release_numbers(removed)
+            old['instances']=[u for u in old['instances'] if u['id']!=uid]
+            c.execute('UPDATE records SET data=?,rev=rev+1 WHERE id=?',(dump(old),rid))
+            c.execute('INSERT INTO records(id,rev,deleted,data) VALUES(?,?,?,?)',(removed['id'],1,1,dump(removed)))
+            self.log(c,rid,'Phone moved to trash',{'unit':unit,'trash_id':removed['id']})
+            return removed['id']
+
     def trash(self,rid,rev,restore=False):
         with self.lock,self.connect() as c:
             old=self.get(c,rid)
             if old['rev']!=rev: raise Conflict('Record changed. Refresh the table.')
             if old['deleted']!=restore:raise ValueError('Record is already in the requested location.')
+            if restore and old.get('_unit_parent'):
+                parent=self.get(c,old['_unit_parent'])
+                if parent['deleted']:raise Conflict('Restore the original model first, then restore this phone.')
+                used={u.get('inv') for r in self.records(c) for u in r.get('instances',[])}
+                for unit in old['instances']:
+                    if any(u['id']==unit['id'] for r in self.records(c) for u in r.get('instances',[])):
+                        raise Conflict('This phone already exists in the collection.')
+                    candidate=unit.get('previous_inv','')
+                    if not candidate or candidate in used:
+                        n=1
+                        while str(n) in used:n+=1
+                        candidate=str(n)
+                    unit['inv']=candidate;used.add(candidate);parent['instances'].append(unit)
+                c.execute('UPDATE records SET data=?,rev=rev+1 WHERE id=?',(dump(parent),parent['id']))
+                c.execute('DELETE FROM records WHERE id=?',(rid,))
+                self.log(c,parent['id'],'Phone restored from trash',{'units':old['instances']})
+                return
             if restore and old['kind']=='phone' and any(r['kind']=='phone' and ' '.join(r['brand'].casefold().split())==' '.join(old['brand'].casefold().split()) and ' '.join(r['model'].casefold().split())==' '.join(old['model'].casefold().split()) for r in self.records(c)):
                 raise Conflict('A model with this name already exists. Resolve the duplicate before restoring from Trash.')
             if not restore and old['kind']=='part' and old.get('reserved',0): raise ValueError('Release reserved stock first.')
@@ -994,6 +1029,7 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/data' and not post:return self.send(200,store.all_data())
             if path=='/api/bulk-units' and post:return self.send(200,store.bulk_units(d,strict_catalog=True))
             if path=='/api/record' and post:return self.send(200,store.save_record(d.get('record'),d.get('rev'),strict_catalog=True))
+            if path=='/api/trash-unit' and post:store.trash_unit(d['id'],d['unit'],d['rev']);return self.send(200,{'ok':True})
             if path in ('/api/trash','/api/untrash') and post:store.trash(d['id'],d['rev'],path.endswith('untrash'));return self.send(200,{'ok':True})
             if path=='/api/purge' and post:store.purge(d['id'],d['rev']);return self.send(200,{'ok':True})
             if path=='/api/catalog-delete' and post:store.delete_catalog(d);return self.send(200,{'ok':True})

@@ -45,6 +45,7 @@ jobs:
             collection-toolbar-120.png
             field-checks-121.png
             check-focus-121.png
+            compact-collection-122.png
       - name: Build package
         shell: pwsh
         env:
