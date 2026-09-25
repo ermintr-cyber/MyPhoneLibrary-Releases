@@ -194,6 +194,8 @@ await page.screenshot({path:'collection-toolbar-120.png',fullPage:true});
 console.log('DOM: compact toolbar widths, saved filter save/apply, locations, comparison and wishlist fields passed.');
 
 // Every editable record/unit field has its own persistent verification marker.
+await page.evaluate(()=>{phoneDraft=null;addPhone();draft.to_check=['note'];draft.instances[0].to_check=['note'];editorRender();});
+assert.equal(await page.locator('[data-check-field=note][data-check-index=model]').count(),1);assert.equal(await page.locator('[data-check-field=note][data-check-index="0"]').count(),1);await page.evaluate(()=>{dirty=false;$('editor').close();});
 await page.evaluate(()=>{phoneDraft=null;catalogReturn=null;panelDirty=false;$('panel').close();addPhone();draft.brand='Nokia';draft.model='Review fields';db.settings.custom_fields=[{id:'test-extra',label:'Extra field',type:'text'}];editorRender();});
 assert.equal(await page.locator('[data-check-field=os]').count(),1);
 assert.equal(await page.locator('[data-check-field="custom:test-extra"]').count(),1);
