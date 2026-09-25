@@ -26,7 +26,7 @@ assert.equal(run("matchesFilters(record('owned'),record('owned').instances[0])")
 assert.equal(run("matchesFilters(record('owned'),record('owned').instances[1])"),false);
 run(`db.settings.views=[{name:'Missing battery',filter:'phone',query:'N73',quickFilters:{battery_present:'false'},showWanted:false,sort:{key:'model',dir:-1}}];applySavedFilter(0);`);
 assert.equal(run('currentView'),'phone');assert.equal(node('search').value,'N73');assert.equal(run('quickFilters.battery_present'),'false');assert.equal(run('sort.dir'),-1);
-run(`selectedUnits=new Set(['u','unknown']);compareUnits()`);assert.match(node('panel-body').innerHTML,/comparison-different/);assert.match(node('panel-body').innerHTML,/Not checked/);
+run(`selectedUnits=new Set(['u','unknown']);compareUnits()`);assert.match(node('panel-body').innerHTML,/comparison-different/);assert.match(node('panel-body').innerHTML,/<th>Battery included<\/th><td>No<\/td><td>—<\/td>/);
 run(`selectedUnits=new Set(['u']);`);assert.throws(()=>run('compareUnits()'),/2 to 20/);
 run(`db.catalog.push({id:'drawer',category:'location',name:'Drawer'});locationsPanel();`);assert.match(node('panel-body').innerHTML,/3 parts/);
 run(`currentView='wish';quickFilters={};$('search').value='';record('wanted').wish_priority='High';record('wanted').wish_price=125;record('wanted').wish_note='<wanted & boxed>';renderWishlistOverview();showEditor('wanted');`);

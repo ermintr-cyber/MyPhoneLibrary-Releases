@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.24.0'
+VERSION = '1.25.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -48,7 +48,7 @@ def check_fields(value):
     return list(dict.fromkeys(value))
 
 TEXT_FIELDS = ['brand','model','alias','type','battery','charger','os','introduced','released','note','gsm','wiki','color','location','source','purchase_date','currency','condition','purpose','declared_qty','declared_parts','part_category','wish_note']
-DEFAULTS = {'columns':['image','inv','brand','model','alias','type','product_code','colors','editions','battery','charger','rating','owned','box','os','released','introduced','qty','parts','gsm','wiki','note','actions'], 'options':{'brand':['Nokia','Sony Ericsson','Ericsson','Motorola','Samsung','Siemens','Apple','LG','HTC','BlackBerry','Alcatel','Huawei'], 'color':['Crna','Bijela','Srebrna','Crvena','Plava','Zlatna'], 'location':[], 'battery':['BL-5J','BL-4D','BL-4U','BL-6F','BP-4L','BP-5M'], 'charger':['2mm','3.5mm Nokia','microUSB 2.0','miniUSB','USB-C','Lightning','Vlasnički'], 'os':['Series 40','Symbian','Maemo 5','Android','iOS','Windows Mobile','Windows Phone'], 'part_category':['Baterija','Punjač','Ekran','Kućište','Tipkovnica','Poklopac','Kutija','Kabl','Ostalo']}, 'custom_fields':[], 'views':[], 'backup_days':1, 'backup_copies':14, 'backup_directory':'', 'backup_primary':'', 'network_local':'', 'network_remote':'', 'theme':'dark', 'default_page':'all', 'density':'compact', 'layout':'list', 'update_repo':'ermintr-cyber/MyPhoneLibrary-Releases'}
+DEFAULTS = {'columns':['image','inv','brand','model','alias','type','product_code','colors','editions','battery','charger','rating','owned','box','os','released','introduced','qty','parts','gsm','wiki','note','actions'], 'options':{'brand':['Nokia','Sony Ericsson','Ericsson','Motorola','Samsung','Siemens','Apple','LG','HTC','BlackBerry','Alcatel','Huawei'], 'color':['Crna','Bijela','Srebrna','Crvena','Plava','Zlatna'], 'location':[], 'battery':['BL-5J','BL-4D','BL-4U','BL-6F','BP-4L','BP-5M'], 'charger':['2mm','3.5mm Nokia','microUSB 2.0','miniUSB','USB-C','Lightning','Vlasnički'], 'os':['Series 40','Symbian','Maemo 5','Android','iOS','Windows Mobile','Windows Phone'], 'part_category':['Baterija','Punjač','Ekran','Kućište','Tipkovnica','Poklopac','Kutija','Kabl','Ostalo']}, 'custom_fields':[], 'comparison_hidden':[], 'views':[], 'backup_days':1, 'backup_copies':14, 'backup_directory':'', 'backup_primary':'', 'network_local':'', 'network_remote':'', 'theme':'dark', 'default_page':'all', 'density':'compact', 'layout':'list', 'update_repo':'ermintr-cyber/MyPhoneLibrary-Releases'}
 
 def stamp(): return dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')
 def ident(): return uuid.uuid4().hex
@@ -505,6 +505,9 @@ class Store:
             if current.get('layout') not in ('list','cards'):raise ValueError('Unknown layout.')
             current['backup_days']=number(current['backup_days'],1,30,True)
             current['backup_copies']=number(current['backup_copies'],2,100,True)
+            hidden=current.get('comparison_hidden',[])
+            if not isinstance(hidden,list) or len(hidden)>1000 or any(not isinstance(k,str) or len(k)>500 for k in hidden): raise ValueError('Invalid comparison field preferences.')
+            current['comparison_hidden']=list(dict.fromkeys(hidden))
             if not isinstance(current['custom_fields'],list) or len(current['custom_fields'])>50: raise ValueError('Maximum 50 custom fields.')
             if len({f.get('id') for f in current['custom_fields']})!=len(current['custom_fields']): raise ValueError('Duplicate field ID.')
             for f in current['custom_fields']:
