@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.25.0'
+VERSION = '1.26.0'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -259,6 +259,21 @@ class Store:
                     v=item.get(k);u[k]=v if v is True or v is False else None
                 if len(item.get('photos',[]))>100:raise ValueError('Maximum 100 photos per unit.')
                 u['photos']=[image_url(p) for p in item.get('photos',[])]
+                previous=existing.get(u['id'],{})
+                model_keys=('brand','model','alias','type','os','battery','charger','gsm','wiki','released','introduced','note','image','photos','specs','custom','to_check')
+                model_changed=bool(old and any(r.get(k)!=old.get(k) for k in model_keys))
+                unit_changed=bool(previous and any(u.get(k)!=previous.get(k) for k in u))
+                action=item.get('verification_action')
+                if action not in (None,'complete','reopen'):raise ValueError('Unknown review action.')
+                pending=bool(r['to_check'] or u['to_check'])
+                if action=='complete' and (pending or u['condition'] not in ACTIVE):
+                    raise ValueError('Resolve all model and phone To check fields before marking a collection phone fully checked.')
+                complete=action=='complete' or (bool(previous.get('checked_complete')) and not pending and not model_changed and not unit_changed and action!='reopen')
+                # Imported backups retain explicit review state; ordinary copies never inherit it.
+                if importing and not previous and not pending and action is None:
+                    complete=item.get('checked_complete') is True
+                u['checked_complete']=complete
+                u['checked_at']=(stamp() if action=='complete' else previous.get('checked_at') or (item.get('checked_at') if importing else None)) if complete else None
                 r['instances'].append(u)
             missing=set(existing)-own_ids
             if missing: raise ValueError('Keep existing units in the list; change their status to Sold, Dismantled or Retired.')

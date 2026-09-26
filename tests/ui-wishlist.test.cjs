@@ -34,8 +34,18 @@ assert.match(node('wishlist-overview').innerHTML,/High/);assert.match(node('wish
 console.log('Saved filter restoration, missing-battery tri-state, comparison guard/differences, location quantities and wishlist planning passed.');
 run(`record('owned').to_check=['os'];record('owned').instances[0].to_check=['imei','box'];checkFocus=false;`);
 assert.match(run("cell(record('owned'),'os')"),/To check/);
-assert.match(run("checkSummary(record('owned'),record('owned').instances[0])"),/To check · 2/);
+assert.match(run("checkSummary(record('owned'),record('owned').instances[0])"),/To check · 3/);
 const checkBefore=run('JSON.stringify(db.records)');run('checkFocus=true;render()');assert.equal(run('JSON.stringify(db.records)'),checkBefore);assert.match(run("checkSummary(record('owned'))"),/Operating system/);run('checkFocus=false;render()');assert.equal(run('JSON.stringify(db.records)'),checkBefore);
 run(`record('wanted').os='Other OS';record('wanted').instances=[{id:'cross-model',inv:'99',condition:'U kolekciji'}];selectedUnits=new Set(['u','cross-model']);compareUnits();`);assert.match(node('panel-body').innerHTML,/Other OS/);assert.match(node('panel-body').innerHTML,/N73/);assert.match(node('panel-body').innerHTML,/N95 8GB/);
 run(`record('owned').instances.push(...Array.from({length:5},(_,i)=>({id:'many'+i,inv:'M'+i})));selectedUnits=new Set(record('owned').instances.map(u=>u.id));compareUnits()`);assert.match(node('panel-title').textContent,/7 phones/);
 console.log('To check badges and focus preserve records; cross-model and larger comparisons use each model specs.');
+
+run(`currentView='review';quickFilters={};$('search').value='';record('owned').to_check=[];record('owned').instances=record('owned').instances.slice(0,2);record('owned').instances[0].to_check=[];record('owned').instances[0].checked_complete=true;render();`);
+assert.equal(run("shownUnits(record('owned')).length"),1);
+assert.doesNotMatch(node('completion-report').innerHTML,/Unit 1/);
+assert.match(node('completion-report').innerHTML,/Review phone/);
+assert.match(run("checkSummary(record('owned'),record('owned').instances[0])"),/Fully checked/);
+run(`record('owned').to_check=['os'];render()`);
+assert.equal(run("fullyChecked(record('owned'),record('owned').instances[0])"),false);
+assert.equal(run("shownUnits(record('owned')).length"),2);
+console.log('Review list keeps completed units out, exposes inherited checks and preserves separate instances.');
