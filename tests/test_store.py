@@ -26,6 +26,35 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(reopened[0]['instances'][1]['edition'],'Music Edition')
         self.assertEqual(reopened[0]['instances'][2]['photos'],['/media/'+'a'*32+'.jpg'])
         self.assertEqual(reopened[0]['instances'][0]['photos'],[])
+    def test_review_is_explicit_per_unit_and_reopens_after_edits(self):
+        r=self.phone(instances=[{'inv':'1'},{'inv':'2'}])
+        self.assertFalse(any(u['checked_complete'] for u in r['instances']))
+        r['instances'][0]['verification_action']='complete'
+        r=self.store.save_record(r,r['rev'])
+        self.assertTrue(r['instances'][0]['checked_complete']);self.assertFalse(r['instances'][1]['checked_complete'])
+        timestamp=r['instances'][0]['checked_at']
+        r=self.store.save_record(r,r['rev'])
+        self.assertEqual(r['instances'][0]['checked_at'],timestamp)
+        r['instances'][1]['color']='Black';r=self.store.save_record(r,r['rev'])
+        self.assertTrue(r['instances'][0]['checked_complete'])
+        r['instances'][0]['color']='Silver';r=self.store.save_record(r,r['rev'])
+        self.assertFalse(r['instances'][0]['checked_complete'])
+        r['instances'][0]['to_check']=['imei'];r['instances'][0]['verification_action']='complete'
+        with self.assertRaisesRegex(ValueError,'To check'):self.store.save_record(r,r['rev'])
+        r['instances'][0]['to_check']=[];r=self.store.save_record(r,r['rev'])
+        r['os']='Symbian';r=self.store.save_record(r,r['rev'])
+        self.assertFalse(r['instances'][0]['checked_complete'])
+        r['to_check']=['os'];r['instances'][0]['verification_action']='complete'
+        with self.assertRaisesRegex(ValueError,'To check'):self.store.save_record(r,r['rev'])
+
+    def test_copied_unit_does_not_inherit_verified_state(self):
+        r=self.phone();r['instances'][0]['verification_action']='complete';r=self.store.save_record(r,r['rev'])
+        copied=copy.deepcopy(r['instances'][0]);copied.pop('id');copied.pop('inv');r['instances'].append(copied)
+        r=self.store.save_record(r,r['rev'])
+        self.assertTrue(r['instances'][0]['checked_complete']);self.assertFalse(r['instances'][1]['checked_complete'])
+        reopened=Store(self.tmp.name).all_data()['records'][0]
+        self.assertTrue(reopened['instances'][0]['checked_complete'])
+
     def test_stale_edits_do_not_overwrite(self):
         r=self.phone();stale=copy.deepcopy(r);r['note']='novije';self.store.save_record(r,r['rev'])
         stale['note']='starije'
