@@ -293,6 +293,22 @@ await purchaseDate.fill('');await page.evaluate(()=>readDraft());assert.equal(aw
 await page.evaluate(()=>{dirty=false;$('editor').close();setCollectionLayout('grouped');});
 console.log('DOM: purchase date dmy input/reopen/mobile, leap-day validation, canonical data and clearing passed.');
 
+// Review badges must stay below model names and inside each model cell.
+await page.evaluate(()=>{dirty=false;$('editor').close();$('panel').close();currentView='all';quickFilters={};collectionLayout='list';db.settings.columns=columns.map(c=>c[0]);db.records[0].model='N97 Mini';db.records[0].alias='N97-4';db.records[0].to_check=['os'];db.records[0].instances.forEach(u=>{u.checked_complete=false;u.to_check=['photos','color','edition','product_code','rating','state','box','battery_present','charger_present','memory','firmware','price','source'];});render();});
+for(const width of [1755,1500,1100]){
+ await page.setViewportSize({width,height:950});
+ const geometry=await page.locator('#collection-table .unit-table-row [data-column=model]').evaluateAll(cells=>cells.map(cell=>{const c=cell.getBoundingClientRect(),title=cell.querySelector('strong').getBoundingClientRect(),group=cell.querySelector('.check-summary').getBoundingClientRect();return {below:group.top>=title.bottom-1,contained:[...cell.querySelectorAll('.review-badge,.check-badge')].every(el=>{const b=el.getBoundingClientRect();return b.left>=c.left&&b.right<=c.right+1&&b.bottom<=c.bottom+1;}),width:c.width};}));
+ assert.ok(geometry.length>0);assert.ok(geometry.every(x=>x.below&&x.contained&&x.width<150),JSON.stringify({width,geometry}));
+}
+await page.setViewportSize({width:1755,height:950});
+await page.evaluate(()=>{db.settings.columns=columns.map(c=>c[0]).filter(k=>!['completeness','value'].includes(k));$('toast').hidden=true;render();});
+await page.screenshot({path:'review-badges-1261.png',fullPage:true});
+await page.locator('#collection-table .unit-table-row .check-badge').first().click();assert.match(await page.locator('#panel-body').textContent(),/Operating system/);
+await page.evaluate(()=>{$('panel').close();panelRoute=null;});
+await page.setViewportSize({width:393,height:851});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+await page.evaluate(()=>setCollectionLayout('grouped'));
+console.log('DOM: review badges stay below names, inside cells, clickable and responsive.');
+
 // Local storage survives a page reload; a separate browser context stays Classic.
 await page.reload();
 await page.setContent(fs.readFileSync('web/index.html','utf8').replace(/<script[^>]*><\/script>/g,'').replace(/<link[^>]*>/g,''));await page.addScriptTag({content:source});

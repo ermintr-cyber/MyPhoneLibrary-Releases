@@ -1,5 +1,5 @@
 'use strict';
-const UI_VERSION='1.26.0';
+const UI_VERSION='1.26.1';
 const IS_ANDROID_APP=typeof navigator!=='undefined'&&/MyPhoneLibraryAndroid/i.test(navigator.userAgent);
 const BUNDLED_ANDROID_UI=IS_ANDROID_APP&&window.MyPhoneLibraryAndroid?.hasBundledUi?.()===true;
 function androidVersion(){
@@ -425,7 +425,8 @@ function checkSummary(r,u=null){
  const fields=u?unique([...checkFields(r),...checkFields(u)]):unique([...checkFields(r),...(r.instances||[]).flatMap(checkFields)]);
  const units=u?[u]:live(r),done=units.filter(x=>fullyChecked(r,x)).length;
  const badge=r.kind==='phone'&&units.length?`<span class="review-badge ${done===units.length?'review-complete':'review-pending'}">${u?(done?'✓ Fully checked':'Needs review'):`${done}/${units.length} fully checked`}</span>`:'';
- return badge+(fields.length?`<button type="button" class="check-badge" data-action="review-checks" data-id="${r.id}" ${u?`data-unit="${u.id}"`:''} title="${esc(fields.map(checkLabel).join(', '))}">To check · ${fields.length}</button>`:'');
+ const flags=fields.length?`<button type="button" class="check-badge" data-action="review-checks" data-id="${r.id}" ${u?`data-unit="${u.id}"`:''} title="${esc(fields.map(checkLabel).join(', '))}">To check · ${fields.length}</button>`:'';
+ return badge||flags?`<span class="check-summary">${badge}${flags}</span>`:'';
 }
 function checkCell(r,u,key,html){const field={colors:'color',editions:'edition',owned:'condition',image:u?'photos':'image',qty:'quantity'}[key]||key;const marked=(u?checkFields(u):checkFields(r)).includes(field)||(!u&&(r.instances||[]).some(x=>checkFields(x).includes(field)))||(u&&['brand','model','battery','charger','alias','type','os','gsm','wiki','introduced','released'].includes(field)&&checkFields(r).includes(field));return marked?`<span class="check-value" title="To check: ${esc(checkLabel(field))}">${html}<small class="check-label">To check</small></span>`:html;}
 function reviewChecks(id,unitId){const r=record(id);if(!r)return;const entries=[{o:r,u:null},...(r.instances||[]).filter(u=>!unitId||u.id===unitId).map(u=>({o:u,u}))].filter(({o})=>checkFields(o).length);panel('To check — '+name(r),`<p>Open the entry, verify the marked fields, uncheck To check and save. The toolbar button only changes highlighting.</p>${entries.map(({o,u})=>`<section class="check-review"><h3>${u?'Phone #'+esc(u.inv):'Model / part'}</h3><ul>${checkFields(o).map(k=>`<li>${esc(checkLabel(k))}</li>`).join('')}</ul><button data-action="${u?'edit-unit':'edit'}" data-id="${r.id}" data-index="${u?r.instances.indexOf(u):0}">Open marked fields</button></section>`).join('')||'<p>No fields need checking.</p>'}`,{kind:'checks'});}
