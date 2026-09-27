@@ -227,5 +227,5 @@ dialog.settings-page .dialog-header{padding:20px 26px 4px;border:0;background:tr
 .check-summary{display:flex;flex-wrap:wrap;align-items:flex-start;gap:3px;min-width:0;max-width:100%;margin:3px 0;white-space:normal}
 .check-summary>.review-badge,.check-summary>.check-badge{min-width:0;max-width:100%;margin:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
 #collection-table [data-column=model]>strong{display:block}
-#collection-table .unit-details-table [data-column=model]{width:100px;max-width:120px;white-space:normal;overflow-wrap:anywhere}
+#collection-table .unit-details-table [data-column=model]{width:100px;min-width:90px;max-width:120px;white-space:normal;overflow-wrap:anywhere}
 #collection-table .unit-details-table [data-column=model] small{white-space:normal;overflow-wrap:anywhere}

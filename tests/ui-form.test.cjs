@@ -300,6 +300,8 @@ for(const width of [1755,1500,1100]){
  const geometry=await page.locator('#collection-table .unit-table-row [data-column=model]').evaluateAll(cells=>cells.map(cell=>{const c=cell.getBoundingClientRect(),title=cell.querySelector('strong').getBoundingClientRect(),group=cell.querySelector('.check-summary').getBoundingClientRect();return {below:group.top>=title.bottom-1,contained:[...cell.querySelectorAll('.review-badge,.check-badge')].every(el=>{const b=el.getBoundingClientRect();return b.left>=c.left&&b.right<=c.right+1&&b.bottom<=c.bottom+1;}),width:c.width};}));
  assert.ok(geometry.length>0);assert.ok(geometry.every(x=>x.below&&x.contained&&x.width<150),JSON.stringify({width,geometry}));
 }
+await page.setViewportSize({width:1755,height:950});
+await page.evaluate(()=>{db.settings.columns=columns.map(c=>c[0]).filter(k=>!['completeness','value'].includes(k));$('toast').hidden=true;render();});
 await page.screenshot({path:'review-badges-1261.png',fullPage:true});
 await page.locator('#collection-table .unit-table-row .check-badge').first().click();assert.match(await page.locator('#panel-body').textContent(),/Operating system/);
 await page.evaluate(()=>{$('panel').close();panelRoute=null;});
