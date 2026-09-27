@@ -47,6 +47,7 @@ jobs:
             check-focus-121.png
             compact-collection-122.png
             model-summary-123.png
+            review-badges-1261.png
       - name: Build package
         shell: pwsh
         env:
