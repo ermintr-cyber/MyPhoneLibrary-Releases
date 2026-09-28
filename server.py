@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.26.1'
+VERSION = '1.26.2'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -930,6 +930,13 @@ class Handler(BaseHTTPRequestHandler):
     def session(self):
         # Optional Toolbox SSO. Disabled unless a local key file is explicitly configured.
         bridge_path = os.environ.get('MPL_TOOLBOX_KEY_FILE')
+        if bridge_path is None and os.name == 'nt' and self.headers.get('X-Toolbox-Bridge'):
+            try:
+                import winreg
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\MyToolbox') as key:
+                    bridge_path = winreg.QueryValueEx(key, 'BridgeKeyFile')[0]
+            except OSError:
+                bridge_path = None
         bridge_header = self.headers.get('X-Toolbox-Bridge', '')
         if bridge_path and bridge_header:
             from toolbox_bridge import verify
