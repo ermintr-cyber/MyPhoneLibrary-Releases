@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.26.1'
+VERSION = '1.26.2'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -928,6 +928,25 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Disposition','attachment; filename="'+download_name+'"')
             self.end_headers();shutil.copyfileobj(source,self.wfile,1024*1024)
     def session(self):
+        # Optional Toolbox SSO. Disabled unless a local key file is explicitly configured.
+        bridge_path = os.environ.get('MPL_TOOLBOX_KEY_FILE')
+        if bridge_path is None and os.name == 'nt' and self.headers.get('X-Toolbox-Bridge'):
+            try:
+                import winreg
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\MyToolbox') as key:
+                    bridge_path = winreg.QueryValueEx(key, 'BridgeKeyFile')[0]
+            except OSError:
+                bridge_path = None
+        bridge_header = self.headers.get('X-Toolbox-Bridge', '')
+        if bridge_path and bridge_header:
+            from toolbox_bridge import verify
+            try:
+                key = Path(bridge_path).read_bytes()
+                bridged = verify(key, bridge_header, self.client_address[0], self.command, self.path) if len(key) == 32 else None
+            except OSError:
+                bridged = None
+            if bridged:
+                return bridged
         cookie=SimpleCookie(self.headers.get('Cookie',''));token=cookie.get('mpl_session');token=token.value if token else ''
         with self.server.state_lock:
             s=self.server.sessions.get(token)
