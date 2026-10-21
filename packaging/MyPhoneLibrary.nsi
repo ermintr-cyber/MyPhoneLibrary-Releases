@@ -7,6 +7,7 @@ Unicode true
 !ifndef VERSION
 !define VERSION "1.15.0"
 !endif
+Var WasRunning
 Name "My Phone Library"
 OutFile "${SOURCE_ROOT}\dist\MyPhoneLibrary_Setup_${VERSION}.exe"
 InstallDir "$LOCALAPPDATA\Programs\MyPhoneLibrary"
@@ -14,7 +15,7 @@ InstallDirRegKey HKCU "Software\MyPhoneLibrary" "InstallDir"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 !define MUI_ABORTWARNING
-!define MUI_WELCOMEPAGE_TEXT "Install My Phone Library on this computer.$\r$\n$\r$\nYour collection, photos and settings are stored separately and preserved when updating or uninstalling.$\r$\n$\r$\nStop the server in Settings > Maintenance before continuing."
+!define MUI_WELCOMEPAGE_TEXT "Install My Phone Library on this computer.$\r$\n$\r$\nYour collection, photos and settings are stored separately and preserved when updating or uninstalling.$\r$\n$\r$\nA running Toolbox-managed Phone server is stopped and restarted automatically."
 !insertmacro MUI_PAGE_WELCOME
 ; Stable install path preserves the firewall program rule.
 !insertmacro MUI_PAGE_INSTFILES
@@ -25,17 +26,38 @@ SetCompressor /SOLID lzma
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"
 Function .onInit
+ StrCpy $WasRunning "0"
  ${IfNot} ${RunningX64}
+  IfSilent unsupported
   MessageBox MB_OK|MB_ICONSTOP "My Phone Library requires 64-bit Windows."
+ unsupported:
+  SetErrorLevel 2
   Abort
  ${EndIf}
- nsExec::ExecToStack "powershell.exe -NoProfile -NonInteractive -Command $\"try { foreach($$base in @($$env:ProgramData,$$env:LOCALAPPDATA)) { $$f=Join-Path $$base 'MyPhoneLibrary\server-running.json'; if(Test-Path $$f) { $$r=Get-Content -Raw $$f|ConvertFrom-Json; $$p=Get-CimInstance Win32_Process -Filter ('ProcessId=' + [int]$$r.pid); if($$p -and $$p.CommandLine -match 'MyPhoneLibrary') { exit 1 } } }; exit 0 } catch { exit 2 }$\""
- Pop $0
- Pop $1
+ IfFileExists "$INSTDIR\runtime\pythonw.exe" 0 ready
+ InitPluginsDir
+ File /oname=$PLUGINSDIR\stop_for_install.py "${SOURCE_ROOT}\packaging\stop_for_install.py"
+ ExecWait '"$INSTDIR\runtime\pythonw.exe" "$PLUGINSDIR\stop_for_install.py" --root "$INSTDIR"' $0
+ StrCmp $0 "10" stopped
  StrCmp $0 "0" ready
- MessageBox MB_OK|MB_ICONSTOP "Stop MyPhoneLibrary in Settings > Maintenance before installing. If it is already closed, restart Windows and try again. Your collection will be preserved."
+ IfSilent stop_failed
+ MessageBox MB_OK|MB_ICONSTOP "My Phone Library could not stop safely. Nothing was overwritten. See MyPhoneLibrary/installer-stop.log in Local AppData, then retry."
+ stop_failed:
+ SetErrorLevel 2
  Abort
+ stopped:
+ StrCpy $WasRunning "1"
  ready:
+FunctionEnd
+Function .onInstSuccess
+ ${If} $WasRunning == "1"
+  Exec '"$INSTDIR\MyPhoneLibrary.exe" --no-browser'
+ ${EndIf}
+FunctionEnd
+Function .onInstFailed
+ ${If} $WasRunning == "1"
+  Exec '"$INSTDIR\MyPhoneLibrary.exe" --no-browser'
+ ${EndIf}
 FunctionEnd
 Section "Application"
  SetOutPath "$INSTDIR"
@@ -76,7 +98,7 @@ Section "Application"
  Pop $0
  Pop $1
  StrCmp $0 "0" network_ready
- ExecShellWait "open" "$INSTDIR\ConfigureNetwork.exe"
+ ExecShellWait "open" "$INSTDIR\ConfigureNetwork.exe" "/QUIET"
  network_ready:
 
 SectionEnd
