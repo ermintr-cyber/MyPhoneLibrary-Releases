@@ -883,3 +883,7 @@ restoreSidebar();
 boot().then(()=>{if(!IS_ANDROID_APP&&sessionStorage.getItem('mpl-install-target'))watchInstallation();setTimeout(monitorConnection,10000);if(location.hash&&db)window.dispatchEvent(new Event('hashchange'));});
 
 window.mplHandleAndroidBack=function(){if($('editor').open){closeEditor();return true;}if($('panel').open){closePanel();return true;}return false;};
+
+
+// Native Toolbox reads the same draft state as the web editor.
+window.toolboxHasUnsavedChanges=()=>Boolean(dirty||panelDirty);

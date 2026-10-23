@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.26.4'
+VERSION = '1.26.5'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -906,6 +906,9 @@ class AppServer(HostHTTPServer):
         super().__init__(address,Handler);self.store=store;self.instance_id=secrets.token_hex(12);self.operation_lock=threading.RLock();self.installing=False;self.sessions={};self.attempts={};self.state_lock=threading.RLock()
 
 class Handler(BaseHTTPRequestHandler):
+    # Bound idle/preconnected sockets before reading a request; active requests
+    # retain their existing longer timeout in handle_request.
+    timeout = 5
     protocol_version='HTTP/1.1'
     def log_message(self,fmt,*args):
         # Do not log credentials, cookies or uploaded content.
@@ -1292,3 +1295,4 @@ if __name__=='__main__':
         selected=native_folder_dialog(base64.b64decode(sys.argv[2]).decode('utf-8'))
         if selected:sys.stdout.write(base64.b64encode(selected.encode('utf-8')).decode('ascii'));sys.stdout.flush()
     else:raise SystemExit(main())
+
