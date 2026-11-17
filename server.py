@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.26.6'
+VERSION = '1.26.7'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -553,14 +553,32 @@ class Store:
             return m
     def repair(self,d):
         with self.lock,self.connect() as c:
+            old=None
+            if d.get('id'):
+                row=c.execute('SELECT data FROM repairs WHERE id=?',(d['id'],)).fetchone()
+                if not row: raise ValueError('Repair not found.')
+                old=json.loads(row[0])
+                if old['record_id']!=d.get('record_id'): raise ValueError('Repair not found.')
+                legacy_complete=d.get('rev') is None and d.get('action') is None and d.get('status')=='Završen'
+                if not legacy_complete and d.get('rev')!=old.get('rev',1):
+                    raise Conflict('Repair changed on another device. Reopen it before saving.')
+                if legacy_complete:
+                    # Existing bundled Android clients send the whole repair
+                    # without rev. Their Complete button may only change status.
+                    d={**old,'action':'status','status':'Završen'}
+            if d.get('action')=='status':
+                if not old: raise ValueError('Repair not found.')
+                # Complete changes only status, never stale notes, costs or units.
+                d={**old,'status':d.get('status')}
+            elif d.get('action') not in (None,'save'):
+                raise ValueError('Unknown repair action.')
             r=self.get(c,d['record_id'])
             if not any(u['id']==d.get('instance_id') for u in r.get('instances',[])): raise ValueError('Select a unit.')
             status=d.get('status','Otvoren')
             if status not in ('Otvoren','U radu','Čeka dijelove','Završen'): raise ValueError('Unknown status.')
-            item={'id':d.get('id') or ident(),'at':stamp(),'record_id':r['id'],'instance_id':d['instance_id'],'status':status,'note':str(d.get('note',''))[:10000],'cost':number(d.get('cost'),0,1000000),'currency':str(d.get('currency','KM'))[:10]}
-            if d.get('id'):
-                old=c.execute('SELECT data FROM repairs WHERE id=?',(d['id'],)).fetchone()
-                if not old or json.loads(old[0])['record_id']!=r['id']: raise ValueError('Repair not found.')
+            now=stamp()
+            item={'id':d.get('id') or ident(),'at':old.get('at',now) if old else now,'updated_at':now,'rev':old.get('rev',1)+1 if old else 1,'record_id':r['id'],'instance_id':d['instance_id'],'status':status,'note':str(d.get('note',''))[:10000],'cost':number(d.get('cost'),0,1000000),'currency':str(d.get('currency','KM'))[:10]}
+            item['completed_at']=((old or {}).get('completed_at') or now) if status=='Završen' else None
             c.execute('INSERT OR REPLACE INTO repairs VALUES(?,?)',(item['id'],dump(item)));self.log(c,r['id'],'Popravak',item)
             return item
     def inventory(self,d):
@@ -578,8 +596,20 @@ class Store:
                     else: inv['found'].pop(uid,None)
             else:
                 loc=str(d.get('location','')).strip()
-                expected={u['id']:{'inv':u['inv'],'record_id':r['id'],'model':r['brand']+' '+r['model'],'location':u.get('location',''),'condition':u.get('condition')} for r in self.records(c) for u in r.get('instances',[]) if u.get('condition') in ACTIVE and (not loc or u.get('location')==loc)}
-                inv={'id':ident(),'at':stamp(),'location':loc,'expected':expected,'found':{},'closed':None}
+                include_sublocations=d.get('include_sublocations',True)
+                if not isinstance(include_sublocations,bool): raise ValueError('Invalid sublocation selection.')
+                normalize=lambda value:' '.join(str(value or '').casefold().split())
+                allowed={normalize(loc)}
+                if loc and include_sublocations:
+                    locations=[x for x in self.catalog(c) if x['category']=='location']
+                    descendants={x['id'] for x in locations if normalize(x['name'])==normalize(loc)}
+                    while True:
+                        expanded=descendants|{x['id'] for x in locations if x.get('parent_id') in descendants}
+                        if expanded==descendants:break
+                        descendants=expanded
+                    allowed.update(normalize(x['name']) for x in locations if x['id'] in descendants)
+                expected={u['id']:{'inv':u['inv'],'record_id':r['id'],'model':r['brand']+' '+r['model'],'location':u.get('location',''),'condition':u.get('condition')} for r in self.records(c) for u in r.get('instances',[]) if u.get('condition') in ACTIVE and (not loc or normalize(u.get('location')) in allowed)}
+                inv={'id':ident(),'at':stamp(),'location':loc,'include_sublocations':include_sublocations,'expected':expected,'found':{},'closed':None}
             c.execute('INSERT OR REPLACE INTO inventories VALUES(?,?)',(inv['id'],dump(inv)))
             return inv
     def all_data(self):
@@ -676,9 +706,35 @@ class Store:
                 c.execute('DELETE FROM remembered_sessions');c.commit()
             previous=self.backup()
             media=staging/'media'
-            if media.exists():
-                for sourcefile in media.iterdir():os.replace(sourcefile,self.media/sourcefile.name)
-            os.replace(tmp,self.path)
+            # Keep rollback material outside staging: an unsuccessful rollback
+            # must never be deleted by TemporaryDirectory cleanup.
+            rollback=Path(tempfile.mkdtemp(prefix='restore-rollback-',dir=self.directory))
+            applied=[];preserve_rollback=False
+            try:
+                if media.exists():
+                    for sourcefile in sorted(media.iterdir()):
+                        target=self.media/sourcefile.name
+                        original=rollback/sourcefile.name if target.exists() else None
+                        if original:shutil.copy2(target,original)
+                        os.replace(sourcefile,target)
+                        applied.append((target,original))
+                # This is the commit point. No fallible mutation follows it.
+                os.replace(tmp,self.path)
+            except OSError as error:
+                failures=[]
+                for target,original in reversed(applied):
+                    try:
+                        if original:os.replace(original,target)
+                        else:target.unlink(missing_ok=True)
+                    except OSError as rollback_error:failures.append(str(rollback_error))
+                if failures:
+                    preserve_rollback=True
+                    raise ValueError('Restore failed and media rollback could not finish. Recovery files: '+str(rollback)+'. Previous complete backup: '+previous['name']) from error
+                raise ValueError('Restore failed; the previous database and photos were kept. Recovery backup: '+previous['name']) from error
+            finally:
+                if not preserve_rollback:
+                    # Cleanup cannot turn a committed restore into a failure.
+                    shutil.rmtree(rollback,ignore_errors=True)
             return {'previous':previous['name']}
     def import_rows(self,rows,commit=False):
         if not isinstance(rows,list) or len(rows)>10000: raise ValueError('Expected a list of up to 10000 rows.')
