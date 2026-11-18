@@ -313,15 +313,22 @@ function rawCell(r,key){if(key==='select')return selectionBox(r);if(key==='compl
 let rowMenuSerial=0;
 function noteIcon(value){if(!value)return '—';return `<button type="button" class="note-icon" data-action="note-popup" data-note="${esc(value)}" aria-label="View note">▤</button>`;}
 function actionButton(r,index=null){const menu='row-menu-'+(++rowMenuSerial),unit=index!==null,attr=`data-id="${r.id}"${unit?` data-index="${index}"`:''}`;return `<button type="button" class="row-menu-toggle" popovertarget="${menu}" aria-label="Actions for ${esc(unit?'phone '+r.instances[index].inv:name(r))}">⋯</button><div id="${menu}" popover class="row-menu"><strong>${esc(unit?'Phone #'+r.instances[index].inv:name(r))}</strong><button data-action="${unit?'edit-unit':'edit'}" ${attr}>Edit</button><button data-action="${unit?'copy-unit':'copy-model'}" ${attr}>Copy</button><button class="danger" data-action="${unit?'delete-unit':'delete-record'}" ${attr}>${unit?'Move this phone to trash':r.kind==='phone'?'Move entire model to trash':'Move part to trash'}</button></div>`;}
+let pinnedNote=null;
 function showNotePopup(target){let tip=$('note-tooltip');if(!tip){tip=document.createElement('div');tip.id='note-tooltip';tip.setAttribute('popover','manual');tip.setAttribute('role','tooltip');document.body.append(tip);}tip.textContent=target.dataset.note;tip.showPopover();const rect=target.getBoundingClientRect();tip.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-tip.offsetWidth-8))+'px';tip.style.top=Math.max(8,Math.min(rect.bottom+6,window.innerHeight-tip.offsetHeight-8))+'px';}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')hideNotePopup();});
-window.addEventListener('resize',()=>hideNotePopup());
-document.addEventListener('scroll',()=>hideNotePopup(),true);
-function hideNotePopup(){const tip=$('note-tooltip');if(tip?.hidePopover)tip.hidePopover();}
-document.addEventListener('pointerover',e=>{const t=e.target.closest?.('.note-icon');if(t)showNotePopup(t);});
-document.addEventListener('pointerout',e=>{if(e.target.closest?.('.note-icon'))hideNotePopup();});
+function repositionNote(){
+ if(!pinnedNote || !pinnedNote.isConnected){hideNotePopup();return;}
+ const box=pinnedNote.getBoundingClientRect();
+ if(box.bottom<0 || box.top>window.innerHeight){hideNotePopup();return;}
+ showNotePopup(pinnedNote);
+}
+window.addEventListener('resize',repositionNote);
+document.addEventListener('scroll',repositionNote,true);
+function hideNotePopup(){pinnedNote=null;const tip=$('note-tooltip');if(tip?.hidePopover)tip.hidePopover();}
+document.addEventListener('pointerover',e=>{const t=e.target.closest?.('.note-icon');if(t&&!pinnedNote)showNotePopup(t);});
+document.addEventListener('pointerout',e=>{if(!pinnedNote&&e.target.closest?.('.note-icon'))hideNotePopup();});
 document.addEventListener('focusin',e=>{if(e.target.closest?.('.note-icon'))showNotePopup(e.target);});
-document.addEventListener('focusout',e=>{if(e.target.closest?.('.note-icon'))hideNotePopup();});
+document.addEventListener('focusout',e=>{if(!pinnedNote&&e.target.closest?.('.note-icon'))hideNotePopup();});
 document.addEventListener('click',e=>{if(!e.target.closest?.('.note-icon'))hideNotePopup();});
 function copyModel(id){if(phoneDraft&&!confirm('Replace the saved phone draft with this model?'))return;draft=clone(record(id));delete draft.id;delete draft.rev;draft.model='';draft.declared_qty=0;draft.instances=draft.kind==='phone'?[blankUnit()]:[];draft.quantity=0;draft.reserved=0;mode=draft.kind==='phone'?'add':'part';phoneDraft=null;dirty=true;editorRender(0);$('editor').showModal();toast('Copy ready. Enter a different model name.');}
 function unitImage(r,u){const own=(u.photos||[])[0],src=own||r.image||(r.photos||[])[0];return src?`<img class="thumb" src="${esc(src)}" alt="${esc(u.inv)}" title="${own?'Unit photo':'Model catalog image'}" data-action="photo" data-url="${esc(src)}">${own?`<small>${u.photos.length} ${u.photos.length===1?'photo':'photos'}</small>`:'<small>Catalog</small>'}`:'<span class="thumb-placeholder" aria-label="No photo">▯</span>';}
@@ -428,6 +435,7 @@ function compareUnits(fieldsOpen=false){const entries=db.records.flatMap(r=>(r.i
 
 function renderWishlistOverview(){const host=$('wishlist-overview');if(!host)return;host.hidden=currentView!=='wish';if(host.hidden)return;const priorities={High:0,Medium:1,Low:2};const rows=filtered().filter(isWanted).sort((a,b)=>(priorities[a.wish_priority]??3)-(priorities[b.wish_priority]??3));host.innerHTML=`<div class="wishlist-plans">${rows.map(r=>`<article><strong>${esc(name(r))}</strong><span>${esc(r.wish_priority||'Priority not set')}</span><span>${r.wish_price!=null&&r.wish_price!==''?'Target: '+esc(r.wish_price)+' '+esc(amountCurrency(r)):'Target price not set'}</span><p>${esc(r.wish_note||'')}</p><button data-action="edit" data-id="${r.id}">Edit wishlist details</button>${acquireButton(r)}</article>`).join('')}</div>`;}
 
+let lastSmallScreen=null;
 function render(){renderFilters();renderWishlistOverview();document.documentElement.dataset.checkFocus=String(checkFocus);if($('check-toggle')){$('check-toggle').setAttribute('aria-pressed',String(checkFocus));$('check-toggle').textContent='To check'+(checkFocus?' · ON':'');}
  if($('wanted-toggle')){$('wanted-toggle').hidden=!['all','phone'].includes(currentView);$('wanted-toggle').textContent=showWanted?'Hide wanted list':'Show wanted list';$('wanted-toggle').setAttribute('aria-pressed',String(showWanted));}
  if($('add-wanted'))$('add-wanted').hidden=currentView!=='wish';
@@ -444,6 +452,7 @@ function render(){renderFilters();renderWishlistOverview();document.documentElem
  for(const mandatory of ['select','image','model','qty','actions'])if(!visible.includes(mandatory))visible.push(mandatory);
  visible.splice(visible.indexOf('image'),1);visible.unshift('image');visible.splice(visible.indexOf('select'),1);visible.unshift('select');
  const smallScreen=window.matchMedia?.('(max-width: 800px)').matches ?? false;
+ lastSmallScreen=smallScreen;
  const listView=collectionLayout==='list' && !['incomplete','review'].includes(currentView);
  $('collection-table').innerHTML=!smallScreen && listView ? `${tableColumns(visible)}<thead><tr>${visible.map(k=>`<th scope="col" draggable="${k!=='image'}" data-column-key="${k}" title="${k==='image'?'Image and expand control stay first':'Drag to reorder; click to sort'}" data-sort="${k}">${esc(columns.find(c=>c[0]===k)[1])}${sort.key===k?(sort.dir===1?' ↑':' ↓'):''}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${visible.map(k=>`<td data-column="${k}" class="${k==='model'?'model-cell':['colors','editions','state','note','location','type'].includes(k)?'wrap':''}">${cell(r,k)}</td>`).join('')}</tr>${expanded.has(r.id)?expandedRow(r,visible):''}`).join('')}</tbody>` : '';
  $('table-wrap').hidden=!rows.length||collectionLayout==='cards';$('card-grid').hidden=collectionLayout!=='cards'||!rows.length;$('card-grid').innerHTML=collectionLayout==='cards'?rows.map(phoneCard).join(''):'';document.querySelectorAll('[data-action="layout"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.layout===(collectionLayout||'list'))));$('empty').hidden=rows.length>0;if(!rows.length&&$('empty').querySelector('h2')){$('empty').querySelector('h2').textContent=currentView==='wish'?'Your wishlist is empty':'No matching collection entries';$('empty').querySelector('p').textContent=currentView==='wish'?'Add a phone you would like to own. It stays separate until you acquire it.':'Add a phone, change the filters or show the wanted list.';}
@@ -861,7 +870,7 @@ document.addEventListener('click',async event=>{
  case 'backups':await backupsPanel();break;
  case 'create-backup':{const p=await api('/api/backup',{});await loadBackups();toast(p.warning||'Backup created and verified.');break;}
  case 'trash':trashPanel();break;
- case 'note-popup':showNotePopup(target);break;
+ case 'note-popup':pinnedNote=target;showNotePopup(target);break;
  case 'copy-model':copyModel(id);break;
  case 'delete-unit':{const r=record(id),u=r.instances[Number(target.dataset.index)];if(!u)throw Error('Phone not found. Refresh the collection.');if(!confirm('Move only phone #'+u.inv+' ('+name(r)+') to trash? Other phones and the model will remain.'))break;await api('/api/trash-unit',{id,unit:u.id,rev:r.rev});selectedUnits.delete(u.id);dirty=false;$('editor').close();draft=null;await refresh();toast('Phone moved to trash.');break;}
  case 'delete-record':{const r=record(id);if(!confirm(r.kind==='phone'?'Move '+name(r)+' and ALL '+r.instances.length+' phones to trash?':'Move this part to trash?'))break;await api('/api/trash',{id,rev:record(id).rev});dirty=false;$('editor').close();draft=null;await refresh();toast('Record moved to trash.');break;}
@@ -943,7 +952,7 @@ document.addEventListener('keydown',e=>{
 $('editor').addEventListener('cancel',e=>{e.preventDefault();closeEditor();});
 let searchTimer;
 $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{if(db)render();},100);});
-window.matchMedia?.('(max-width: 800px)').addEventListener('change',()=>{if(db)render();});
+window.matchMedia?.('(max-width: 800px)').addEventListener('change',event=>{if(db&&event.matches!==lastSmallScreen)render();});
 $('collection-table').addEventListener('click',e=>{const th=e.target.closest('[data-sort]');if(!th||Date.now()<ignoreSortUntil||['select','image','actions'].includes(th.dataset.sort))return;sort={key:th.dataset.sort,dir:sort.key===th.dataset.sort?-sort.dir:1};render();});
 $('collection-table').addEventListener('dragstart',e=>{const th=e.target.closest('[data-column-key]');if(!th||th.dataset.columnKey==='image')return;dragColumn=th.dataset.columnKey;e.dataTransfer.setData('text/plain',dragColumn);e.dataTransfer.effectAllowed='move';th.classList.add('dragging');});
 $('collection-table').addEventListener('dragover',e=>{const th=e.target.closest('[data-column-key]');if(th&&dragColumn){e.preventDefault();e.dataTransfer.dropEffect='move';}});
