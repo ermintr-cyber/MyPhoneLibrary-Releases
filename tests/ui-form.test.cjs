@@ -51,7 +51,12 @@ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=windo
 assert.equal(await page.locator('.mobile-primary-nav').evaluate(el=>el.getBoundingClientRect().height),66);
 assert.ok(await page.locator('#mobile-list .state-working').count()>0);
 assert.equal(await page.locator('#collection-table th[data-column-key=state]').count(),0);
-assert.ok(await page.locator('#collection-table .unit-details-table .state-working').count()>0);
+assert.equal(await page.locator('#collection-table tbody').count(),0);
+await page.setViewportSize({width:1500,height:950});
+await page.locator('#collection-table .unit-details-table .state-working').first().waitFor();
+assert.equal(await page.locator('#mobile-list .mobile-model').count(),0);
+await page.setViewportSize({width:393,height:851});
+await page.locator('#mobile-list .state-working').first().waitFor();
 await page.screenshot({path:'mobile-collection-113.png',fullPage:true});
 await page.evaluate(()=>{currentView='incomplete';render();});assert.equal(await page.locator('#completion-report').isVisible(),true);assert.match(await page.locator('#completion-report').textContent(),/Missing: Charger/);
 await page.evaluate(()=>{currentView='all';showEditor('a',0);});assert.equal(await page.locator('[data-r=declared_parts]').count(),0);await page.locator('[data-u=for_parts]').check();await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purpose),'Donor');await page.locator('[data-u=for_parts]').uncheck();await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purpose),'Kolekcija');
