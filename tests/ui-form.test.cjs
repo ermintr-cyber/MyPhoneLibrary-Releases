@@ -125,7 +125,7 @@ assert.equal(await page.locator('#table-wrap').isVisible(),false);
 await page.locator('#wanted-toggle').click();assert.equal(await page.locator('#table-wrap').isVisible(),true);
 assert.match(await page.locator('#summary').textContent(),/0models0phones/);
 await page.setViewportSize({width:393,height:851});
-assert.equal(await page.locator('#mobile-list [data-action=acquire-wanted]').isVisible(),true);
+await page.locator('#mobile-list [data-action=acquire-wanted]').waitFor({state:'visible'});
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 await page.screenshot({path:'mobile-wishlist-118.png',fullPage:true});
 await page.locator('#mobile-list [data-action=acquire-wanted]').click();
