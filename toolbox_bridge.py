@@ -9,7 +9,7 @@ import time
 
 def sign(key, session, method, path):
     payload = base64.urlsafe_b64encode(json.dumps({'id': session['id'], 'csrf': session['csrf'],
-        'expires': min(time.time()+30, session['expires']), 'method': method, 'path': path}, separators=(',', ':')).encode()).decode()
+        'draft_scope':session.get('draft_scope',''), 'expires': min(time.time()+30, session['expires']), 'method': method, 'path': path}, separators=(',', ':')).encode()).decode()
     return payload + '.' + hmac.new(key, payload.encode(), hashlib.sha256).hexdigest()
 
 
@@ -26,6 +26,6 @@ def verify(key, value, peer, method, path):
             return None
         if len(data['id']) != 32 or not 20 <= len(data['csrf']) <= 128:
             return None
-        return 'toolbox:'+data['id'], {'csrf': data['csrf'], 'expires': data['expires']}
+        return 'toolbox:'+data['id'], {'csrf': data['csrf'], 'expires': data['expires'], **({'draft_scope':data['draft_scope']} if data.get('draft_scope') else {})}
     except (ValueError, TypeError, KeyError, UnicodeError):
         return None

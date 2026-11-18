@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.26.7'
+VERSION = '1.26.8'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -676,7 +676,7 @@ class Store:
                 tmp.unlink(missing_ok=True);target.with_suffix('.tmp').unlink(missing_ok=True)
     def restore(self,content):
         return self.restore_file(io.BytesIO(content))
-    def restore_file(self,source):
+    def restore_file(self,source,*,preview=False):
         with self.lock,tempfile.TemporaryDirectory(prefix='restore-',dir=self.directory) as staging:
             staging=Path(staging)
             with zipfile.ZipFile(source) as z:
@@ -704,6 +704,8 @@ class Store:
             with contextlib.closing(sqlite3.connect(tmp)) as c:
                 c.execute('CREATE TABLE IF NOT EXISTS remembered_sessions(token_hash TEXT PRIMARY KEY,expires REAL NOT NULL)')
                 c.execute('DELETE FROM remembered_sessions');c.commit()
+            if preview:
+                return {'count':len(files),'bytes':total,'sample':sorted(files)[:8]}
             previous=self.backup()
             media=staging/'media'
             # Keep rollback material outside staging: an unsuccessful rollback
@@ -1046,7 +1048,7 @@ class Handler(BaseHTTPRequestHandler):
                     if not hmac.compare_digest(self.headers.get('X-MPL-CSRF',''),session['csrf']):
                         self.close_connection=True
                         return self.send(403,{'error':'Session expired. Refresh the app.'})
-                if path=='/api/restore':
+                if path in ('/api/restore','/api/restore-preview'):
                     size=int(self.headers.get('Content-Length','0'))
                     if not 0<size<=10*1024**3:
                         self.close_connection=True
@@ -1060,8 +1062,9 @@ class Handler(BaseHTTPRequestHandler):
                             chunk=self.rfile.read(min(left,1024*1024))
                             if not chunk:raise ValueError('Backup upload was interrupted.')
                             uploaded.write(chunk);left-=len(chunk)
-                        uploaded.seek(0);result=store.restore_file(uploaded)
-                    with self.server.state_lock:self.server.sessions.clear()
+                        uploaded.seek(0);result=store.restore_file(uploaded,preview=path.endswith('-preview'))
+                    if path=='/api/restore':
+                        with self.server.state_lock:self.server.sessions.clear()
                     return self.send(200,result)
                 raw=self.read_body()
                 binary=path in ('/api/upload','/api/restore','/api/image-import','/api/update')
@@ -1069,7 +1072,15 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(d,dict):raise ValueError('Expected an object.')
             if path=='/api/status' and not post:
                 from updater import read_update_status
-                return self.send(200,{'update_job':read_update_status(store.directory),'version':VERSION,'instance':self.server.instance_id,'product':PRODUCT,'setup':not bool(store.meta('auth')),'authenticated':bool(session),'csrf':session['csrf'] if session else None})
+                scope=''
+                if session:
+                    scope=session.get('draft_scope','')
+                    if not scope and not self.headers.get('X-Toolbox-Bridge'):
+                        with store.lock,store.connect() as c:
+                            scope=store.meta('draft_namespace','',c)
+                            if not scope:
+                                scope=secrets.token_hex(24);store.setmeta(c,'draft_namespace',scope)
+                return self.send(200,{'draft_scope':scope,'update_job':read_update_status(store.directory),'version':VERSION,'instance':self.server.instance_id,'product':PRODUCT,'setup':not bool(store.meta('auth')),'authenticated':bool(session),'csrf':session['csrf'] if session else None})
             if path in ('/api/setup','/api/login') and post:
                 ip=self.client_address[0]
                 with self.server.state_lock:
@@ -1144,6 +1155,16 @@ class Handler(BaseHTTPRequestHandler):
                 with store.connect() as c:rows=[dict(r) for r in c.execute('SELECT at,action,data FROM history WHERE record_id=? ORDER BY id DESC LIMIT 100',(rid,))]
                 return self.send(200,rows)
             if path=='/api/backup' and post:return self.send(200,store.backup())
+            if path=='/api/storage-usage' and not post:
+                def usage(folder,pattern):
+                    try:return sum(f.stat().st_size for f in folder.glob(pattern) if f.is_file() and not f.is_symlink())
+                    except OSError:return None
+                folders={str(store.backups)}
+                for entry in store.backup_status():
+                    if entry['path']:folders.add(entry['path'])
+                return self.send(200,{'photo_bytes':usage(store.media,'*'),'backups':[
+                    {'folder':str(path),'bytes':usage(path,'MyPhoneLibrary-*.zip') if path.is_dir() else None}
+                    for path in sorted({Path(p).resolve() for p in folders})]})
             if path=='/api/backup-status' and not post:return self.send(200,store.backup_status())
             if path=='/api/backups' and not post:return self.send(200,[{'name':x.name,'bytes':x.stat().st_size,'at':dt.datetime.fromtimestamp(x.stat().st_mtime,dt.timezone.utc).isoformat()} for x in sorted(store.backups.glob('MyPhoneLibrary-*.zip'),reverse=True)])
             if path=='/api/download-backup' and not post:

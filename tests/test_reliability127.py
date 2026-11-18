@@ -110,6 +110,15 @@ class ReliabilityTests(unittest.TestCase):
         self.store.save_record(phone, phone['rev'])
         return content, old_image, new_image
 
+    def test_trial_restore_leaves_current_phone_and_images_intact(self):
+        import io
+        content, original, absent = self.restore_fixture()
+        report = self.store.restore_file(io.BytesIO(content), preview=True)
+        self.assertIn('library.sqlite3', report['sample'])
+        self.assertEqual(original.read_bytes(), b'current image')
+        self.assertFalse(absent.exists())
+        self.assertEqual(self.store.records()[0]['note'], 'Current database')
+
     def test_database_replace_failure_rolls_back_overwrites_and_new_photos(self):
         content, old_image, new_image = self.restore_fixture()
         replace = server.os.replace
