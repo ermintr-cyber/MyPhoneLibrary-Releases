@@ -306,7 +306,9 @@ console.log('DOM: purchase date dmy input/reopen/mobile, leap-day validation, ca
 await page.evaluate(()=>{dirty=false;$('editor').close();$('panel').close();currentView='all';quickFilters={};collectionLayout='list';db.settings.columns=columns.map(c=>c[0]);db.records[0].model='N97 Mini';db.records[0].alias='N97-4';db.records[0].to_check=['os'];db.records[0].instances.forEach(u=>{u.checked_complete=false;u.to_check=['photos','color','edition','product_code','rating','state','box','battery_present','charger_present','memory','firmware','price','source'];});render();});
 for(const width of [1755,1500,1100]){
  await page.setViewportSize({width,height:950});
- const geometry=await page.locator('#collection-table .unit-table-row [data-column=model]').evaluateAll(cells=>cells.map(cell=>{const c=cell.getBoundingClientRect(),title=cell.querySelector('strong').getBoundingClientRect(),group=cell.querySelector('.check-summary').getBoundingClientRect();return {below:group.top>=title.bottom-1,contained:[...cell.querySelectorAll('.review-badge,.check-badge')].every(el=>{const b=el.getBoundingClientRect();return b.left>=c.left&&b.right<=c.right+1&&b.bottom<=c.bottom+1;}),width:c.width};}));
+ const modelCells=page.locator('#collection-table .unit-table-row [data-column=model]');
+ await modelCells.first().waitFor({state:'visible'});
+ const geometry=await modelCells.evaluateAll(cells=>cells.map(cell=>{const c=cell.getBoundingClientRect(),title=cell.querySelector('strong').getBoundingClientRect(),group=cell.querySelector('.check-summary').getBoundingClientRect();return {below:group.top>=title.bottom-1,contained:[...cell.querySelectorAll('.review-badge,.check-badge')].every(el=>{const b=el.getBoundingClientRect();return b.left>=c.left&&b.right<=c.right+1&&b.bottom<=c.bottom+1;}),width:c.width};}));
  assert.ok(geometry.length>0);assert.ok(geometry.every(x=>x.below&&x.contained&&x.width<150),JSON.stringify({width,geometry}));
 }
 await page.setViewportSize({width:1755,height:950});
