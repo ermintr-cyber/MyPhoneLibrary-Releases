@@ -229,3 +229,10 @@ dialog.settings-page .dialog-header{padding:20px 26px 4px;border:0;background:tr
 #collection-table [data-column=model]>strong{display:block}
 #collection-table .unit-details-table [data-column=model]{width:100px;min-width:90px;max-width:120px;white-space:normal;overflow-wrap:anywhere}
 #collection-table .unit-details-table [data-column=model] small{white-space:normal;overflow-wrap:anywhere}
+
+#bulk-tools[hidden],#recover-draft[hidden]{display:none}.view-shortcuts summary{cursor:pointer;padding:.55rem}.view-shortcuts button{width:100%}
+
+.editor-scope h3,.editor-scope p{margin:0}
+.editor-scope p{color:var(--muted);margin-top:.2rem}
+.unit-fields{margin-block:1.5rem;padding:1rem;border:1px solid var(--line);border-inline-start:4px solid var(--accent);border-radius:8px;background:var(--surface2)}
+.unit-fields h3{overflow-wrap:anywhere}

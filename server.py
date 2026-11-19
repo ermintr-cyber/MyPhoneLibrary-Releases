@@ -35,7 +35,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import unescape
 
-VERSION = '1.26.1'
+VERSION = '1.26.9'
 PRODUCT = 'MyPhoneLibrary'
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE))
@@ -553,14 +553,32 @@ class Store:
             return m
     def repair(self,d):
         with self.lock,self.connect() as c:
+            old=None
+            if d.get('id'):
+                row=c.execute('SELECT data FROM repairs WHERE id=?',(d['id'],)).fetchone()
+                if not row: raise ValueError('Repair not found.')
+                old=json.loads(row[0])
+                if old['record_id']!=d.get('record_id'): raise ValueError('Repair not found.')
+                legacy_complete=d.get('rev') is None and d.get('action') is None and d.get('status')=='Završen'
+                if not legacy_complete and d.get('rev')!=old.get('rev',1):
+                    raise Conflict('Repair changed on another device. Reopen it before saving.')
+                if legacy_complete:
+                    # Existing bundled Android clients send the whole repair
+                    # without rev. Their Complete button may only change status.
+                    d={**old,'action':'status','status':'Završen'}
+            if d.get('action')=='status':
+                if not old: raise ValueError('Repair not found.')
+                # Complete changes only status, never stale notes, costs or units.
+                d={**old,'status':d.get('status')}
+            elif d.get('action') not in (None,'save'):
+                raise ValueError('Unknown repair action.')
             r=self.get(c,d['record_id'])
             if not any(u['id']==d.get('instance_id') for u in r.get('instances',[])): raise ValueError('Select a unit.')
             status=d.get('status','Otvoren')
             if status not in ('Otvoren','U radu','Čeka dijelove','Završen'): raise ValueError('Unknown status.')
-            item={'id':d.get('id') or ident(),'at':stamp(),'record_id':r['id'],'instance_id':d['instance_id'],'status':status,'note':str(d.get('note',''))[:10000],'cost':number(d.get('cost'),0,1000000),'currency':str(d.get('currency','KM'))[:10]}
-            if d.get('id'):
-                old=c.execute('SELECT data FROM repairs WHERE id=?',(d['id'],)).fetchone()
-                if not old or json.loads(old[0])['record_id']!=r['id']: raise ValueError('Repair not found.')
+            now=stamp()
+            item={'id':d.get('id') or ident(),'at':old.get('at',now) if old else now,'updated_at':now,'rev':old.get('rev',1)+1 if old else 1,'record_id':r['id'],'instance_id':d['instance_id'],'status':status,'note':str(d.get('note',''))[:10000],'cost':number(d.get('cost'),0,1000000),'currency':str(d.get('currency','KM'))[:10]}
+            item['completed_at']=((old or {}).get('completed_at') or now) if status=='Završen' else None
             c.execute('INSERT OR REPLACE INTO repairs VALUES(?,?)',(item['id'],dump(item)));self.log(c,r['id'],'Popravak',item)
             return item
     def inventory(self,d):
@@ -578,8 +596,20 @@ class Store:
                     else: inv['found'].pop(uid,None)
             else:
                 loc=str(d.get('location','')).strip()
-                expected={u['id']:{'inv':u['inv'],'record_id':r['id'],'model':r['brand']+' '+r['model'],'location':u.get('location',''),'condition':u.get('condition')} for r in self.records(c) for u in r.get('instances',[]) if u.get('condition') in ACTIVE and (not loc or u.get('location')==loc)}
-                inv={'id':ident(),'at':stamp(),'location':loc,'expected':expected,'found':{},'closed':None}
+                include_sublocations=d.get('include_sublocations',True)
+                if not isinstance(include_sublocations,bool): raise ValueError('Invalid sublocation selection.')
+                normalize=lambda value:' '.join(str(value or '').casefold().split())
+                allowed={normalize(loc)}
+                if loc and include_sublocations:
+                    locations=[x for x in self.catalog(c) if x['category']=='location']
+                    descendants={x['id'] for x in locations if normalize(x['name'])==normalize(loc)}
+                    while True:
+                        expanded=descendants|{x['id'] for x in locations if x.get('parent_id') in descendants}
+                        if expanded==descendants:break
+                        descendants=expanded
+                    allowed.update(normalize(x['name']) for x in locations if x['id'] in descendants)
+                expected={u['id']:{'inv':u['inv'],'record_id':r['id'],'model':r['brand']+' '+r['model'],'location':u.get('location',''),'condition':u.get('condition')} for r in self.records(c) for u in r.get('instances',[]) if u.get('condition') in ACTIVE and (not loc or normalize(u.get('location')) in allowed)}
+                inv={'id':ident(),'at':stamp(),'location':loc,'include_sublocations':include_sublocations,'expected':expected,'found':{},'closed':None}
             c.execute('INSERT OR REPLACE INTO inventories VALUES(?,?)',(inv['id'],dump(inv)))
             return inv
     def all_data(self):
@@ -646,7 +676,7 @@ class Store:
                 tmp.unlink(missing_ok=True);target.with_suffix('.tmp').unlink(missing_ok=True)
     def restore(self,content):
         return self.restore_file(io.BytesIO(content))
-    def restore_file(self,source):
+    def restore_file(self,source,*,preview=False):
         with self.lock,tempfile.TemporaryDirectory(prefix='restore-',dir=self.directory) as staging:
             staging=Path(staging)
             with zipfile.ZipFile(source) as z:
@@ -674,11 +704,39 @@ class Store:
             with contextlib.closing(sqlite3.connect(tmp)) as c:
                 c.execute('CREATE TABLE IF NOT EXISTS remembered_sessions(token_hash TEXT PRIMARY KEY,expires REAL NOT NULL)')
                 c.execute('DELETE FROM remembered_sessions');c.commit()
+            if preview:
+                return {'count':len(files),'bytes':total,'sample':sorted(files)[:8]}
             previous=self.backup()
             media=staging/'media'
-            if media.exists():
-                for sourcefile in media.iterdir():os.replace(sourcefile,self.media/sourcefile.name)
-            os.replace(tmp,self.path)
+            # Keep rollback material outside staging: an unsuccessful rollback
+            # must never be deleted by TemporaryDirectory cleanup.
+            rollback=Path(tempfile.mkdtemp(prefix='restore-rollback-',dir=self.directory))
+            applied=[];preserve_rollback=False
+            try:
+                if media.exists():
+                    for sourcefile in sorted(media.iterdir()):
+                        target=self.media/sourcefile.name
+                        original=rollback/sourcefile.name if target.exists() else None
+                        if original:shutil.copy2(target,original)
+                        os.replace(sourcefile,target)
+                        applied.append((target,original))
+                # This is the commit point. No fallible mutation follows it.
+                os.replace(tmp,self.path)
+            except OSError as error:
+                failures=[]
+                for target,original in reversed(applied):
+                    try:
+                        if original:os.replace(original,target)
+                        else:target.unlink(missing_ok=True)
+                    except OSError as rollback_error:failures.append(str(rollback_error))
+                if failures:
+                    preserve_rollback=True
+                    raise ValueError('Restore failed and media rollback could not finish. Recovery files: '+str(rollback)+'. Previous complete backup: '+previous['name']) from error
+                raise ValueError('Restore failed; the previous database and photos were kept. Recovery backup: '+previous['name']) from error
+            finally:
+                if not preserve_rollback:
+                    # Cleanup cannot turn a committed restore into a failure.
+                    shutil.rmtree(rollback,ignore_errors=True)
             return {'previous':previous['name']}
     def import_rows(self,rows,commit=False):
         if not isinstance(rows,list) or len(rows)>10000: raise ValueError('Expected a list of up to 10000 rows.')
@@ -906,6 +964,9 @@ class AppServer(HostHTTPServer):
         super().__init__(address,Handler);self.store=store;self.instance_id=secrets.token_hex(12);self.operation_lock=threading.RLock();self.installing=False;self.sessions={};self.attempts={};self.state_lock=threading.RLock()
 
 class Handler(BaseHTTPRequestHandler):
+    # Bound idle/preconnected sockets before reading a request; active requests
+    # retain their existing longer timeout in handle_request.
+    timeout = 5
     protocol_version='HTTP/1.1'
     def log_message(self,fmt,*args):
         # Do not log credentials, cookies or uploaded content.
@@ -928,6 +989,25 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Disposition','attachment; filename="'+download_name+'"')
             self.end_headers();shutil.copyfileobj(source,self.wfile,1024*1024)
     def session(self):
+        # Optional Toolbox SSO. Disabled unless a local key file is explicitly configured.
+        bridge_path = os.environ.get('MPL_TOOLBOX_KEY_FILE')
+        if bridge_path is None and os.name == 'nt' and self.headers.get('X-Toolbox-Bridge'):
+            try:
+                import winreg
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\MyToolbox') as key:
+                    bridge_path = winreg.QueryValueEx(key, 'BridgeKeyFile')[0]
+            except OSError:
+                bridge_path = None
+        bridge_header = self.headers.get('X-Toolbox-Bridge', '')
+        if bridge_path and bridge_header:
+            from toolbox_bridge import verify
+            try:
+                key = Path(bridge_path).read_bytes()
+                bridged = verify(key, bridge_header, self.client_address[0], self.command, self.path) if len(key) == 32 else None
+            except OSError:
+                bridged = None
+            if bridged:
+                return bridged
         cookie=SimpleCookie(self.headers.get('Cookie',''));token=cookie.get('mpl_session');token=token.value if token else ''
         with self.server.state_lock:
             s=self.server.sessions.get(token)
@@ -968,7 +1048,7 @@ class Handler(BaseHTTPRequestHandler):
                     if not hmac.compare_digest(self.headers.get('X-MPL-CSRF',''),session['csrf']):
                         self.close_connection=True
                         return self.send(403,{'error':'Session expired. Refresh the app.'})
-                if path=='/api/restore':
+                if path in ('/api/restore','/api/restore-preview'):
                     size=int(self.headers.get('Content-Length','0'))
                     if not 0<size<=10*1024**3:
                         self.close_connection=True
@@ -982,8 +1062,9 @@ class Handler(BaseHTTPRequestHandler):
                             chunk=self.rfile.read(min(left,1024*1024))
                             if not chunk:raise ValueError('Backup upload was interrupted.')
                             uploaded.write(chunk);left-=len(chunk)
-                        uploaded.seek(0);result=store.restore_file(uploaded)
-                    with self.server.state_lock:self.server.sessions.clear()
+                        uploaded.seek(0);result=store.restore_file(uploaded,preview=path.endswith('-preview'))
+                    if path=='/api/restore':
+                        with self.server.state_lock:self.server.sessions.clear()
                     return self.send(200,result)
                 raw=self.read_body()
                 binary=path in ('/api/upload','/api/restore','/api/image-import','/api/update')
@@ -991,7 +1072,15 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(d,dict):raise ValueError('Expected an object.')
             if path=='/api/status' and not post:
                 from updater import read_update_status
-                return self.send(200,{'update_job':read_update_status(store.directory),'version':VERSION,'instance':self.server.instance_id,'product':PRODUCT,'setup':not bool(store.meta('auth')),'authenticated':bool(session),'csrf':session['csrf'] if session else None})
+                scope=''
+                if session:
+                    scope=session.get('draft_scope','')
+                    if not scope and not self.headers.get('X-Toolbox-Bridge'):
+                        with store.lock,store.connect() as c:
+                            scope=store.meta('draft_namespace','',c)
+                            if not scope:
+                                scope=secrets.token_hex(24);store.setmeta(c,'draft_namespace',scope)
+                return self.send(200,{'draft_scope':scope,'update_job':read_update_status(store.directory),'version':VERSION,'instance':self.server.instance_id,'product':PRODUCT,'setup':not bool(store.meta('auth')),'authenticated':bool(session),'csrf':session['csrf'] if session else None})
             if path in ('/api/setup','/api/login') and post:
                 ip=self.client_address[0]
                 with self.server.state_lock:
@@ -1066,6 +1155,16 @@ class Handler(BaseHTTPRequestHandler):
                 with store.connect() as c:rows=[dict(r) for r in c.execute('SELECT at,action,data FROM history WHERE record_id=? ORDER BY id DESC LIMIT 100',(rid,))]
                 return self.send(200,rows)
             if path=='/api/backup' and post:return self.send(200,store.backup())
+            if path=='/api/storage-usage' and not post:
+                def usage(folder,pattern):
+                    try:return sum(f.stat().st_size for f in folder.glob(pattern) if f.is_file() and not f.is_symlink())
+                    except OSError:return None
+                folders={str(store.backups)}
+                for entry in store.backup_status():
+                    if entry['path']:folders.add(entry['path'])
+                return self.send(200,{'photo_bytes':usage(store.media,'*'),'backups':[
+                    {'folder':str(path),'bytes':usage(path,'MyPhoneLibrary-*.zip') if path.is_dir() else None}
+                    for path in sorted({Path(p).resolve() for p in folders})]})
             if path=='/api/backup-status' and not post:return self.send(200,store.backup_status())
             if path=='/api/backups' and not post:return self.send(200,[{'name':x.name,'bytes':x.stat().st_size,'at':dt.datetime.fromtimestamp(x.stat().st_mtime,dt.timezone.utc).isoformat()} for x in sorted(store.backups.glob('MyPhoneLibrary-*.zip'),reverse=True)])
             if path=='/api/download-backup' and not post:
@@ -1273,3 +1372,4 @@ if __name__=='__main__':
         selected=native_folder_dialog(base64.b64decode(sys.argv[2]).decode('utf-8'))
         if selected:sys.stdout.write(base64.b64encode(selected.encode('utf-8')).decode('ascii'));sys.stdout.flush()
     else:raise SystemExit(main())
+

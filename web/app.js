@@ -1,5 +1,5 @@
 'use strict';
-const UI_VERSION='1.26.1';
+const UI_VERSION='1.26.9';
 const IS_ANDROID_APP=typeof navigator!=='undefined'&&/MyPhoneLibraryAndroid/i.test(navigator.userAgent);
 const BUNDLED_ANDROID_UI=IS_ANDROID_APP&&window.MyPhoneLibraryAndroid?.hasBundledUi?.()===true;
 function androidVersion(){
@@ -15,6 +15,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const normal=s=>String(s??'').trim().toLocaleLowerCase().replace(/\s+/g,' ');
 const enumLabel=v=>({"Izmjena":"Updated","Dodavanje":"Added","U kolekciji": "In collection", "Posuđen": "On loan", "Prodan": "Sold", "Poklonjen": "Gifted", "Rastavljen": "Dismantled", "Rashodovan": "Retired", "Netestiran": "Untested", "Ispravan": "Working", "Djelimično ispravan": "Partly working", "Neispravan": "Not working", "Kolekcija": "Collection", "Za popravak": "For repair", "Donor": "Donor", "Za prodaju": "For sale", "Za razmjenu": "For trade", "Obična": "Standard", "Music Edition": "Music Edition", "Limited Edition": "Limited Edition", "Nepoznato": "Unknown", "Original": "Original", "Zamjenski": "Replacement", "Miješano": "Mixed", "Otključan": "Unlocked", "SIM-lock": "SIM lock", "Drugi lock": "Other lock", "Dodaj": "Add", "Rezerviši": "Reserve", "Oslobodi": "Release", "Ugradi": "Install", "Ugradi rezervisano": "Install reserved", "Otpiši": "Write off", "Otvoren": "Open", "U radu": "In progress", "Čeka dijelove": "Waiting for parts", "Završen": "Completed", "Netestirano": "Untested", "Ispravno": "Working", "Neispravno": "Not working", "Novo": "New", "Korišteno": "Used"})[v]||v;
 const ACTIVE=['U kolekciji','Posuđen'];
+const viewTitles={all:'My collection',phone:'Phones',part:'Parts and accessories',duplicates:'Multiple units',donors:'Donor phones',repair:'For repair',untested:'Untested',incomplete:'What is missing?',review:'Phones to complete',wish:'Wishlist'};
 let uploadCount=0,phoneDraft=null,panelRoute=null,panelDirty=false;
 let db=null,csrf='',draft=null,mode='edit',addUnit=null,dirty=false,expanded=new Set(),sort={key:'brand',dir:1},importRows=null,preview=null,toastTimer;
 const columns=[['select','Select'],['completeness','Completeness'],['image','Image'],['inv','Inv. no.'],['brand','Brand'],['model','Model name'],['alias','Mod. nr.'],['type','Type code'],['product_code','Product code'],['colors','Colors'],['editions','Editions'],['battery','Battery'],['charger','Charger'],['state','Condition'],['rating','Cosmetic'],['owned','Owned'],['box','Box'],['os','Operating system'],['released','Released'],['introduced','Introduced'],['qty','Qty'],['parts','Parts'],['location','Location'],['value','Value'],['gsm','GSM'],['wiki','Wiki'],['note','Note'],['actions','Actions']];
@@ -25,6 +26,28 @@ const wantedOnly=r=>isWanted(r)&&!live(r).length;
 function acquireButton(r){return isWanted(r)?`<button type="button" data-action="acquire-wanted" data-id="${r.id}">Acquired — add to collection</button>`:'';}
 const unique=a=>[...new Set(a.filter(Boolean))];
 const name=r=>[r.brand,r.model].filter(Boolean).join(' ');
+let draftScope='',draftSlot='';
+const draftPrefix=()=> 'mpl:draft:'+draftScope+':';
+function draftList(){
+ if(!draftScope)return [];
+ try{return Object.keys(localStorage).filter(k=>k.startsWith(draftPrefix())).map(k=>[k,JSON.parse(localStorage.getItem(k))]).filter(([,d])=>d?.record&&Array.isArray(d.record.instances)).sort((a,b)=>b[1].at-a[1].at);}
+ catch{return [];}
+}
+function draftButton(){const el=$('recover-draft');if(el)el.hidden=!draftList().length;}
+function preserveDraft(){
+ if(!draftScope||!dirty||!draft||!$('editor').open)return;
+ readDraft();
+ try{
+  if(!draftSlot)draftSlot=draftPrefix()+(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2));
+  localStorage.setItem(draftSlot,JSON.stringify({record:draft,mode,index:editorUnitIndex,at:Date.now()}));
+  draftButton();
+ }catch{$('editor-error').textContent='Draft could not be saved on this device.';}
+}
+function removeDraft(){if(draftSlot)try{localStorage.removeItem(draftSlot);}catch{}draftSlot='';draftButton();}
+function recoverDraft(){
+ const drafts=draftList();
+ panel('Recover a draft',drafts.map(([key,d])=>'<div class="setting-row"><button data-action="open-draft" data-id="'+esc(key)+'">'+esc(name(d.record)||'New phone')+' · '+esc(new Date(d.at).toLocaleString())+'</button><button data-action="drop-draft" data-id="'+esc(key)+'">Discard</button></div>').join('')||'<p>No saved drafts.</p>');
+}
 function toast(msg){const dialog=[...document.querySelectorAll('dialog[open]')].at(-1);let node=$('toast');if(dialog){node=dialog.querySelector('.dialog-notice');if(!node){node=document.createElement('p');node.className='dialog-notice hint';node.setAttribute('role','status');dialog.prepend(node);}}node.textContent=msg;node.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>node.hidden=true,9000);}
 async function api(path,data,binary=false){
  if(data!==undefined&&versionMismatch&&!['/api/login','/api/logout'].includes(path))throw Error('A newer application version is active. Reload this page before saving changes.');
@@ -99,10 +122,15 @@ async function watchInstallation(){
  }finally{reconnecting=false;}
 }
 async function boot(){
- try{const status=await api('/api/status');serverInstance=status.instance||null;csrf=status.csrf||'';$('login').hidden=status.authenticated;$('application').hidden=!status.authenticated;
+ try{const status=await api('/api/status');
+ if(draftScope!==(status.draft_scope||'')){
+  if(draftScope){preserveDraft();if($('editor').open)$('editor').close();if($('panel').open)$('panel').close();}
+  draftScope=status.draft_scope||'';draftSlot='';phoneDraft=null;draft=null;dirty=false;
+ }
+ serverInstance=status.instance||null;csrf=status.csrf||'';$('login').hidden=status.authenticated;$('application').hidden=!status.authenticated;
  $('login-description').textContent=status.setup?'Set a password for your collection.':'Sign in to access your phones.';
  $('login-submit').textContent=status.setup?'Create collection':'Sign in';$('login-form').dataset.setup=String(status.setup);
- if(status.authenticated){await refresh();currentView=db.settings.default_page||'all';render();}
+ if(status.authenticated){await refresh();draftButton();currentView=db.settings.default_page||'all';render();}
  const completed=sessionStorage.getItem('mpl-update-complete');
  if(completed&&status.version===completed){
   $('update-banner').hidden=false;$('update-banner').textContent='Update completed successfully. Installed version: '+completed;
@@ -222,12 +250,30 @@ let quickFilters={brand:'',color:'',os:'',location:'',state:''};
 const filterLabels={brand:'Brand',color:'Color',os:'Operating system',location:'Location',state:'Condition',battery_present:'Battery included'};
 function renderFilters(){const root=$('quick-filters');if(!root)return;root.innerHTML=Object.entries(filterLabels).map(([k,label])=>{if(k==='battery_present')return `<label>${label}<select data-quick-filter="${k}"><option value="">All</option>${[['true','Yes'],['false','No'],['unknown','Not checked']].map(([v,l])=>`<option value="${v}" ${quickFilters[k]===v?'selected':''}>${l}</option>`).join('')}</select></label>`;const values=unique(db.records.flatMap(r=>k==='brand'?[r.brand]:r.kind==='part'?[k==='state'?r.condition:r[k]]:(r.instances||[]).map(u=>u[k]||(k==='os'?r.os:'')))).sort((a,b)=>a.localeCompare(b));if(quickFilters[k]&&!values.includes(quickFilters[k]))values.push(quickFilters[k]);return `<label>${label}<select data-quick-filter="${k}"><option value="">All</option>${values.map(v=>`<option value="${esc(v)}" ${v===quickFilters[k]?'selected':''}>${esc(enumLabel(v))}</option>`).join('')}</select></label>`;}).join('')+'<button data-action="clear-filters">Clear filters</button><button data-action="saved-filters">Save / open filters</button>';}
 function matchesFilters(r,u){return Object.entries(quickFilters).every(([k,v])=>!v||(k==='battery_present'?(r.kind==='phone'&&!!u&&(v==='unknown'?u.battery_present==null:String(u.battery_present)===v)):normal(k==='brand'?r.brand:k==='os'?(u?.os||r.os):u?u[k]:k==='state'?r.condition:r[k])===normal(v)));}
-function searchMatches(r,q){const norm=v=>normal(v).replace(/[^\p{L}\p{N}]/gu,''),tokens=normal(q).split(/\s+/).filter(Boolean).map(norm).filter(Boolean);const common=['brand','model','alias','type','battery','charger','os','note'].map(k=>r[k]||'').join(' ');return (r.kind==='phone'&&r.instances?.length?r.instances:[null]).some(u=>{if(!matchesFilters(r,u))return false;const text=norm(common+' '+(u?['inv','alias','type','product_code','color','edition','os','imei','imei2','serial','firmware','memory','location','note'].map(k=>u[k]||'').join(' '):[r.location,r.part_category,r.color].join(' ')));return tokens.every(t=>text.includes(t));});}
+const searchIndex = new WeakMap();
+const normalizeSearch = value => normal(value).replace(/[^\p{L}\p{N}]/gu,'');
+function indexRecord(r){
+ const common = ['brand','model','alias','type','battery','charger','os','note'].map(k=>r[k]||'').join(' ');
+ const fields = ['inv','alias','type','product_code','color','edition','os','imei','imei2','serial','firmware','memory','location','note'];
+ return (r.kind==='phone' && r.instances?.length ? r.instances : [null]).map(unit=>{
+  const values = unit ? fields.map(k=>unit[k]||'') : [r.location,r.part_category,r.color];
+  return {unit,text:normalizeSearch(common+' '+values.join(' '))};
+ });
+}
+function searchMatches(r,q){
+ const tokens = Array.isArray(q) ? q : normal(q).split(/\s+/).map(normalizeSearch).filter(Boolean);
+ if(!tokens.length && !Object.values(quickFilters).some(Boolean))return true;
+ let entries=searchIndex.get(r);
+ if(!entries){entries=indexRecord(r);searchIndex.set(r,entries);}
+ return entries.some(({unit,text})=>matchesFilters(r,unit)&&tokens.every(t=>text.includes(t)));
+}
+const searchCollator = new Intl.Collator('bs',{numeric:true});
 function filtered(){
  let q=normal($('search').value),view=currentView;
  if(view.startsWith('saved-')){const v=db.settings.views[Number(view.slice(6))];if(v){view=v.filter;q=normal($('search').value||v.query);}}
- let rows=db.records.filter(r=>{if(view==='review'&&(r.kind!=='phone'||!live(r).some(u=>!fullyChecked(r,u))))return false;if(view==='donors'&&!live(r).some(forParts))return false;if(view==='incomplete'&&!live(r).some(needsCompletion))return false;if(view==='phone'||view==='part'){if(r.kind!==view)return false;}if(view==='wish'&&!isWanted(r))return false;if(['all','phone'].includes(view)&&!showWanted&&wantedOnly(r))return false;if(view==='duplicates'&&live(r).length<2)return false;if(view==='untested'&&!live(r).some(u=>u.state==='Netestiran'))return false;if(view==='repair'&&!live(r).some(u=>u.purpose==='Za popravak'||u.state==='Neispravan'||u.state==='Djelimično ispravan'))return false;return searchMatches(r,q);});
- return rows.sort((a,b)=>{const av=value(a,sort.key),bv=value(b,sort.key);return sort.dir*(typeof av==='number'&&typeof bv==='number'?av-bv:String(av).localeCompare(String(bv),'bs',{numeric:true}));});
+ const tokens=q.split(/\s+/).map(normalizeSearch).filter(Boolean);
+ let rows=db.records.filter(r=>{if(view==='review'&&(r.kind!=='phone'||!live(r).some(u=>!fullyChecked(r,u))))return false;if(view==='donors'&&!live(r).some(forParts))return false;if(view==='incomplete'&&!live(r).some(needsCompletion))return false;if(view==='phone'||view==='part'){if(r.kind!==view)return false;}if(view==='wish'&&!isWanted(r))return false;if(['all','phone'].includes(view)&&!showWanted&&wantedOnly(r))return false;if(view==='duplicates'&&live(r).length<2)return false;if(view==='untested'&&!live(r).some(u=>u.state==='Netestiran'))return false;if(view==='repair'&&!live(r).some(u=>u.purpose==='Za popravak'||u.state==='Neispravan'||u.state==='Djelimično ispravan'))return false;return searchMatches(r,tokens);});
+ return rows.sort((a,b)=>{const av=value(a,sort.key),bv=value(b,sort.key);return sort.dir*(typeof av==='number'&&typeof bv==='number'?av-bv:searchCollator.compare(String(av),String(bv)));});
 }
 function image(r){const src=r.image||(r.photos||[])[0];return src?`<img class="thumb" src="${esc(src)}" alt="${esc(name(r))}" loading="lazy" data-action="photo" data-url="${esc(src)}">`:'<span class="thumb-placeholder" aria-label="No photo">▯</span>';}
 function modelValues(r,key){
@@ -267,15 +313,22 @@ function rawCell(r,key){if(key==='select')return selectionBox(r);if(key==='compl
 let rowMenuSerial=0;
 function noteIcon(value){if(!value)return '—';return `<button type="button" class="note-icon" data-action="note-popup" data-note="${esc(value)}" aria-label="View note">▤</button>`;}
 function actionButton(r,index=null){const menu='row-menu-'+(++rowMenuSerial),unit=index!==null,attr=`data-id="${r.id}"${unit?` data-index="${index}"`:''}`;return `<button type="button" class="row-menu-toggle" popovertarget="${menu}" aria-label="Actions for ${esc(unit?'phone '+r.instances[index].inv:name(r))}">⋯</button><div id="${menu}" popover class="row-menu"><strong>${esc(unit?'Phone #'+r.instances[index].inv:name(r))}</strong><button data-action="${unit?'edit-unit':'edit'}" ${attr}>Edit</button><button data-action="${unit?'copy-unit':'copy-model'}" ${attr}>Copy</button><button class="danger" data-action="${unit?'delete-unit':'delete-record'}" ${attr}>${unit?'Move this phone to trash':r.kind==='phone'?'Move entire model to trash':'Move part to trash'}</button></div>`;}
+let pinnedNote=null;
 function showNotePopup(target){let tip=$('note-tooltip');if(!tip){tip=document.createElement('div');tip.id='note-tooltip';tip.setAttribute('popover','manual');tip.setAttribute('role','tooltip');document.body.append(tip);}tip.textContent=target.dataset.note;tip.showPopover();const rect=target.getBoundingClientRect();tip.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-tip.offsetWidth-8))+'px';tip.style.top=Math.max(8,Math.min(rect.bottom+6,window.innerHeight-tip.offsetHeight-8))+'px';}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')hideNotePopup();});
-window.addEventListener('resize',()=>hideNotePopup());
-document.addEventListener('scroll',()=>hideNotePopup(),true);
-function hideNotePopup(){const tip=$('note-tooltip');if(tip?.hidePopover)tip.hidePopover();}
-document.addEventListener('pointerover',e=>{const t=e.target.closest?.('.note-icon');if(t)showNotePopup(t);});
-document.addEventListener('pointerout',e=>{if(e.target.closest?.('.note-icon'))hideNotePopup();});
+function repositionNote(){
+ if(!pinnedNote || !pinnedNote.isConnected){hideNotePopup();return;}
+ const box=pinnedNote.getBoundingClientRect();
+ if(box.bottom<0 || box.top>window.innerHeight){hideNotePopup();return;}
+ showNotePopup(pinnedNote);
+}
+window.addEventListener('resize',repositionNote);
+document.addEventListener('scroll',repositionNote,true);
+function hideNotePopup(){pinnedNote=null;const tip=$('note-tooltip');if(tip?.hidePopover)tip.hidePopover();}
+document.addEventListener('pointerover',e=>{const t=e.target.closest?.('.note-icon');if(t&&!pinnedNote)showNotePopup(t);});
+document.addEventListener('pointerout',e=>{if(!pinnedNote&&e.target.closest?.('.note-icon'))hideNotePopup();});
 document.addEventListener('focusin',e=>{if(e.target.closest?.('.note-icon'))showNotePopup(e.target);});
-document.addEventListener('focusout',e=>{if(e.target.closest?.('.note-icon'))hideNotePopup();});
+document.addEventListener('focusout',e=>{if(!pinnedNote&&e.target.closest?.('.note-icon'))hideNotePopup();});
 document.addEventListener('click',e=>{if(!e.target.closest?.('.note-icon'))hideNotePopup();});
 function copyModel(id){if(phoneDraft&&!confirm('Replace the saved phone draft with this model?'))return;draft=clone(record(id));delete draft.id;delete draft.rev;draft.model='';draft.declared_qty=0;draft.instances=draft.kind==='phone'?[blankUnit()]:[];draft.quantity=0;draft.reserved=0;mode=draft.kind==='phone'?'add':'part';phoneDraft=null;dirty=true;editorRender(0);$('editor').showModal();toast('Copy ready. Enter a different model name.');}
 function unitImage(r,u){const own=(u.photos||[])[0],src=own||r.image||(r.photos||[])[0];return src?`<img class="thumb" src="${esc(src)}" alt="${esc(u.inv)}" title="${own?'Unit photo':'Model catalog image'}" data-action="photo" data-url="${esc(src)}">${own?`<small>${u.photos.length} ${u.photos.length===1?'photo':'photos'}</small>`:'<small>Catalog</small>'}`:'<span class="thumb-placeholder" aria-label="No photo">▯</span>';}
@@ -382,22 +435,28 @@ function compareUnits(fieldsOpen=false){const entries=db.records.flatMap(r=>(r.i
 
 function renderWishlistOverview(){const host=$('wishlist-overview');if(!host)return;host.hidden=currentView!=='wish';if(host.hidden)return;const priorities={High:0,Medium:1,Low:2};const rows=filtered().filter(isWanted).sort((a,b)=>(priorities[a.wish_priority]??3)-(priorities[b.wish_priority]??3));host.innerHTML=`<div class="wishlist-plans">${rows.map(r=>`<article><strong>${esc(name(r))}</strong><span>${esc(r.wish_priority||'Priority not set')}</span><span>${r.wish_price!=null&&r.wish_price!==''?'Target: '+esc(r.wish_price)+' '+esc(amountCurrency(r)):'Target price not set'}</span><p>${esc(r.wish_note||'')}</p><button data-action="edit" data-id="${r.id}">Edit wishlist details</button>${acquireButton(r)}</article>`).join('')}</div>`;}
 
+let lastSmallScreen=null;
 function render(){renderFilters();renderWishlistOverview();document.documentElement.dataset.checkFocus=String(checkFocus);if($('check-toggle')){$('check-toggle').setAttribute('aria-pressed',String(checkFocus));$('check-toggle').textContent='To check'+(checkFocus?' · ON':'');}
  if($('wanted-toggle')){$('wanted-toggle').hidden=!['all','phone'].includes(currentView);$('wanted-toggle').textContent=showWanted?'Hide wanted list':'Show wanted list';$('wanted-toggle').setAttribute('aria-pressed',String(showWanted));}
  if($('add-wanted'))$('add-wanted').hidden=currentView!=='wish';
  if($('heading-add-phone'))$('heading-add-phone').hidden=currentView==='wish';
- if($('page-title'))$('page-title').textContent=currentView==='wish'?'Wishlist':currentView==='review'?'Phones to complete':currentView==='incomplete'?'What is missing?':'My collection';
+ if($('page-title'))$('page-title').textContent=viewTitles[currentView]||(currentView.startsWith('saved-')?db.settings.views?.[Number(currentView.slice(6))]?.name:null)||'My collection';
+ if($('sidebar-version'))$('sidebar-version').textContent='MyPhoneLibrary '+db.version;
  const activeFilters=Object.values(quickFilters).filter(Boolean).length;if($('filter-toggle'))$('filter-toggle').textContent='Filters'+(activeFilters?' ('+activeFilters+')':'');
  if(quickEdit)return;
  selectedUnits=new Set([...selectedUnits].filter(id=>db.records.some(r=>(r.instances||[]).some(u=>u.id===id))));
+ if($('bulk-tools'))$('bulk-tools').hidden=!selectedUnits.size;
  if($('bulk-count'))$('bulk-count').textContent=selectedUnits.size+' selected';
  document.querySelectorAll('[data-action="nav-view"]').forEach(el=>el.classList.toggle('active',el.dataset.view===currentView));
  const rows=filtered(), visible=db.settings.columns.filter(k=>columns.some(c=>c[0]===k)&&!unitOnlyColumns.includes(k));
  for(const mandatory of ['select','image','model','qty','actions'])if(!visible.includes(mandatory))visible.push(mandatory);
  visible.splice(visible.indexOf('image'),1);visible.unshift('image');visible.splice(visible.indexOf('select'),1);visible.unshift('select');
- $('collection-table').innerHTML=`${tableColumns(visible)}<thead><tr>${visible.map(k=>`<th scope="col" draggable="${k!=='image'}" data-column-key="${k}" title="${k==='image'?'Image and expand control stay first':'Drag to reorder; click to sort'}" data-sort="${k}">${esc(columns.find(c=>c[0]===k)[1])}${sort.key===k?(sort.dir===1?' ↑':' ↓'):''}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${visible.map(k=>`<td data-column="${k}" class="${k==='model'?'model-cell':['colors','editions','state','note','location','type'].includes(k)?'wrap':''}">${cell(r,k)}</td>`).join('')}</tr>${expanded.has(r.id)?expandedRow(r,visible):''}`).join('')}</tbody>`;
+ const smallScreen=window.matchMedia?.('(max-width: 800px)').matches ?? false;
+ lastSmallScreen=smallScreen;
+ const listView=collectionLayout==='list' && !['incomplete','review'].includes(currentView);
+ $('collection-table').innerHTML=!smallScreen && listView ? `${tableColumns(visible)}<thead><tr>${visible.map(k=>`<th scope="col" draggable="${k!=='image'}" data-column-key="${k}" title="${k==='image'?'Image and expand control stay first':'Drag to reorder; click to sort'}" data-sort="${k}">${esc(columns.find(c=>c[0]===k)[1])}${sort.key===k?(sort.dir===1?' ↑':' ↓'):''}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${visible.map(k=>`<td data-column="${k}" class="${k==='model'?'model-cell':['colors','editions','state','note','location','type'].includes(k)?'wrap':''}">${cell(r,k)}</td>`).join('')}</tr>${expanded.has(r.id)?expandedRow(r,visible):''}`).join('')}</tbody>` : '';
  $('table-wrap').hidden=!rows.length||collectionLayout==='cards';$('card-grid').hidden=collectionLayout!=='cards'||!rows.length;$('card-grid').innerHTML=collectionLayout==='cards'?rows.map(phoneCard).join(''):'';document.querySelectorAll('[data-action="layout"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.layout===(collectionLayout||'list'))));$('empty').hidden=rows.length>0;if(!rows.length&&$('empty').querySelector('h2')){$('empty').querySelector('h2').textContent=currentView==='wish'?'Your wishlist is empty':'No matching collection entries';$('empty').querySelector('p').textContent=currentView==='wish'?'Add a phone you would like to own. It stays separate until you acquire it.':'Add a phone, change the filters or show the wanted list.';}
- if($('mobile-list')){$('mobile-list').innerHTML=rows.map(mobileModel).join('');$('mobile-list').hidden=collectionLayout==='cards'||!rows.length||currentView==='incomplete';}
+ if($('mobile-list')){$('mobile-list').innerHTML=smallScreen && listView ? rows.map(mobileModel).join('') : '';$('mobile-list').hidden=collectionLayout==='cards'||!rows.length||currentView==='incomplete';}
  if($('completion-report')){$('completion-report').hidden=currentView!=='incomplete';if(currentView==='incomplete'){$('completion-report').innerHTML=completionReport(rows);$('table-wrap').hidden=true;$('card-grid').hidden=true;}}
  renderCollectionLayouts(rows);
  if(currentView==='review'){for(const id of ['table-wrap','card-grid','mobile-list','alternative-layout','empty'])if($(id))$(id).hidden=true;$('completion-report').hidden=false;$('completion-report').innerHTML=reviewReport(rows);}
@@ -485,7 +544,7 @@ function acquireWanted(id){
 function clearPhoneDraft(){
  if(uploadCount){toast('Wait for photos to finish uploading.');return;}
  if(!confirm('Clear all entered data and photos from this unsaved phone?'))return;
- phoneDraft=null;draft=newRecord();draft.instances.push(blankUnit());addUnit=draft.instances[0];dirty=false;editorRender(0);
+ removeDraft();phoneDraft=null;draft=newRecord();draft.instances.push(blankUnit());addUnit=draft.instances[0];dirty=false;editorRender(0);
 }
 function addPart(){mode='part';draft=newRecord('part');dirty=false;editorRender();$('editor').showModal();$('editor').scrollTop=0;}
 function readDraft(){
@@ -528,19 +587,24 @@ function editorRender(unitIndex=null){
  $('editor-kicker').textContent=wish?'Wanted phone · no physical unit added':mode==='acquire'?'Moves to collection only after saving':'';$('record-save').textContent=mode==='add'?'Add phone':wish?'Save to wishlist':mode==='acquire'?'Add to collection':'Save changes';$('editor-error').textContent='';
  const rf=(l,k,o={})=>field(l,k,draft[k],o);
  const ef=(l,k,o={})=>part||wish||!u?rf(l,k,o):field(l,k,u?.[k]||draft[k]||'',o).replace(`data-r="${k}"`,`data-effective="${k}"`);
- const selector=!part&&!wish&&mode!=='add'&&draft.instances.length>1?`<label class="span-all">Phone<select id="editor-unit-select">${draft.instances.map((x,i)=>`<option value="${i}" ${i===editorUnitIndex?'selected':''}>${esc([x.inv,x.color,x.edition].filter(Boolean).join(' · '))}</option>`).join('')}</select></label>`:'';
+ const editingUnit=!part&&!wish&&!!u;
+ const unitOverrides=editingUnit&&!!draft.id;
+ const unitLabel=(unit,index)=>[unit.inv || 'Phone '+(index+1),unit.color,unit.edition].filter(Boolean).join(' · ');
+ const selector=editingUnit&&mode!=='add'&&draft.instances.length>1?`<label class="span-all">Selected phone<select id="editor-unit-select">${draft.instances.map((unit,index)=>`<option value="${index}" ${index===editorUnitIndex?'selected':''}>${esc(unitLabel(unit,index))}</option>`).join('')}</select></label>`:'';
+ const referenceFields=`${ef('Model number / Variant','alias')}${ef('Type code','type')}${!part?ef('Operating system','os',{list:'options-os'}):''}${ef('GSMArena link','gsm',{type:'url'})}${ef('Wikipedia link','wiki',{type:'url'})}`;
  $('editor-content').innerHTML=`${mode==='add'?'<div class="actions"><button type="button" data-action="draft-catalogs">Catalogs</button><button type="button" data-action="clear-phone-data">Clear data</button></div>':''}
- <div class="phone-form-grid grid">${selector}<div class="photo-box">${draft.image?`<img src="${esc(draft.image)}" alt="Model image" data-action="photo" data-url="${esc(draft.image)}">`:'<span class="thumb-placeholder">▯</span>'}<label>Model image — list and cards<input id="main-image-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>${rf('Model image URL','image')}${draft.image?'<button type="button" data-action="remove-image">Remove model image</button>':''}</div>
+ <section class="phone-form-grid grid model-fields"${part?'':' aria-labelledby="model-fields-heading"'}>${!part?'<header class="span-all editor-scope"><h3 id="model-fields-heading">Model information</h3><p>Shared by all phones of this model.</p></header>':''}<div class="photo-box">${draft.image?`<img src="${esc(draft.image)}" alt="Model image" data-action="photo" data-url="${esc(draft.image)}">`:'<span class="thumb-placeholder">▯</span>'}<label>Model image — list and cards<input id="main-image-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>${rf('Model image URL','image')}${draft.image?'<button type="button" data-action="remove-image">Remove model image</button>':''}</div>
  ${rf('Brand','brand',{list:'options-brand',required:!part})}${rf(part?'Part name':'Model name','model',{list:part?'':'model-suggestions',required:true})}
- ${ef('Model number / Variant','alias')}${ef('Type code','type')}
- ${part?rf('Catalog item','catalog_item',{choices:[['','None'],...(db.catalog||[]).filter(x=>['battery','charger','part_category'].includes(x.category)).map(x=>[x.id,x.name])]}):ef('Operating system','os',{list:'options-os'})}
+ ${unitOverrides?'':referenceFields}
+ ${part?rf('Catalog item','catalog_item',{choices:[['','None'],...(db.catalog||[]).filter(x=>['battery','charger','part_category'].includes(x.category)).map(x=>[x.id,x.name])]}):''}
  ${part?rf('Part category','part_category',{list:'options-part_category'}):''}${rf('Battery / code','battery',{list:'options-battery'})}${rf('Charger / connector','charger',{list:'options-charger'})}<div id="editor-battery-suggestions" class="span-all">${part?'':batterySuggestionsHTML(draft.brand,draft.model)}</div><div id="editor-charger-suggestions" class="span-all">${part?'':chargerSuggestionsHTML(draft)}</div><div id="editor-battery-alternatives" class="span-all subtle">${batteryAlternatives(draft.battery).length?'Compatible batteries: '+batteryAlternatives(draft.battery).map(x=>esc(x.name)).join(' · '):''}</div>
- ${rf('Released — year, month or date','released')}${rf('Introduced','introduced')}${ef('GSMArena link','gsm',{type:'url'})}${ef('Wikipedia link','wiki',{type:'url'})}
+ ${rf('Released — year, month or date','released')}${rf('Introduced','introduced')}
  ${!part?'<div class="span-all"><button type="button" data-action="gsm-preview">Get data from GSMArena</button></div>':''}
  <div class="span-all checks">${rf('Favorite','favorite',{type:'checkbox'})}${!wish&&mode!=='acquire'?rf('Wishlist','wishlist',{type:'checkbox'}):''}</div>
  ${!part&&(wish||isWanted(draft))?`${rf('Wishlist priority','wish_priority',{choices:[['','Not set'],'High','Medium','Low']})}${rf('Target price ('+amountCurrency(draft)+')','wish_price',{type:'number'})}${rf('Wishlist requirements / notes','wish_note',{type:'textarea'})}`:''}
- ${part?`${rf('Location','location',{list:'options-location'})}${draft.id?`<p class="hint">Total ${draft.quantity}; reserved ${draft.reserved}. Change quantities using Stock movements.</p>`:rf('Initial quantity','quantity',{type:'number'})}${rf('Part condition','condition',{choices:['Netestirano','Ispravno','Neispravno','Novo','Korišteno']})}${rf('Color','color',{list:'options-color'})}${rf('Purchase price per item ('+amountCurrency(draft)+')','price',{type:'number'})}${rf('Estimated value per item ('+amountCurrency(draft)+')','value',{type:'number'})}<div class="span-all">${rf('Notes','note',{type:'textarea'})}</div><div class="span-all checks" id="compatibility">${db.records.filter(r=>r.kind==='phone').map(r=>`<label class="check"><input type="checkbox" value="${r.id}" ${(draft.compatible||[]).includes(r.id)?'checked':''}>${esc(name(r))}</label>`).join('')}</div><div class="span-all"><h3>Photos of this part</h3><div class="gallery">${(draft.photos||[]).map((src,i)=>`<figure><img src="${esc(src)}" alt="Part photo"><button type="button" data-action="remove-photo" data-photo="${i}">Remove</button></figure>`).join('')}</div><input id="gallery-upload" type="file" multiple accept="image/*"></div>`:`<div class="span-all hint" id="imei-warning" hidden></div>${wish||!u?rf('Model notes','note',{type:'textarea'}):unitHTML(u,editorUnitIndex,true)}`}
- ${(db.settings.custom_fields||[]).map(f=>customHTML(f,draft.custom?.[f.id])).join('')}</div>
+ ${part?`${rf('Location','location',{list:'options-location'})}${draft.id?`<p class="hint">Total ${draft.quantity}; reserved ${draft.reserved}. Change quantities using Stock movements.</p>`:rf('Initial quantity','quantity',{type:'number'})}${rf('Part condition','condition',{choices:['Netestirano','Ispravno','Neispravno','Novo','Korišteno']})}${rf('Color','color',{list:'options-color'})}${rf('Purchase price per item ('+amountCurrency(draft)+')','price',{type:'number'})}${rf('Estimated value per item ('+amountCurrency(draft)+')','value',{type:'number'})}<div class="span-all">${rf('Notes','note',{type:'textarea'})}</div><div class="span-all checks" id="compatibility">${db.records.filter(r=>r.kind==='phone').map(r=>`<label class="check"><input type="checkbox" value="${r.id}" ${(draft.compatible||[]).includes(r.id)?'checked':''}>${esc(name(r))}</label>`).join('')}</div><div class="span-all"><h3>Photos of this part</h3><div class="gallery">${(draft.photos||[]).map((src,i)=>`<figure><img src="${esc(src)}" alt="Part photo"><button type="button" data-action="remove-photo" data-photo="${i}">Remove</button></figure>`).join('')}</div><input id="gallery-upload" type="file" multiple accept="image/*"></div>`:`<div class="span-all hint" id="imei-warning" hidden></div>${wish||!u?rf('Model notes','note',{type:'textarea'}):''}`}
+ ${(db.settings.custom_fields||[]).map(f=>customHTML(f,draft.custom?.[f.id])).join('')}</section>
+ ${editingUnit?`<section class="phone-form-grid grid unit-fields" aria-labelledby="unit-fields-heading"><header class="span-all editor-scope"><h3 id="unit-fields-heading">This phone · ${esc(unitLabel(u,editorUnitIndex))}</h3><p>Inventory, condition and photos for this physical phone.</p></header>${selector}${unitOverrides?referenceFields:''}${unitHTML(u,editorUnitIndex,true)}</section>`:''}
  ${Object.keys(draft.specs||{}).length?`<details class="section"><summary>Imported specifications</summary><div class="pre">${esc(Object.entries(draft.specs).filter(([,v])=>v).map(([k,v])=>k+': '+v).join('\n'))}</div></details>`:''}
  ${draft.id&&mode!=='add'&&mode!=='acquire'?`<div class="actions"><button type="button" data-action="history" data-id="${draft.id}">History</button>${part?`<button type="button" data-action="move" data-id="${draft.id}">Stock movements</button>`:wish?acquireButton(draft):'<button type="button" data-action="append-unit">+ Another unit</button>'}<button type="button" class="danger" data-action="${!part&&!wish&&u?'delete-unit':'delete-record'}" data-id="${draft.id}" data-index="${editorUnitIndex}">${!part&&!wish&&u?'Move this phone to trash':part?'Move part to trash':'Move entire model to trash'}</button></div>`:''}`;
  if(!part&&!wish&&u)$('editor-content').innerHTML+='<div class="review-editor hint">'+checkSummary(draft,u)+'<p>Save as fully checked confirms that you have reviewed this phone. All To check flags must be resolved. Later changes to its data reopen the review.</p>'+(fullyChecked(draft,u)?'<button type="button" data-action="reopen-review">Reopen review</button>':'')+'</div>';
@@ -568,9 +632,9 @@ function closePanel(){
 }
 function closeEditor(){
  if(uploadCount){toast('Wait for photos to finish uploading.');return false;}
- if(mode==='add'){readDraft();phoneDraft=dirty?clone(draft):null;}
- else if(dirty&&!confirm('Discard unsaved changes?'))return false;
- $('editor').close();draft=null;dirty=false;return true;
+ if(mode==='add'){readDraft();phoneDraft=dirty?clone(draft):null;preserveDraft();}
+ else if(dirty){if(!confirm('Discard unsaved changes?'))return false;removeDraft();}
+ $('editor').close();draft=null;draftSlot='';dirty=false;return true;
 }
 function download(text,filename,type='application/json'){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([text],{type}));a.href=u;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
 function exportPanel(){panel('Export collection',`<p>JSON contains models and individual units. Open CSV in a spreadsheet. Use a ZIP backup for complete recovery including photos.</p><div class="actions"><button data-action="export-json" class="primary">JSON — all data</button><button data-action="export-csv">CSV — all units</button><button data-action="export-table">CSV — current table</button><button data-action="offline-export">Offline view</button></div>`);}
@@ -642,7 +706,7 @@ function outsideDialog(event,dialog){
 }
 function customFieldsContents(){return `<p class="subtle">Fields appear in the model or part editor. Existing values are preserved.</p><div class="settings-list">${db.settings.custom_fields.map(f=>`<div class="setting-row"><span>${esc(f.label)} <small>${esc(f.type)}</small></span></div>`).join('')}</div><div class="grid" style="margin-top:18px"><label>Field name<input id="custom-label" placeholder="e.g. Country of manufacture"></label><label>Type<select id="custom-type"><option value="text">Text</option><option value="number">Number</option><option value="date">Date</option><option value="checkbox">Checkbox</option><option value="select">Dropdown</option></select></label><label>Options (comma-separated)<input id="custom-options"></label></div><div class="actions"><button class="primary" data-action="add-custom">Add field</button></div>`;}
 function customFieldsPanel(){if($('custom-fields-inline'))$('custom-fields-inline').innerHTML=customFieldsContents();else {settingsTab='maintenance';settingsPanel();}}
-function backupContents(){return `<h3>Backups and recovery</h3><p class="subtle">Data folder: ${esc(db.data_directory||'')}</p><p>The ZIP contains your database, photos and settings. Current data is backed up before restoring.</p><div class="actions"><button class="primary" data-action="create-backup">Create backup</button><label>Restore from ZIP backup<input id="restore-file" type="file" accept=".zip"></label></div><div id="backup-status" role="status"></div><div id="backup-files" class="settings-list"></div>`;}
+function backupContents(){return `<h3>Backups and recovery</h3><p class="subtle">Data folder: ${esc(db.data_directory||'')}</p><p>The ZIP contains your database, photos and settings. Current data is backed up before restoring.</p><div class="actions"><button class="primary" data-action="create-backup">Create backup</button><label>Restore from ZIP backup<input id="restore-file" type="file" accept=".zip"></label></div><button data-action="storage-usage">Show storage usage</button><div id="storage-usage" role="status"></div><div id="backup-status" role="status"></div><div id="backup-files" class="settings-list"></div>`;}
 async function loadBackupStatus(){const result=await api('/api/backup-status');if($('backup-status'))$('backup-status').innerHTML=result.map(x=>`<div class="backup-status-row"><strong>${esc(x.label)}</strong><span class="${x.status==='success'?'good':x.status==='failed'?'error':'muted'}">${esc(x.message)}</span><small>${esc(x.path||'Not configured')}</small><small>Last successful backup: ${x.last_success?esc(new Date(x.last_success).toLocaleString('en-GB')):'Never recorded'}</small></div>`).join('');}
 async function loadBackups(){loadBackupStatus().catch(e=>{if($('backup-status'))$('backup-status').textContent='Backup status unavailable: '+e.message;});const files=await api('/api/backups');if($('backup-files'))$('backup-files').innerHTML=files.map(f=>`<div class="setting-row"><span>${esc(f.name)} <small>${(f.bytes/1024/1024).toFixed(2)} MB</small></span><a href="/api/download-backup?name=${encodeURIComponent(f.name)}" download>Download</a></div>`).join('')||'<p class="subtle">No backups yet.</p>';}
 async function backupsPanel(){settingsTab='backup';await settingsPanel();}
@@ -653,9 +717,28 @@ async function importPreview(file){const text=await file.text();if(file.name.toL
 function movePanel(id){const p=record(id);panel('Stock movements — '+p.model,`<p>Total: <strong>${p.quantity}</strong> · Available: <strong>${p.quantity-p.reserved}</strong> · Reserved: <strong>${p.reserved}</strong></p><div class="grid two" style="margin-top:16px"><label>Action<select id="move-action">${['Dodaj','Rezerviši','Oslobodi','Ugradi','Ugradi rezervisano','Otpiši'].map(s=>`<option value="${esc(s)}">${esc(enumLabel(s))}</option>`).join('')}</select></label><label>Quantity<input id="move-qty" type="number" min="1" step="1" value="1"></label><label>Target unit<select id="move-unit"><option value="">Select when installing</option>${db.records.filter(r=>r.kind==='phone').flatMap(r=>live(r).map(u=>`<option value="${r.id}:${u.id}">${esc(name(r)+' · '+u.inv+' · '+u.color)}</option>`)).join('')}</select></label><label>Note<input id="move-note"></label></div><div class="actions"><button class="primary" data-action="save-move" data-id="${id}">Save movement</button></div><h3 class="section">Stock history</h3>${db.movements.filter(m=>m.part_id===id).map(m=>`<div class="setting-row"><span>${esc(enumLabel(m.action))} · ${m.quantity} items <small>${esc(m.at)}</small></span><span>${esc(m.note)}</span></div>`).join('')||'<p class="subtle">No movements yet.</p>'}`);}
 function repairsPanel(id){const r=record(id),repairs=db.repairs.filter(x=>x.record_id===id);panel('Repairs — '+name(r),`<div class="grid two"><label>Unit<select id="repair-unit">${r.instances.map(u=>`<option value="${u.id}">${esc(u.inv+' · '+u.color+' · '+u.edition)}</option>`).join('')}</select></label><label>Status<select id="repair-status">${['Otvoren','U radu','Čeka dijelove','Završen'].map(s=>`<option value="${esc(s)}">${esc(enumLabel(s))}</option>`).join('')}</select></label><label>Cost<input id="repair-cost" type="number" value="0" min="0" step="0.01"></label><label>Currency<select id="repair-currency">${opts.currency.map(s=>`<option value="${esc(s)}">${esc(enumLabel(s))}</option>`).join('')}</select></label><label class="span-all">Fault / work performed<textarea id="repair-note"></textarea></label></div><div class="actions"><button class="primary" data-action="save-repair" data-id="${id}" ${r.instances.length?'':'disabled'}>Add repair record</button></div><h3 class="section">Records</h3>${repairs.map(x=>`<div class="setting-row"><div><strong>${esc(r.instances.find(u=>u.id===x.instance_id)?.inv||'Unit')} · ${esc(enumLabel(x.status))}</strong><p>${esc(x.note)}</p><small>${x.cost} ${esc(x.currency)} · ${esc(x.at)}</small></div>${x.status!=='Završen'?`<button data-action="finish-repair" data-id="${x.id}">Complete</button>`:''}</div>`).join('')||'<p class="subtle">No repairs yet.</p>'}<p class="hint">Record installed parts through Stock movements to update quantities correctly.</p>`);}
 function inventoryPanel(id=null){const inv=id?db.inventories.find(x=>x.id===id):null;if(inv){const entries=Object.entries(inv.expected);panel('Inventory check — '+(inv.location||'Entire collection'),`<p>Found ${Object.keys(inv.found).length} / ${entries.length} · ${inv.closed?'Completed':'In progress'}</p><p class="hint">Unconfirmed phones remain in the collection. Loaned units are marked separately.</p>${entries.map(([uid,u])=>`<label class="inventory-row ${inv.found[uid]?'found':''}"><input type="checkbox" data-inventory="${inv.id}" data-unit="${uid}" ${inv.found[uid]?'checked':''} ${inv.closed?'disabled':''}><span>${esc(u.inv+' · '+u.model)}<small>${esc(u.location||'No location')} · ${esc(enumLabel(u.condition))}</small></span></label>`).join('')}<div class="actions">${!inv.closed?`<button class="primary" data-action="close-inventory" data-id="${inv.id}">Complete inventory check</button>`:''}<button data-action="export-inventory" data-id="${inv.id}">Export results</button><button data-action="inventory">All inventory checks</button></div>`);return;}
- const locations=unique(db.records.flatMap(r=>live(r).map(u=>u.location)));
- panel('Inventory check',`<p>Check the phones at a selected location.</p><div class="actions"><select id="inventory-location"><option value="">Entire collection</option>${locations.map(l=>`<option>${esc(enumLabel(l))}</option>`).join('')}</select><button class="primary" data-action="start-inventory">Start inventory check</button></div><div class="settings-list" style="margin-top:18px">${db.inventories.map(i=>`<div class="setting-row"><div>${esc(i.location||'Entire collection')}<small> · ${esc(i.at)} · ${i.closed?'Completed':'In progress'} · ${Object.keys(i.found).length}/${Object.keys(i.expected).length}</small></div><button data-action="open-inventory" data-id="${i.id}">Open</button></div>`).join('')}</div>`);}
-async function historyPanel(id){const history=await api('/api/history?id='+id);panel('Change history',history.map(h=>`<details class="setting-row" style="display:block"><summary>${esc(h.action)} · ${esc(h.at)}</summary><pre class="pre">${esc(JSON.stringify(JSON.parse(h.data),null,2))}</pre></details>`).join('')||'<p>No records yet.</p>');}
+ const catalogLocations=(db.catalog||[]).filter(x=>x.category==='location');
+ const locations=unique([...catalogLocations.map(x=>x.name),...db.records.flatMap(r=>live(r).map(u=>u.location))]);
+ const label=l=>{const entry=catalogLocations.find(x=>normal(x.name)===normal(l));return entry?locationPath(entry):l;};
+ locations.sort((a,b)=>label(a).localeCompare(label(b)));
+ panel('Inventory check',`<p>Check the phones at a selected location.</p><div class="actions"><select id="inventory-location"><option value="">Entire collection</option>${locations.map(l=>`<option value="${esc(l)}">${esc(label(l))}</option>`).join('')}</select><label class="check"><input type="checkbox" id="inventory-sublocations" checked>Include nested locations</label><button class="primary" data-action="start-inventory">Start inventory check</button></div><div class="settings-list" style="margin-top:18px">${db.inventories.map(i=>`<div class="setting-row"><div>${esc(i.location||'Entire collection')}<small> · ${esc(i.at)} · ${i.closed?'Completed':'In progress'} · ${Object.keys(i.found).length}/${Object.keys(i.expected).length}</small></div><button data-action="open-inventory" data-id="${i.id}">Open</button></div>`).join('')}</div>`);}
+function historyChanges(data){
+ const result=[];
+ function walk(a,b,path){
+  if(JSON.stringify(a)===JSON.stringify(b))return;
+  if((a&&typeof a==='object')||(b&&typeof b==='object')){
+   if(path==='instances'&&Array.isArray(a)&&Array.isArray(b)){
+    const left=new Map(a.map(x=>[x.id,x])),right=new Map(b.map(x=>[x.id,x]));
+    for(const id of new Set([...left.keys(),...right.keys()]))walk(left.get(id),right.get(id),'Phone '+(right.get(id)?.inv||left.get(id)?.inv||id));return;
+   }
+   for(const k of new Set([...Object.keys(a && typeof a==='object' ? a : {}),...Object.keys(b && typeof b==='object' ? b : {})]))if(!['rev','updated_at','created_at'].includes(k))walk(a?.[k],b?.[k],[path,k].filter(Boolean).join(' / '));return;
+  }
+  result.push('<li><strong>'+esc(path.replaceAll('_',' '))+'</strong> '+esc(a??'—')+' → '+esc(b??'—')+'</li>');
+ }
+ if('before' in data||'after' in data)walk(data.before,data.after,'');
+ return result.length?'<ul>'+result.join('')+'</ul>':'';
+}
+async function historyPanel(id){const history=await api('/api/history?id='+id);panel('Change history',history.map(h=>`<details class="setting-row" style="display:block"><summary>${esc(h.action)} · ${esc(h.at)}</summary>${historyChanges(JSON.parse(h.data))}<details><summary>Details</summary><pre class="pre">${esc(JSON.stringify(JSON.parse(h.data),null,2))}</pre></details></details>`).join('')||'<p>No records yet.</p>');}
 function trashPanel(){panel('Trash',`<p class="subtle">Records are retained and can be restored. Inventory numbers are released. Restore reuses the old number if available, otherwise assigns a new one. Permanent deletion removes the collection entry; historical audit records and backups are retained.</p><div class="settings-list">${db.trash.map(r=>`<div class="setting-row"><span>${esc(name(r))} · ${r._unit_parent?'Phone #'+esc(r.instances[0]?.previous_inv||'')+' (individual)':r.kind==='phone'?(r.instances||[]).length+' units':'part'}</span><div class="actions"><button data-action="untrash" data-id="${r.id}">Restore</button><button class="danger" data-action="purge" data-id="${r.id}">Delete permanently</button></div></div>`).join('')||'<p>Trash is empty.</p>'}</div>`);}
 function updateContents(){
  if(IS_ANDROID_APP)return `<div class="about-rows"><div><span>Android app</span><strong>${esc(androidVersion())||'Unknown'}</strong></div><div><span>Android interface</span><strong>${UI_VERSION}</strong></div><div><span>Windows server</span><strong>${esc(db.version)}</strong></div><div><span>Update channel</span><strong>Android · manual checks</strong></div></div><h3 class="settings-group-title">Android updates</h3><div class="actions"><button class="primary" data-action="check-update">Check for Android updates</button><a id="android-download" hidden target="_blank" rel="noopener noreferrer">Download Android APK</a></div><p id="update-result" class="hint" role="status">Android updates are installed on this phone. Your collection stays on the server.</p>`;
@@ -694,6 +777,9 @@ document.addEventListener('click',async event=>{
  case 'select-clear':selectedUnits.clear();render();break;
  case 'toggle-check-focus':checkFocus=!checkFocus;render();break;
  case 'review-checks':reviewChecks(id,target.dataset.unit);break;
+ case 'recover-draft':recoverDraft();break;
+ case 'drop-draft':if(draftList().some(([k])=>k===id)&&confirm('Discard this saved draft?')){localStorage.removeItem(id);draftButton();recoverDraft();}break;
+ case 'open-draft':{const entry=draftList().find(([k])=>k===id);if(!entry)break;const saved=entry[1];$('panel').close();draftSlot=id;draft=clone(saved.record);mode=saved.mode;dirty=true;addUnit=mode==='add'?draft.instances.at(-1):null;editorRender(saved.index);$('editor').showModal();break;}
  case 'bulk-edit':openBulk();break;
  case 'compare-units':compareUnits();break;
  case 'locations':locationsPanel();break;
@@ -721,7 +807,7 @@ document.addEventListener('click',async event=>{
  case 'mobile-search':$('search').focus();$('search').scrollIntoView({block:'center'});break;
  case 'clear-filters':quickFilters={brand:'',color:'',os:'',location:'',state:''};render();break;
  case 'refresh':await refresh();toast('Table refreshed.');break;
- case 'logout':if((dirty||phoneDraft||panelDirty)&&!confirm('Sign out and discard unsaved changes?'))break;await api('/api/logout',{});$('editor').close();$('panel').close();draft=null;phoneDraft=null;db=null;dirty=false;await boot();break;
+ case 'logout':if((dirty||phoneDraft||panelDirty)&&!confirm('Sign out and discard unsaved changes?'))break;await api('/api/logout',{});removeDraft();$('editor').close();$('panel').close();draft=null;phoneDraft=null;db=null;dirty=false;await boot();break;
  case 'toggle-wanted':showWanted=!showWanted;render();break;
  case 'add-wanted':addWanted();break;
  case 'acquire-wanted':if($('editor').open&&!closeEditor())break;$('panel').close();acquireWanted(id);break;
@@ -789,7 +875,7 @@ document.addEventListener('click',async event=>{
  case 'backups':await backupsPanel();break;
  case 'create-backup':{const p=await api('/api/backup',{});await loadBackups();toast(p.warning||'Backup created and verified.');break;}
  case 'trash':trashPanel();break;
- case 'note-popup':showNotePopup(target);break;
+ case 'note-popup':pinnedNote=target;showNotePopup(target);break;
  case 'copy-model':copyModel(id);break;
  case 'delete-unit':{const r=record(id),u=r.instances[Number(target.dataset.index)];if(!u)throw Error('Phone not found. Refresh the collection.');if(!confirm('Move only phone #'+u.inv+' ('+name(r)+') to trash? Other phones and the model will remain.'))break;await api('/api/trash-unit',{id,unit:u.id,rev:r.rev});selectedUnits.delete(u.id);dirty=false;$('editor').close();draft=null;await refresh();toast('Phone moved to trash.');break;}
  case 'delete-record':{const r=record(id);if(!confirm(r.kind==='phone'?'Move '+name(r)+' and ALL '+r.instances.length+' phones to trash?':'Move this part to trash?'))break;await api('/api/trash',{id,rev:record(id).rev});dirty=false;$('editor').close();draft=null;await refresh();toast('Record moved to trash.');break;}
@@ -799,12 +885,13 @@ document.addEventListener('click',async event=>{
  case 'save-move':{const [rid,uid]=$('move-unit').value.split(':');await api('/api/move',{part_id:id,action:$('move-action').value,quantity:Number($('move-qty').value),record_id:rid,instance_id:uid,note:$('move-note').value});await refresh();if(draft?.id===id){draft=clone(record(id));editorRender();}movePanel(id);toast('Stock movement saved.');break;}
  case 'repairs':repairsPanel(id);break;
  case 'save-repair':await api('/api/repair',{record_id:id,instance_id:$('repair-unit').value,status:$('repair-status').value,cost:Number($('repair-cost').value),currency:$('repair-currency').value,note:$('repair-note').value});await refresh();repairsPanel(id);break;
- case 'finish-repair':{const r=db.repairs.find(r=>r.id===id);await api('/api/repair',{...r,status:'Završen'});await refresh();repairsPanel(r.record_id);break;}
+ case 'finish-repair':{const r=db.repairs.find(r=>r.id===id);try{await api('/api/repair',{id:r.id,record_id:r.record_id,rev:r.rev||1,action:'status',status:'Završen'});}catch(error){try{await refresh();repairsPanel(r.record_id);}catch{}throw error;}await refresh();repairsPanel(r.record_id);break;}
  case 'inventory':inventoryPanel();break;
- case 'start-inventory':{const i=await api('/api/inventory',{location:$('inventory-location').value});await refresh();inventoryPanel(i.id);break;}
+ case 'start-inventory':{const i=await api('/api/inventory',{location:$('inventory-location').value,include_sublocations:$('inventory-sublocations').checked});await refresh();inventoryPanel(i.id);break;}
  case 'open-inventory':inventoryPanel(id);break;
  case 'close-inventory':if(!confirm('Complete this inventory check and save its results?'))break;await api('/api/inventory',{id,action:'close'});await refresh();inventoryPanel(id);break;
  case 'export-inventory':{const i=db.inventories.find(x=>x.id===id);download(csvText([['Inventory no.','Model','Location','Found','Time'],...Object.entries(i.expected).map(([uid,u])=>[u.inv,u.model,u.location,i.found[uid]?'Yes':'No',i.found[uid]||''])]),'Inventory check.csv','text/csv;charset=utf-8');break;}
+ case 'storage-usage':{const data=await api('/api/storage-usage');const size=v=>v==null?'Unavailable':(v/1048576).toFixed(1)+' MiB';$('storage-usage').textContent=['Photos: '+size(data.photo_bytes),...data.backups.map(b=>b.folder+': '+size(b.bytes))].join(' · ');break;}
  case 'history':await historyPanel(id);break;
  case 'gsm-preview':target.disabled=true;try{await gsmPanel();}finally{target.disabled=false;}break;
  case 'apply-gsm':{document.querySelectorAll('[data-gsm]:checked').forEach(el=>{const k=el.dataset.gsm,v=preview.fields[k];if(catalogNames[k]&&!(db.catalog||[]).some(x=>x.category===k&&normal(x.name)===normal(v)))throw Error('Add '+v+' to '+catalogNames[k]+' first.');if(draft.id&&['alias','type','os','gsm','wiki'].includes(k)&&draft.instances[editorUnitIndex])draft.instances[editorUnitIndex][k]=v;else draft[k]=v;});if($('gsm-specs').checked)draft.specs={...(draft.specs||{}),...preview.specs};draft.provenance={source:preview.source,at:preview.at};dirty=true;$('panel').close();editorRender(mode==='add'?draft.instances.length-1:null);break;}
@@ -847,10 +934,12 @@ document.addEventListener('change',async e=>{const el=e.target;try{
  }catch(error){toast(error.message);if($('editor').open)$('editor-error').textContent=error.message;}
 });
 function prepareNextPhone(saved,previous){phoneDraft=null;draft=clone(saved);mode='add';const u=blankUnit();for(const k of ['color','edition','alias','type','os','gsm','wiki','memory'])if(previous[k])u[k]=previous[k];draft.instances.push(u);addUnit=u;dirty=false;editorRender(draft.instances.length-1);$('editor').scrollTop=0;}
-$('record-form').addEventListener('submit',async e=>{e.preventDefault();if(uploadCount){toast('Photos are still uploading.');return;}if(!validateCombos($('editor-content'))||!validatePurchaseDates())return;readDraft();if(mode==='acquire'&&!ACTIVE.includes(draft.instances[editorUnitIndex]?.condition)){$('editor-error').textContent='Choose In collection or On loan for the acquired phone.';return;}if(e.submitter?.id!=='complete-save'&&draft.instances[editorUnitIndex]?.verification_action==='complete')delete draft.instances[editorUnitIndex].verification_action;if(e.submitter?.id==='complete-save'){const u=draft.instances[editorUnitIndex];if(!u||checkFields(draft).length||checkFields(u).length){$('editor-error').textContent='Resolve all model and phone To check fields first.';return;}u.verification_action='complete';}const duplicates=imeiWarnings()||[];if(duplicates.length&&!confirm('Duplicate IMEI detected. Review the warning above. Save anyway?'))return;const another=e.submitter?.id==='save-add-another',previous=clone(draft.instances[editorUnitIndex]||{});$('record-save').disabled=true;$('save-add-another').disabled=true;$('complete-save').disabled=true;try{const r=await api('/api/record',{record:draft,rev:draft.rev});await refresh();if(mode==='add')phoneDraft=null;dirty=false;expanded.add(r.id);render();if(another){prepareNextPhone(r,previous);toast('Phone saved. Ready for the next unit.');}else{$('editor').close();draft=null;toast('Phone / record saved.');}}catch(error){$('editor-error').textContent=error.message;}finally{$('record-save').disabled=false;$('save-add-another').disabled=false;$('complete-save').disabled=false;}});
+$('record-form').addEventListener('submit',async e=>{e.preventDefault();if(uploadCount){toast('Photos are still uploading.');return;}if(!validateCombos($('editor-content'))||!validatePurchaseDates())return;readDraft();if(mode==='acquire'&&!ACTIVE.includes(draft.instances[editorUnitIndex]?.condition)){$('editor-error').textContent='Choose In collection or On loan for the acquired phone.';return;}if(e.submitter?.id!=='complete-save'&&draft.instances[editorUnitIndex]?.verification_action==='complete')delete draft.instances[editorUnitIndex].verification_action;if(e.submitter?.id==='complete-save'){const u=draft.instances[editorUnitIndex];if(!u||checkFields(draft).length||checkFields(u).length){$('editor-error').textContent='Resolve all model and phone To check fields first.';return;}u.verification_action='complete';}const duplicates=imeiWarnings()||[];if(duplicates.length&&!confirm('Duplicate IMEI detected. Review the warning above. Save anyway?'))return;const another=e.submitter?.id==='save-add-another',previous=clone(draft.instances[editorUnitIndex]||{});$('record-save').disabled=true;$('save-add-another').disabled=true;$('complete-save').disabled=true;try{const r=await api('/api/record',{record:draft,rev:draft.rev});removeDraft();await refresh();if(mode==='add')phoneDraft=null;dirty=false;expanded.add(r.id);render();if(another){prepareNextPhone(r,previous);toast('Phone saved. Ready for the next unit.');}else{$('editor').close();draft=null;toast('Phone / record saved.');}}catch(error){$('editor-error').textContent=error.message;}finally{$('record-save').disabled=false;$('save-add-another').disabled=false;$('complete-save').disabled=false;}});
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();$('login-error').textContent='';$('login-submit').disabled=true;try{await api($('login-form').dataset.setup==='true'?'/api/setup':'/api/login',{password:$('password').value,remember:$('remember-me').checked});$('password').value='';window.MyPhoneLibraryAndroid?.sessionChanged?.();await boot();}catch(error){$('login-error').textContent=error.message;}finally{$('login-submit').disabled=false;}});
-$('editor-content').addEventListener('input',e=>{dirty=true;if(e.target?.dataset?.r==='model')refreshBatterySuggestions();});
-$('editor-content').addEventListener('change',()=>dirty=true);
+$('editor-content').addEventListener('input',e=>{dirty=true;preserveDraft();if(e.target?.dataset?.r==='model')refreshBatterySuggestions();});
+$('editor-content').addEventListener('change',()=>{dirty=true;preserveDraft();});
+window.addEventListener('pagehide',preserveDraft);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)preserveDraft();});
 $('panel-body').addEventListener('input',e=>{if(panelRoute&&e.target.id!=='default-layout')panelDirty=true;});
 $('panel-body').addEventListener('change',e=>{if(panelRoute&&e.target.id!=='default-layout')panelDirty=true;});
 $('panel').addEventListener('cancel',e=>{e.preventDefault();closePanel();});
@@ -866,7 +955,9 @@ document.addEventListener('keydown',e=>{
  else if($('panel').open){e.preventDefault();closePanel();}
 });
 $('editor').addEventListener('cancel',e=>{e.preventDefault();closeEditor();});
-$('search').addEventListener('input',render);
+let searchTimer;
+$('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{if(db)render();},100);});
+window.matchMedia?.('(max-width: 800px)').addEventListener('change',event=>{if(db&&event.matches!==lastSmallScreen)render();});
 $('collection-table').addEventListener('click',e=>{const th=e.target.closest('[data-sort]');if(!th||Date.now()<ignoreSortUntil||['select','image','actions'].includes(th.dataset.sort))return;sort={key:th.dataset.sort,dir:sort.key===th.dataset.sort?-sort.dir:1};render();});
 $('collection-table').addEventListener('dragstart',e=>{const th=e.target.closest('[data-column-key]');if(!th||th.dataset.columnKey==='image')return;dragColumn=th.dataset.columnKey;e.dataTransfer.setData('text/plain',dragColumn);e.dataTransfer.effectAllowed='move';th.classList.add('dragging');});
 $('collection-table').addEventListener('dragover',e=>{const th=e.target.closest('[data-column-key]');if(th&&dragColumn){e.preventDefault();e.dataTransfer.dropEffect='move';}});
@@ -883,3 +974,7 @@ restoreSidebar();
 boot().then(()=>{if(!IS_ANDROID_APP&&sessionStorage.getItem('mpl-install-target'))watchInstallation();setTimeout(monitorConnection,10000);if(location.hash&&db)window.dispatchEvent(new Event('hashchange'));});
 
 window.mplHandleAndroidBack=function(){if($('editor').open){closeEditor();return true;}if($('panel').open){closePanel();return true;}return false;};
+
+
+// Native Toolbox reads the same draft state as the web editor.
+window.toolboxHasUnsavedChanges=()=>Boolean(dirty||panelDirty);

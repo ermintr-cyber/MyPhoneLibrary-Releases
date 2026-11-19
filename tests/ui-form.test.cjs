@@ -11,6 +11,10 @@ const os=page.locator('.catalog-combo[data-category=os] [data-combo-query]');awa
 await page.evaluate(()=>{readDraft();});assert.equal(await page.evaluate(()=>draft.os),'Symbian OS 9.2');
 // Existing model edits keep sibling overrides and legacy gallery data.
 await page.evaluate(()=>{document.getElementById('editor').close();db.records=[{id:'a',kind:'phone',brand:'Nokia',model:'N73',alias:'N73-1',type:'RM-133',os:'Symbian OS 9.2',photos:['/media/old.jpg'],custom:{},instances:[{id:'u1',inv:'1',photos:[],type:''},{id:'u2',inv:'2',photos:[],type:'RM-ME'}]}];showEditor('a',1);});
+assert.equal(await page.locator('.model-fields [data-r=brand]').count(),1);
+assert.equal(await page.locator('.unit-fields [data-effective=type]').count(),1);
+assert.equal(await page.locator('.unit-fields [data-u=imei]').count(),1);
+assert.match(await page.locator('#unit-fields-heading').textContent(),/This phone · 2/);
 await page.locator('[data-effective=type]').fill('RM-new');await page.locator('#editor-unit-select').selectOption('0');assert.equal(await page.locator('[data-effective=type]').inputValue(),'RM-133');assert.equal(await page.evaluate(()=>draft.instances[1].type),'RM-new');assert.equal(await page.evaluate(()=>draft.photos[0]),'/media/old.jpg');
 await page.evaluate(()=>{dirty=false;closeEditor();sidebarState(true);});assert.equal(await page.locator('main').evaluate(el=>getComputedStyle(el).marginLeft),'0px');
 // Empty and cleared phone forms must not block installation; real drafts must.
@@ -51,7 +55,12 @@ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=windo
 assert.equal(await page.locator('.mobile-primary-nav').evaluate(el=>el.getBoundingClientRect().height),66);
 assert.ok(await page.locator('#mobile-list .state-working').count()>0);
 assert.equal(await page.locator('#collection-table th[data-column-key=state]').count(),0);
-assert.ok(await page.locator('#collection-table .unit-details-table .state-working').count()>0);
+assert.equal(await page.locator('#collection-table tbody').count(),0);
+await page.setViewportSize({width:1500,height:950});
+await page.locator('#collection-table .unit-details-table .state-working').first().waitFor();
+assert.equal(await page.locator('#mobile-list .mobile-model').count(),0);
+await page.setViewportSize({width:393,height:851});
+await page.locator('#mobile-list .state-working').first().waitFor();
 await page.screenshot({path:'mobile-collection-113.png',fullPage:true});
 await page.evaluate(()=>{currentView='incomplete';render();});assert.equal(await page.locator('#completion-report').isVisible(),true);assert.match(await page.locator('#completion-report').textContent(),/Missing: Charger/);
 await page.evaluate(()=>{currentView='all';showEditor('a',0);});assert.equal(await page.locator('[data-r=declared_parts]').count(),0);await page.locator('[data-u=for_parts]').check();await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purpose),'Donor');await page.locator('[data-u=for_parts]').uncheck();await page.evaluate(()=>readDraft());assert.equal(await page.evaluate(()=>draft.instances[0].purpose),'Kolekcija');
@@ -120,7 +129,7 @@ assert.equal(await page.locator('#table-wrap').isVisible(),false);
 await page.locator('#wanted-toggle').click();assert.equal(await page.locator('#table-wrap').isVisible(),true);
 assert.match(await page.locator('#summary').textContent(),/0models0phones/);
 await page.setViewportSize({width:393,height:851});
-assert.equal(await page.locator('#mobile-list [data-action=acquire-wanted]').isVisible(),true);
+await page.locator('#mobile-list [data-action=acquire-wanted]').waitFor({state:'visible'});
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 await page.screenshot({path:'mobile-wishlist-118.png',fullPage:true});
 await page.locator('#mobile-list [data-action=acquire-wanted]').click();
@@ -297,7 +306,9 @@ console.log('DOM: purchase date dmy input/reopen/mobile, leap-day validation, ca
 await page.evaluate(()=>{dirty=false;$('editor').close();$('panel').close();currentView='all';quickFilters={};collectionLayout='list';db.settings.columns=columns.map(c=>c[0]);db.records[0].model='N97 Mini';db.records[0].alias='N97-4';db.records[0].to_check=['os'];db.records[0].instances.forEach(u=>{u.checked_complete=false;u.to_check=['photos','color','edition','product_code','rating','state','box','battery_present','charger_present','memory','firmware','price','source'];});render();});
 for(const width of [1755,1500,1100]){
  await page.setViewportSize({width,height:950});
- const geometry=await page.locator('#collection-table .unit-table-row [data-column=model]').evaluateAll(cells=>cells.map(cell=>{const c=cell.getBoundingClientRect(),title=cell.querySelector('strong').getBoundingClientRect(),group=cell.querySelector('.check-summary').getBoundingClientRect();return {below:group.top>=title.bottom-1,contained:[...cell.querySelectorAll('.review-badge,.check-badge')].every(el=>{const b=el.getBoundingClientRect();return b.left>=c.left&&b.right<=c.right+1&&b.bottom<=c.bottom+1;}),width:c.width};}));
+ const modelCells=page.locator('#collection-table .unit-table-row [data-column=model]');
+ await modelCells.first().waitFor({state:'visible'});
+ const geometry=await modelCells.evaluateAll(cells=>cells.map(cell=>{const c=cell.getBoundingClientRect(),title=cell.querySelector('strong').getBoundingClientRect(),group=cell.querySelector('.check-summary').getBoundingClientRect();return {below:group.top>=title.bottom-1,contained:[...cell.querySelectorAll('.review-badge,.check-badge')].every(el=>{const b=el.getBoundingClientRect();return b.left>=c.left&&b.right<=c.right+1&&b.bottom<=c.bottom+1;}),width:c.width};}));
  assert.ok(geometry.length>0);assert.ok(geometry.every(x=>x.below&&x.contained&&x.width<150),JSON.stringify({width,geometry}));
 }
 await page.setViewportSize({width:1755,height:950});
