@@ -11,6 +11,10 @@ const os=page.locator('.catalog-combo[data-category=os] [data-combo-query]');awa
 await page.evaluate(()=>{readDraft();});assert.equal(await page.evaluate(()=>draft.os),'Symbian OS 9.2');
 // Existing model edits keep sibling overrides and legacy gallery data.
 await page.evaluate(()=>{document.getElementById('editor').close();db.records=[{id:'a',kind:'phone',brand:'Nokia',model:'N73',alias:'N73-1',type:'RM-133',os:'Symbian OS 9.2',photos:['/media/old.jpg'],custom:{},instances:[{id:'u1',inv:'1',photos:[],type:''},{id:'u2',inv:'2',photos:[],type:'RM-ME'}]}];showEditor('a',1);});
+assert.equal(await page.locator('.model-fields [data-r=brand]').count(),1);
+assert.equal(await page.locator('.unit-fields [data-effective=type]').count(),1);
+assert.equal(await page.locator('.unit-fields [data-u=imei]').count(),1);
+assert.match(await page.locator('#unit-fields-heading').textContent(),/This phone · 2/);
 await page.locator('[data-effective=type]').fill('RM-new');await page.locator('#editor-unit-select').selectOption('0');assert.equal(await page.locator('[data-effective=type]').inputValue(),'RM-133');assert.equal(await page.evaluate(()=>draft.instances[1].type),'RM-new');assert.equal(await page.evaluate(()=>draft.photos[0]),'/media/old.jpg');
 await page.evaluate(()=>{dirty=false;closeEditor();sidebarState(true);});assert.equal(await page.locator('main').evaluate(el=>getComputedStyle(el).marginLeft),'0px');
 // Empty and cleared phone forms must not block installation; real drafts must.
